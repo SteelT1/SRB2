@@ -60,6 +60,10 @@
 #endif
 #endif
 
+#ifdef MODPLUG_HACK
+#include <libmodplug/modplug.h>
+#endif
+
 UINT8 sound_started = false;
 
 static boolean midimode;
@@ -103,6 +107,12 @@ void I_StartupSound(void)
 
 	sound_started = true;
 	Mix_AllocateChannels(256);
+	#ifdef MODPLUG_HACK
+	ModPlug_Settings settings;
+	ModPlug_GetSettings(&settings);
+	settings.mLoopCount = -1;
+	ModPlug_SetSettings(&settings);
+	#endif
 }
 
 void I_ShutdownSound(void)
