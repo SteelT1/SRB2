@@ -86,10 +86,10 @@ typedef struct
 
 //=============================================================================
 
-#define HOSTNAME "loopback"
-#define USER "srb2_ms"
-#define PASSWORD "gLRDRb7WgLRDRb7W"
-#define DATABASE "srb2_ms"
+#define HOSTNAME "HOSTNAME HERE"
+#define USER "USERNAME HERE"
+#define PASSWORD "PASSWORD HERE"
+#define DATABASE "DATABASE HERE"
 
 // MySQL Stuff :D
 
@@ -282,7 +282,7 @@ int MySQL_CheckRoom(UINT32 room)
 	}
 }
 
-void MySQL_AddServer(const char *ip, const char *port, const char *name, const char *version, UINT32 room, bool firstadd, const char *key) {
+void MySQL_AddServer(const char *ip, const char *port, const char *name, const char *key, UINT32 room, bool firstadd, const char *version) {
         char escapedName[255];
         char escapedPort[10];
         char escapedVersion[10];
@@ -290,7 +290,7 @@ void MySQL_AddServer(const char *ip, const char *port, const char *name, const c
         char insertquery[5000];
         char checkquery[500];
         char updatequery[5000];
-        char queryp1[5000] = "INSERT INTO `ms_servers` (`name`,`ip`,`port`,`version`,`timestamp`,`room`,`key`) VALUES ('%s','%s','%s','%s','%ld','%d','%s')";
+        char queryp1[5000] = "INSERT INTO `ms_servers` (`name`,`ip`,`port`,`key`,`timestamp`,`room`,`version`) VALUES ('%s','%s','%s','%s','%ld','%d','%s')";
         char checkqueryp1[500] = "SELECT room_override FROM `ms_servers` WHERE `ip` = '%s'";
 		char updatequeryp1[5000];
 		if(firstadd)
@@ -616,7 +616,7 @@ void MySQL_ListServServers(UINT32 id, UINT32 type, const char *ip) {
      }
 }
 
-void MySQL_RemoveServer(char *ip, char *port, char *name, char *version) {
+void MySQL_RemoveServer(char *ip, char *port, char *name, char *key, char *version) {
         char escapedName[255];
         char updatequery[5000];
         char updatequeryp1[5000] = "UPDATE `ms_servers` SET upnow = '0' WHERE `ip` = '%s' AND `permanent` = '0'";
@@ -628,7 +628,7 @@ void MySQL_RemoveServer(char *ip, char *port, char *name, char *version) {
            logPrintf(errorfile, "MYSQL ERROR: %s\n", mysql_error(conn));
 		   MySQL_Conn(true);
         } else {
-           logPrintf(logfile, "Server: %s:%s || Name: %s || Version: %s removed successfully.\n", ip, port, name, version);
+           logPrintf(logfile, "Server: %s:%s || Name: %s || Version: %s removed successfully.\n", ip, port, name, version, key);
         }
 }
 
@@ -894,8 +894,8 @@ static void removeServer(int id, char *buffer)
 	// retrieve the true ip of the server
 	strcpy(info->ip, server_socket.getClientIP(id));
 
-	logPrintf(logfile, "Removing the temporary server: %s %s %s %s\n", info->ip, info->port, info->name, info->version);
-	MySQL_RemoveServer(info->ip, info->port, info->name, info->version); // New and win.
+	logPrintf(logfile, "Removing the temporary server: %s %s %s %s\n", info->ip, info->port, info->name, info->version, info->key);
+	MySQL_RemoveServer(info->ip, info->port, info->name, info->version, info->key); // New and win.
 }
 
 /*

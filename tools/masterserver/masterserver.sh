@@ -4,8 +4,8 @@
 #
 
 # Get LSB functions
-. /lib/lsb/init-functions
-. /etc/default/rcS
+./lib/lsb/init-functions
+./etc/default/rcS
 
 SRB2MS=/usr/local/bin/masterserver
 SRB2MS_PORT=28900

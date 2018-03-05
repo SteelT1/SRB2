@@ -1,4 +1,5 @@
 /client
 /server
-/server.log
+/*.log
 /*.o
+/*.pid
