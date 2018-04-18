@@ -139,6 +139,8 @@ static CV_PossibleValue_t backcolor_cons_t[] = {{0, "White"}, 	{1, "Gray"},	{2, 
 												{0, NULL}};
 consvar_t cons_backcolor = {"con_backcolor", "Green", CV_CALL|CV_SAVE, backcolor_cons_t, CONS_backcolor_Change, 0, NULL, NULL, 0, 0, NULL};
 
+// Set up our cvars for chat drawing:
+
 static void CON_Print(char *msg);
 
 //
@@ -842,9 +844,8 @@ boolean CON_Responder(event_t *ev)
 			return true;
 		}
 
-		// ...why shouldn't it eat the key? if it doesn't, it just means you
-		// can control Sonic from the console, which is silly
-		return true; //return false;
+		// don't eat the key
+		return false;
 	}
 
 	// command completion forward (tab) and backward (shift-tab)
@@ -1043,7 +1044,7 @@ boolean CON_Responder(event_t *ev)
 
 	// enter a char into the command prompt
 	if (key < 32 || key > 127)
-		return true; // even if key can't be printed, eat it anyway
+		return false;
 
 	// add key to cmd line here
 	if (key >= 'A' && key <= 'Z' && !shiftdown) //this is only really necessary for dedicated servers
@@ -1433,8 +1434,8 @@ static void CON_DrawHudlines(void)
 	if (con_hudlines <= 0)
 		return;
 
-	if (chat_on)
-		y = charheight; // leave place for chat input in the first row of text
+	if (chat_on && cv_consolechat.value)
+		y = charheight; // leave place for chat input in the first row of text (only do it if consolechat is on.)
 	else
 		y = 0;
 
