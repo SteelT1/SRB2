@@ -20,6 +20,7 @@
 #include "m_random.h"
 #include "s_sound.h"
 #include "g_game.h"
+#include "hu_stuff.h"	// HU_AddChatText
 
 #include "lua_script.h"
 #include "lua_libs.h"
@@ -82,6 +83,21 @@ static int lib_print(lua_State *L)
     lua_pop(L, 1);  /* pop result */
   }
 	CONS_Printf("\n");
+	return 0;
+}
+
+// I'm not sure why print uses such a code when this could've simply been done instead lol
+static int lib_chatprint(lua_State *L)
+{
+	const char *str = luaL_checkstring(L, 1);
+	int len = strlen(str);
+	if (len > 255)	// string is too long!!!
+		return luaL_error(L, "String exceeds the 255 characters limit of the chat buffer.");
+	
+	if (cv_consolechat.value || !netgame)
+		CONS_Printf("%s\n", str);
+	else
+		HU_AddChatText(str);
 	return 0;
 }
 
@@ -1982,6 +1998,7 @@ static int lib_gTicsToMilliseconds(lua_State *L)
 
 static luaL_Reg lib[] = {
 	{"print", lib_print},
+	{"chatprint", lib_chatprint},
 	{"EvalMath", lib_evalMath},
 
 	// m_random
