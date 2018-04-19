@@ -585,23 +585,30 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 		}
 	}
 	
-		
+	int spam_eatmsg = 0;
+	
 	// before we do anything, let's verify the guy isn't spamming, get this easier on us.
 	
-	if (stop_spamming_you_cunt[playernum] != 0 && consoleplayer != playernum && cv_chatspamprotection.value)	// I ain't gonna stop you if you like spamming yourself, but others won't have to deal with your shit shenanigans, dickhead.
+	//if (stop_spamming_you_cunt[playernum] != 0 && consoleplayer != playernum && cv_chatspamprotection.value && !(flags & HU_CSAY))
+	if (stop_spamming_you_cunt[playernum] != 0 && cv_chatspamprotection.value && !(flags & HU_CSAY))
 	{	
 		CONS_Debug(DBG_NETPLAY,"Received SAY cmd too quickly from Player %d (%s), assuming as spam and blocking message.\n", playernum+1, player_names[playernum]);
 		stop_spamming_you_cunt[playernum] = 4;
-		return;
+		spam_eatmsg = 1;
 	}
 	else
 		stop_spamming_you_cunt[playernum] = 4;	// you can hold off for 4 tics, can you?
-
+	
+	// run the lua hook even if we were supposed to eat the msg, netgame consistency goes first.
+	
 #ifdef HAVE_BLUA
-	if (LUAh_PlayerMsg(playernum, target, flags, msg))
+	if (LUAh_PlayerMsg(playernum, target, flags, msg, spam_eatmsg))
 		return;
 #endif
-
+	
+	if (spam_eatmsg)
+		return;	// don't proceed if we were supposed to eat the message.
+	
 	// If it's a CSAY, just CECHO and be done with it.
 	if (flags & HU_CSAY)
 	{
@@ -883,13 +890,23 @@ static boolean justscrolledup;
 //
 boolean HU_Responder(event_t *ev)
 {
-	UINT8 c;
+	UINT8 c=0;
 		
 	if (ev->type != ev_keydown)
 		return false;
 
 	// only KeyDown events now...
-
+	
+	// capslock
+	if (c && c == KEY_CAPSLOCK)	// it's a toggle.
+	{	
+		if (capslock)
+			capslock = false;
+		else	
+			capslock = true;
+		return true;
+	}	
+	
 	if (!chat_on)
 	{
 		// enter chat mode
@@ -927,10 +944,37 @@ boolean HU_Responder(event_t *ev)
 
 		c = (UINT8)ev->data1;
 		
-		// use console translations
-		if (shiftdown)
+		// use console translations		
+			
+		if (shiftdown ^ capslock)
 			c = shiftxform[c];
-
+		
+		// TODO: make chat behave like the console, so that we can go back and edit stuff when we fuck up.
+		
+		// pasting. pasting is cool. chat is a bit limited, though :(
+		if ((c == 'v' || c == 'V') && ctrldown)
+		{
+			const char *paste = I_ClipboardPaste();
+			
+			// create a dummy string real quickly
+			
+			if (paste == NULL)
+				return true;
+			
+			size_t chatlen = strlen(w_chat);
+			size_t pastelen = strlen(paste);
+			if (chatlen+pastelen > HU_MAXMSGLEN)
+				return true; // we can't paste this!!
+			
+			memcpy(&w_chat[chatlen], paste, pastelen);	// copy it into our "visual" chat.
+			size_t i = 0;
+			for (;i<pastelen;i++)
+			{
+				HU_queueChatChar(paste[i]);				// queue it so that it's actually sent. (this chat write thing is REALLY messy.)
+			}
+			return true;
+		}
+		
 		if (HU_keyInChatString(w_chat,c))
 			HU_queueChatChar(c);
 		if (c == KEY_ENTER)
