@@ -2015,10 +2015,13 @@ static void HU_Draw32TeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 				V_DrawFixedPatch(x*FRACUNIT, y*FRACUNIT, FRACUNIT/4, 0, faceprefix[players[tab[i].num].skin], colormap);
 		}
 		V_DrawRightAlignedThinString(x+128, y, ((players[tab[i].num].health > 0) ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
-		if (!(tab[i].num == serverplayer))
-			HU_drawPing(x+ 135, y+3, playerpingtable[tab[i].num], true);
+		if (!splitscreen)
+		{	
+			if (!(tab[i].num == serverplayer))
+				HU_drawPing(x+ 135, y+3, playerpingtable[tab[i].num], true);
 		//else
 			//V_DrawSmallString(x+ 129, y+4, V_YELLOWMAP, "HOST"); 
+		}
 	}
 }
 
@@ -2131,10 +2134,13 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 				V_DrawSmallMappedPatch (x, y-4, 0, faceprefix[players[tab[i].num].skin], colormap);
 		}
 		V_DrawRightAlignedThinString(x+100, y, ((players[tab[i].num].health > 0) ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
-		if (!(tab[i].num == serverplayer))
-			HU_drawPing(x+ 113, y+2, playerpingtable[tab[i].num], false);
+		if (!splitscreen)
+		{	
+			if (!(tab[i].num == serverplayer))
+				HU_drawPing(x+ 113, y+2, playerpingtable[tab[i].num], false);
 		//else
 		//	V_DrawSmallString(x+ 94, y+4, V_YELLOWMAP, "SERVER"); 
+		}
 	}
 }
 
@@ -2254,10 +2260,13 @@ void HU_Draw32TabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines,
 			continue; //ignore them.
 
 		strlcpy(name, tab[i].name, 7);
-		if (!(tab[i].num == serverplayer))
-			HU_drawPing(x+ 135, y+3, playerpingtable[tab[i].num], true);
+		if (!splitscreen)	// don't draw it on splitscreen,
+		{
+			if (!(tab[i].num == serverplayer))
+				HU_drawPing(x+ 135, y+3, playerpingtable[tab[i].num], true);
 		//else
 		//	V_DrawSmallString(x+ 129, y+4, V_YELLOWMAP, "HOST"); 
+		}
 		
 		V_DrawString(x + 10, y,
 		             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
