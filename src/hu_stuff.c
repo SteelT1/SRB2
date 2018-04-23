@@ -897,16 +897,6 @@ boolean HU_Responder(event_t *ev)
 
 	// only KeyDown events now...
 	
-	// capslock
-	if (c && c == KEY_CAPSLOCK)	// it's a toggle.
-	{	
-		if (capslock)
-			capslock = false;
-		else	
-			capslock = true;
-		return true;
-	}	
-	
 	if (!chat_on)
 	{
 		// enter chat mode
@@ -944,8 +934,17 @@ boolean HU_Responder(event_t *ev)
 
 		c = (UINT8)ev->data1;
 		
+		// capslock
+		if (c && c == KEY_CAPSLOCK)	// it's a toggle.
+		{	
+			if (capslock)
+				capslock = false;
+			else	
+				capslock = true;
+			return true;
+		}	
+		
 		// use console translations		
-			
 		if (shiftdown ^ capslock)
 			c = shiftxform[c];
 		
@@ -1210,6 +1209,7 @@ static void HU_DrawDownArrow(INT32 x, INT32 y, INT32 options)
 // TODO: fix dumb word wrapping issues
 
 static INT32 prevnummsg = 0; // used to determine when we auto scroll:
+static boolean scrollagain = 0;	// I'm bad at coding. 
 
 static void HU_drawChatLog(void)
 {
@@ -1276,10 +1276,14 @@ static void HU_drawChatLog(void)
 		chat_maxscroll = 0;
 	
 	// if we're not bound by the time, autoscroll for next frame:
-	if (chat_scrolltime == 0 && i != prevnummsg)
+	if ((chat_scrolltime == 0 && i != prevnummsg) || scrollagain)
 	{	
 		chat_scroll = chat_maxscroll;
 		prevnummsg = i;
+		if (!scrollagain)
+			scrollagain = 1;	// scroll again next frame, mostly for multi line msg handling in multiplayer
+		else
+			scrollagain = 0;
 	}	
 	
 	// draw arrows to indicate that we can (or not) scroll.
