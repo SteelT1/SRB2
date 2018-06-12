@@ -321,7 +321,7 @@ void HU_Start(void)
 
 #ifndef NONET
 
-// If we use the new chat system, then CONS_Printf isn't what's gonna help us!
+// EVERY CHANGE IN THIS SCRIPT IS LOL XD! BY VINCYTM
 
 static UINT32 chat_nummsg_log = 0;
 static UINT32 chat_nummsg_min = 0;
@@ -336,6 +336,8 @@ static INT32 chat_maxscroll = 0;	// how far can we scroll?
 static char chat_log[CHAT_BUFSIZE][255];	// hold the last 48 or so messages in that log.
 static char chat_mini[8][255];			// display up to 8 messages that will fade away / get overwritten
 static tic_t chat_timers[8];
+
+static boolean chat_scrollmedown = false;	// force instant scroll down on the chat log. Happens when you open it / send a message.
 
 // remove text from minichat table
 
@@ -440,6 +442,52 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 		if (ix > 0)
 			strlcat(msg, " ", msgspace);
 		strlcat(msg, COM_Argv(ix + usedargs), msgspace);
+	}
+	
+	if (strlen(msg) > 4 && strnicmp(msg, "/pm", 3) == 0)	// used /pm
+	{
+		// what we're gonna do now is check if the node exists
+		// with that logic, characters 4 and 5 are our numbers:
+		int spc = 1;	// used if nodenum[1] is a space.
+		char *nodenum = (char*) malloc(3);
+		strncpy(nodenum, msg+3, 5);
+		// check for undesirable characters in our "number"
+		if 	(((nodenum[0] < '0') || (nodenum[0] > '9')) || ((nodenum[1] < '0') || (nodenum[1] > '9')))
+		{	
+			// check if nodenum[1] is a space
+			if (nodenum[1] == ' ')
+				spc = 0;
+				// let it slide
+			else
+			{	
+				HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<node> \'.");
+				return;
+			}	
+		}
+		// I'm very bad at C, I swear I am, additional checks eww!
+			if (spc != 0)
+			{	
+				if (msg[5] != ' ')
+				{
+					HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<node> \'.");
+					return;
+				}
+			}
+		
+		target = atoi((const char*) nodenum);	// turn that into a number
+		//CONS_Printf("%d\n", target);
+		
+		// check for target player, if it doesn't exist then we can't send the message!
+		if (playeringame[target])	// player exists
+			target++;				// even though playernums are from 0 to 31, target is 1 to 32, so up that by 1 to have it work!
+		else
+		{
+			HU_AddChatText(va("\x82NOTICE: \x80Player %d does not exist.", target));	// same
+			return;
+		}
+		buf[0] = target;
+		const char *newmsg = msg+5+spc;
+		memcpy(msg, newmsg, 255);
 	}
 
 	SendNetXCmd(XD_SAY, buf, strlen(msg) + 1 + msg-buf);
@@ -702,13 +750,17 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 			cstart = "\x82";
 			fmt = "\4%s<%s%s>%s\x80 %s\n";	// make this yellow, however.
 			fmt2 = "%s<%s%s>%s\x80 %s";
-		}	
+		}
 		else if (target > 0) // By you, to another player
 		{
 			// Use target's name.
 			dispname = player_names[target-1];
-			fmt = "\3->*%s%s%s* %s\n";
-			fmt2 = "->*%s%s%s* %s";
+			/*fmt = "\3\x82[TO]\x80%s%s%s* %s\n";
+			fmt2 = "\x82[TO]\x80%s%s%s* %s";*/
+			prefix = "\x82[TO]";
+			cstart = "\x82";
+			fmt = "\4%s<%s%s>%s\x80 %s\n";	// make this yellow, however.
+			fmt2 = "%s<%s%s>%s\x80 %s";
 			
 		}
 		else // To your team
@@ -843,6 +895,7 @@ static void HU_queueChatChar(char c)
 	{
 		char buf[2+256];
 		size_t ci = 2;
+		char *msg = &buf[2];
 		do {
 			c = w_chat[-2+ci++];
 			if (!c || (c >= ' ' && !(c & 0x80))) // copy printable characters and terminating '\0' only.
@@ -851,23 +904,72 @@ static void HU_queueChatChar(char c)
 		size_t i = 0;
 		for (;(i<HU_MAXMSGLEN);i++)
 			w_chat[i] = 0;	// reset this.
-
+		
+		c_input = 0;
+		
 		// last minute mute check
 		if (cv_mute.value && !(server || adminplayer == consoleplayer))
 		{
 			HU_AddChatText(va("%s>ERROR: The chat is muted. You can't say anything.", "\x85"));
 			return;
 		}
-
+		
+		INT32 target;
+		
+		if (strlen(msg) > 4 && strnicmp(msg, "/pm", 3) == 0)	// used /pm
+		{
+			// what we're gonna do now is check if the node exists
+			// with that logic, characters 4 and 5 are our numbers:
+			int spc = 1;	// used if nodenum[1] is a space.
+			char *nodenum = (char*) malloc(3);
+			strncpy(nodenum, msg+3, 5);
+			// check for undesirable characters in our "number"
+			if 	(((nodenum[0] < '0') || (nodenum[0] > '9')) || ((nodenum[1] < '0') || (nodenum[1] > '9')))
+			{	
+				// check if nodenum[1] is a space
+				if (nodenum[1] == ' ')
+					spc = 0;
+					// let it slide
+				else
+				{	
+					HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<node> \'.");
+					return;
+				}	
+			}
+			// I'm very bad at C, I swear I am, additional checks eww!
+			if (spc != 0)
+			{	
+				if (msg[5] != ' ')
+				{
+					HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<node> \'.");
+					return;
+				}
+			}
+		
+			target = atoi((const char*) nodenum);	// turn that into a number
+			//CONS_Printf("%d\n", target);
+		
+			// check for target player, if it doesn't exist then we can't send the message!
+			if (playeringame[target])	// player exists
+				target++;				// even though playernums are from 0 to 31, target is 1 to 32, so up that by 1 to have it work!
+			else
+			{
+				HU_AddChatText(va("\x82NOTICE: \x80Player %d does not exist.", target));	// same
+				return;
+			}
+			buf[0] = target;
+			// we need to get rid of the /pm<node>
+			const char *newmsg = msg+5+spc;
+			memcpy(msg, newmsg, 255);
+		}	
+		
 		if (ci > 3) // don't send target+flags+empty message.
 		{
 			if (teamtalk)
 				buf[0] = -1; // target
-			else
-				buf[0] = 0; // target
+			
 			buf[1] = 0; // flags
 			SendNetXCmd(XD_SAY, buf, 2 + strlen(&buf[2]) + 1);
-			c_input = 0;
 		}
 		return;
 	}
@@ -908,6 +1010,7 @@ boolean HU_Responder(event_t *ev)
 			chat_on = true;
 			w_chat[0] = 0;
 			teamtalk = false;
+			chat_scrollmedown = true;
 			return true;
 		}
 		if ((ev->data1 == gamecontrol[gc_teamkey][0] || ev->data1 == gamecontrol[gc_teamkey][1])
@@ -918,6 +1021,7 @@ boolean HU_Responder(event_t *ev)
 			chat_on = true;
 			w_chat[0] = 0;
 			teamtalk = true;
+			chat_scrollmedown = true;
 			return true;
 		}
 	}
@@ -997,9 +1101,9 @@ boolean HU_Responder(event_t *ev)
 		}	
 		if (c == KEY_ENTER)
 		{	
-			chat_scrolltime = 0;	// you hit enter, so you might wanna autoscroll to see what you just sent. :)
 			chat_on = false;
 			c_input = 0;			// reset input cursor
+			chat_scrollmedown = true; // you hit enter, so you might wanna autoscroll to see what you just sent. :)
 		}	
 		else if (c == KEY_ESCAPE)
 		{	
@@ -1009,14 +1113,14 @@ boolean HU_Responder(event_t *ev)
 		else if ((c == KEY_UPARROW || c == KEY_MOUSEWHEELUP) && chat_scroll > 0)	// CHAT SCROLLING YAYS!
 		{
 			chat_scroll--;
-			chat_scrolltime = TICRATE*3/2;
 			justscrolledup = true;
+			chat_scrolltime = 4;
 		}	
 		else if ((c == KEY_DOWNARROW || c == KEY_MOUSEWHEELDOWN) && chat_scroll < chat_maxscroll && chat_maxscroll > 0)
 		{	
 			chat_scroll++;
-			chat_scrolltime = TICRATE*3/2;
 			justscrolleddown = true;
+			chat_scrolltime = 4;
 		}
 		else if (c == KEY_LEFTARROW && c_input != 0)	// i said go back
 			c_input--;
@@ -1208,9 +1312,6 @@ static void HU_DrawDownArrow(INT32 x, INT32 y, INT32 options)
 // HU_DrawChatLog
 // TODO: fix dumb word wrapping issues
 
-static INT32 prevnummsg = 0; // used to determine when we auto scroll:
-static boolean scrollagain = 0;	// I'm bad at coding. 
-
 static void HU_drawChatLog(void)
 {
 	
@@ -1221,6 +1322,7 @@ static void HU_drawChatLog(void)
 	INT32 charwidth = (vid.width < 640) ? 8 : 4, charheight = (vid.width < 640) ? 8 : 6;
 	INT32 x = chatx+2, y = chaty+2-(chat_scroll*charheight), dx = 0, dy = 0;
 	size_t i = 0;
+	boolean atbottom = false;
 	
 	V_DrawFillConsoleMap(chatx, chaty, cv_chatwidth.value, cv_chatheight.value*charheight +2, 239|V_SNAPTOTOP|V_SNAPTORIGHT);	// INUT
 		
@@ -1270,21 +1372,21 @@ static void HU_drawChatLog(void)
 		dy += charheight;
 		dx = 0;
 	}
+	
+	if (((chat_scroll >= chat_maxscroll) || (chat_scrollmedown)) && !(justscrolleddown || justscrolledup || chat_scrolltime))	// was already at the bottom of the page before new maxscroll calculation and was NOT scrolling.
+	{
+		atbottom = true;	// we should scroll
+	}
+	chat_scrollmedown = false;
+	
 	// getmaxscroll through a lazy hack. We do all these loops, so let's not do more loops that are gonna lag the game more. :P
 	chat_maxscroll = (dy/charheight)-cv_chatheight.value;	// welcome to C, we don't know what min() and max() are.
 	if (chat_maxscroll < 0)
 		chat_maxscroll = 0;
 	
 	// if we're not bound by the time, autoscroll for next frame:
-	if ((chat_scrolltime == 0 && i != prevnummsg) || scrollagain)
-	{	
+	if (atbottom)
 		chat_scroll = chat_maxscroll;
-		prevnummsg = i;
-		if (!scrollagain)
-			scrollagain = 1;	// scroll again next frame, mostly for multi line msg handling in multiplayer
-		else
-			scrollagain = 0;
-	}	
 	
 	// draw arrows to indicate that we can (or not) scroll.
 	
@@ -1304,7 +1406,6 @@ static void HU_drawChatLog(void)
 //
 
 static INT16 typelines = 1;	// number of drawfill lines we need. it's some weird hack and might be one frame off but I'm lazy to make another loop.
-
 static void HU_DrawChat(void)
 {	
 	INT32 charwidth = (vid.width < 640) ? 8 : 4, charheight = (vid.width < 640) ? 8 : 6;
@@ -1366,7 +1467,75 @@ static void HU_DrawChat(void)
 			y += charheight;
 			typelines += 1;
 		}
-	}	
+	}
+
+	// handle /pm list.
+	if (strnicmp(w_chat, "/pm", 3) == 0 && vid.width >= 400)	// 320x200 unsupported kthxbai
+	{	
+		i = 0;
+		int count = 0;
+		INT32 p_dispy = chaty+2;
+		V_DrawFillConsoleMap(chatx-50, p_dispy-2, 48, 2, 239 | V_SNAPTOTOP | V_SNAPTORIGHT);	// top (don't mind me)
+		for(i=0; (i<MAXPLAYERS); i++)
+		{
+			
+			// filter: (code needs optimization pls help I'm bad with C)
+			if (w_chat[3])
+			{
+				
+				// right, that's half important: (w_chat[4] may be a space since /pm0 msg is perfectly acceptable!)
+				if ( ( ((w_chat[3] != 0) && ((w_chat[3] < '0') || (w_chat[3] > '9'))) || ((w_chat[4] != 0) && (((w_chat[4] < '0') || (w_chat[4] > '9'))))) && (w_chat[4] != ' '))
+					break;
+					
+				
+				char *nodenum = (char*) malloc(3);
+				strncpy(nodenum, w_chat+3, 4);
+				INT32 n = atoi((const char*) nodenum);	// turn that into a number
+				// special cases:
+				
+				if ((n == 0) && !(w_chat[4] == '0'))
+				{	
+					if (!(i<10))
+						continue;		
+				}
+				else if ((n == 1) && !(w_chat[3] == '0'))
+				{	
+					if (!((i == 1) || ((i >= 10) && (i <= 19))))
+						continue;
+				}
+				else if ((n == 2) && !(w_chat[3] == '0'))
+				{	
+					if (!((i == 2) || ((i >= 20) && (i <= 29))))
+						continue;
+				}
+				else if ((n == 3) && !(w_chat[3] == '0'))
+				{	
+					if (!((i == 3) || ((i >= 30) && (i <= 31))))
+						continue;
+				}
+				else	// general case.
+				{	
+					if (i != n)
+						continue;
+				}
+			}
+			
+			if ((playeringame[i]))
+			{	
+				char name[MAXPLAYERNAME+1];
+				strlcpy(name, player_names[i], 7);	// shorten name to 7 characters.
+				V_DrawFillConsoleMap(chatx-50, p_dispy+ (6*count), 48, 6, 239 | V_SNAPTOTOP | V_SNAPTORIGHT);	// fill it like the chat so the text doesn't become hard to read because of the hud.
+				V_DrawSmallString(chatx-48, p_dispy+ (6*count), V_SNAPTOTOP|V_SNAPTORIGHT|V_ALLOWLOWERCASE, va("\x82%d\x80 - %s", i, name));
+				count++;
+			}
+		}
+		if (count == 0)	// no results.
+		{
+			V_DrawFillConsoleMap(chatx-50, p_dispy+ (6*count), 48, 6, 239 | V_SNAPTOTOP | V_SNAPTORIGHT);	// fill it like the chat so the text doesn't become hard to read because of the hud.
+			V_DrawSmallString(chatx-48, p_dispy+ (6*count), V_SNAPTOTOP|V_SNAPTORIGHT|V_ALLOWLOWERCASE, "NO RESULT.");
+		}	
+	}
+	
 }
 
 // why the fuck would you use this...
@@ -1789,8 +1958,8 @@ void HU_drawPing(INT32 x, INT32 y, INT32 ping, boolean notext)
 {
 	UINT8 numbars = 1;		// how many ping bars do we draw?
 	UINT8 barcolor = 128;	// color we use for the bars (green, yellow or red)
-	INT8 i = 0;
-	INT8 yoffset = 6;
+	SINT8 i = 0;
+	SINT8 yoffset = 6;
 	if (ping < 128)
 	{	
 		numbars = 3;
