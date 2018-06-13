@@ -914,7 +914,7 @@ static void HU_queueChatChar(char c)
 			return;
 		}
 		
-		INT32 target;
+		INT32 target = 0;
 		
 		if (strlen(msg) > 4 && strnicmp(msg, "/pm", 3) == 0)	// used /pm
 		{
@@ -957,16 +957,16 @@ static void HU_queueChatChar(char c)
 				HU_AddChatText(va("\x82NOTICE: \x80Player %d does not exist.", target));	// same
 				return;
 			}
-			buf[0] = target;
 			// we need to get rid of the /pm<node>
 			const char *newmsg = msg+5+spc;
 			memcpy(msg, newmsg, 255);
 		}	
-		
 		if (ci > 3) // don't send target+flags+empty message.
 		{
 			if (teamtalk)
 				buf[0] = -1; // target
+			else
+				buf[0] = target;
 			
 			buf[1] = 0; // flags
 			SendNetXCmd(XD_SAY, buf, 2 + strlen(&buf[2]) + 1);
