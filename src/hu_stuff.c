@@ -920,6 +920,14 @@ static void HU_queueChatChar(char c)
 		{
 			// what we're gonna do now is check if the node exists
 			// with that logic, characters 4 and 5 are our numbers:
+			
+			// teamtalk can't send PMs, just don't send it, else everyone would be able to see it, and no one wants to see your sex RP sicko.
+			if (teamtalk)
+			{
+				HU_AddChatText(va("%sCannot send sayto in Say-Team.", "\x85"));
+				return;
+			}	
+			
 			int spc = 1;	// used if nodenum[1] is a space.
 			char *nodenum = (char*) malloc(3);
 			strncpy(nodenum, msg+3, 5);
@@ -945,7 +953,7 @@ static void HU_queueChatChar(char c)
 					return;
 				}
 			}
-		
+			
 			target = atoi((const char*) nodenum);	// turn that into a number
 			//CONS_Printf("%d\n", target);
 		
@@ -1470,7 +1478,7 @@ static void HU_DrawChat(void)
 	}
 
 	// handle /pm list.
-	if (strnicmp(w_chat, "/pm", 3) == 0 && vid.width >= 400)	// 320x200 unsupported kthxbai
+	if (strnicmp(w_chat, "/pm", 3) == 0 && vid.width >= 400 && !teamtalk)	// 320x200 unsupported kthxbai
 	{	
 		i = 0;
 		int count = 0;
