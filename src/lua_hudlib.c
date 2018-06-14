@@ -358,6 +358,41 @@ static int libd_draw(lua_State *L)
 	return 0;
 }
 
+static int libd_drawcropped(lua_State *L)
+{
+	/* to be used like this:
+		v.drawCroppedPatch(x, y, scale, patch, sx, sy, width, height, scale)
+	*/
+	INT32 x, y, scale, sx, sy, w, h, flags;
+	patch_t *patch;
+
+	HUDONLY
+	x = luaL_checkinteger(L, 1);
+	y = luaL_checkinteger(L, 2);
+	scale = luaL_checkinteger(L, 3);
+	patch = *((patch_t **)luaL_checkudata(L, 4, META_PATCH));
+	sx = luaL_checkinteger(L, 5);
+	sy = luaL_checkinteger(L, 6);
+	w = luaL_checkinteger(L, 7);
+	h = luaL_checkinteger(L, 8);
+	flags = luaL_optinteger(L, 9, 0);
+
+	flags &= ~V_PARAMMASK; // Don't let crashes happen.
+
+	V_DrawCroppedPatch(x, y, scale, flags, patch, sx, sy, w, h);
+	return 0;
+}
+
+static int libd_drawpfill(lua_State *L)
+{
+	patch_t *patch;
+
+	HUDONLY
+	patch = *((patch_t **)luaL_checkudata(L, 1, META_PATCH));
+	V_DrawPatchFill(patch);
+	return 0;
+}
+
 static int libd_drawScaled(lua_State *L)
 {
 	fixed_t x, y, scale;
@@ -424,6 +459,19 @@ static int libd_drawFill(lua_State *L)
 	return 0;
 }
 
+static int libd_drawFillConsole(lua_State *L)
+{
+	INT32 x = luaL_optinteger(L, 1, 0);
+	INT32 y = luaL_optinteger(L, 2, 0);
+	INT32 w = luaL_optinteger(L, 3, BASEVIDWIDTH);
+	INT32 h = luaL_optinteger(L, 4, BASEVIDHEIGHT);
+	INT32 c = luaL_optinteger(L, 5, 31);
+
+	HUDONLY
+	V_DrawFillConsoleMap(x, y, w, h, c);
+	return 0;
+}
+
 static int libd_drawString(lua_State *L)
 {
 	fixed_t x = luaL_checkinteger(L, 1);
@@ -468,6 +516,20 @@ static int libd_drawString(lua_State *L)
 	return 0;
 }
 
+static int libd_drawLevelString(lua_State *L)
+{
+	fixed_t x = luaL_checkinteger(L, 1);
+	fixed_t y = luaL_checkinteger(L, 2);
+	const char *str = luaL_checkstring(L, 3);
+	INT32 flags = luaL_optinteger(L, 4, 0);
+
+	flags &= ~V_PARAMMASK; // Don't let crashes happen.
+
+	HUDONLY
+	V_DrawLevelTitle(x, y, flags, str);
+	return 0;
+}
+
 static int libd_stringWidth(lua_State *L)
 {
 	const char *str = luaL_checkstring(L, 1);
@@ -487,6 +549,14 @@ static int libd_stringWidth(lua_State *L)
 		lua_pushinteger(L, V_ThinStringWidth(str, flags));
 		break;
 	}
+	return 1;
+}
+
+static int libd_levelstringWidth(lua_State *L)
+{
+	const char *str = luaL_checkstring(L, 1);
+	HUDONLY
+	V_LevelNameWidth(str);
 	return 1;
 }
 
@@ -565,11 +635,16 @@ static luaL_Reg lib_draw[] = {
 	{"cachePatch", libd_cachePatch},
 	{"draw", libd_draw},
 	{"drawScaled", libd_drawScaled},
+	{"drawCroppedPatch", libd_drawcropped},
+	{"drawPatchFill", libd_drawpfill},
 	{"drawNum", libd_drawNum},
 	{"drawPaddedNum", libd_drawPaddedNum},
 	{"drawFill", libd_drawFill},
+	{"drawFillConsoleMap", libd_drawFillConsole},
 	{"drawString", libd_drawString},
 	{"stringWidth", libd_stringWidth},
+	{"drawLevelTitle", libd_drawLevelString},
+	{"levelstringWidth", libd_levelstringWidth},
 	{"getColormap", libd_getColormap},
 	{"width", libd_width},
 	{"height", libd_height},
@@ -599,6 +674,25 @@ static int lib_huddisable(lua_State *L)
 	return 0;
 }
 
+boolean LUA_HudEnabled(enum hud option)
+{
+	if (!gL || hud_enabled[option/8] & (1<<(option%8)))
+		return true;
+	return false;
+}
+
+static int LUA_IsHUDEnabled(lua_State *L)
+{
+	lua_settop(L, 2);
+	enum hud option = luaL_checkoption(L, 1, NULL, hud_disable_options);
+	if (!gL || hud_enabled[option/8] & (1<<(option%8)))
+		lua_pushboolean(L, true);
+	else
+		lua_pushboolean(L, false);
+	
+	return 1;
+}
+
 // add a HUD element for rendering
 static int lib_hudadd(lua_State *L)
 {
@@ -623,6 +717,7 @@ static int lib_hudadd(lua_State *L)
 static luaL_Reg lib_hud[] = {
 	{"enable", lib_hudenable},
 	{"disable", lib_huddisable},
+	{"enabled", LUA_IsHUDEnabled},	// excuse me but why was this not implemented???????????
 	{"add", lib_hudadd},
 	{NULL, NULL}
 };
@@ -688,13 +783,6 @@ int LUA_HudLib(lua_State *L)
 
 	luaL_register(L, "hud", lib_hud);
 	return 0;
-}
-
-boolean LUA_HudEnabled(enum hud option)
-{
-	if (!gL || hud_enabled[option/8] & (1<<(option%8)))
-		return true;
-	return false;
 }
 
 // Hook for HUD rendering
