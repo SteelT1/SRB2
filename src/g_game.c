@@ -1266,6 +1266,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics)
 	if ((cmd->forwardmove || cmd->sidemove || cmd->buttons)
 		&& displayplayer != consoleplayer)
 		displayplayer = consoleplayer;
+	
+	if (playeringame[consoleplayer])	// do not run on title screen.
+		LUAh_PlayerCmd(player, cmd);	// run this hook after we've done everything. Why? Because that way we can check what buttons we're pressing and what we're doing in that frame rather than using last frame's info!
+	
 }
 
 // like the g_buildticcmd 1 but using mouse2, gamcontrolbis, ...
@@ -1561,6 +1565,10 @@ void G_BuildTiccmd2(ticcmd_t *cmd, INT32 realtics)
 		localangle2 += (cmd->angleturn<<16);
 		cmd->angleturn = (INT16)(localangle2 >> 16);
 	}
+	
+	if (playeringame[consoleplayer])	// do not run on title screen.
+		LUAh_PlayerCmd(player, cmd);
+	
 }
 
 // User has designated that they want
