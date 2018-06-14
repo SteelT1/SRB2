@@ -394,26 +394,42 @@ static inline void InitLumLut(void)
 #define CALCFOGDENSITY(x) ((float)((5220.0f*(1.0f/((x)/41.0f+1.0f)))-(5220.0f*(1.0f/(255.0f/41.0f+1.0f))))) // Approximate fog calculation based off of software walls
 #define CALCFOGDENSITYFLOOR(x) ((float)((40227.0f*(1.0f/((x)/11.0f+1.0f)))-(40227.0f*(1.0f/(255.0f/11.0f+1.0f))))) // Approximate fog calculation based off of software floors
 #define CALCLIGHT(x,y) ((float)(x)*((y)/255.0f))
+
+// colormaps are wonky, we need GL 2.0+ and shaders!!!!
+// for now we'll use the fade
+
+// best settings for colormaps here definitely are gr_fog and gr_softwarefog together. discard other shit.
+
 UINT32 HWR_Lighting(INT32 light, UINT32 color, UINT32 fadecolor, boolean fogblockpoly, boolean plane)
 {
 	RGBA_t realcolor, fogcolor, surfcolor;
-	INT32 alpha, fogalpha;
+	INT32 alpha, fogalpha, newalpha, clightfac;
 
 	(void)fogblockpoly;
-
+	
+	// You see the problem is that darker light isn't actually as dark as it SHOULD be.
+	light = 255 - ((255 - light)*100/90);
+	clightfac = 255- (255-light)*2;
+	if (clightfac < 0)
+		clightfac = 0;
+	
 	// Don't go out of bounds
 	if (light < 0)
 		light = 0;
 	else if (light > 255)
 		light = 255;
-
+		
 	realcolor.rgba = color;
 	fogcolor.rgba = fadecolor;
-
-	alpha = (realcolor.s.alpha*255)/25;
+	
+	newalpha = realcolor.s.alpha*10/4;
+	if (newalpha > 25)	// alpha doesn't get any bigger than that.
+		newalpha = 25;
+	
+	alpha = (newalpha*255)/25;
 	fogalpha = (fogcolor.s.alpha*255)/25;
 
-	if (cv_grfog.value && cv_grsoftwarefog.value) // Only do this when fog is on, software fog mode is on, and the poly is not from a fog block
+	if (1) // Only do this when fog is on, software fog mode is on, and the poly is not from a fog block
 	{
 		// Modulate the colors by alpha.
 		realcolor.s.red = (UINT8)(CALCLIGHT(alpha,realcolor.s.red));
@@ -455,25 +471,27 @@ UINT32 HWR_Lighting(INT32 light, UINT32 color, UINT32 fadecolor, boolean fogbloc
 		surfcolor.s.alpha = 0xFF;
 	}
 
-	if(cv_grfog.value)
+	if(1)
 	{
-		if (cv_grsoftwarefog.value)
+		if (1)
 		{
-			fogcolor.s.red = (UINT8)((CALCLIGHT(fogcolor.s.red,(255-light)))+(CALCLIGHT(realcolor.s.red,light)));
-			fogcolor.s.green = (UINT8)((CALCLIGHT(fogcolor.s.green,(255-light)))+(CALCLIGHT(realcolor.s.green,light)));
-			fogcolor.s.blue = (UINT8)((CALCLIGHT(fogcolor.s.blue,(255-light)))+(CALCLIGHT(realcolor.s.blue,light)));
+			fogcolor.s.red = (UINT8)((CALCLIGHT(fogcolor.s.red,(255-light)))+(CALCLIGHT(realcolor.s.red,clightfac)));
+			fogcolor.s.green = (UINT8)((CALCLIGHT(fogcolor.s.green,(255-light)))+(CALCLIGHT(realcolor.s.green,clightfac)));
+			fogcolor.s.blue = (UINT8)((CALCLIGHT(fogcolor.s.blue,(255-light)))+(CALCLIGHT(realcolor.s.blue,clightfac)));
 
 			// Set the fog options.
-			if (cv_grsoftwarefog.value == 1 && plane) // With floors, software draws them way darker for their distance
+			if (0) // With floors, software draws them way darker for their distance
 				HWD.pfnSetSpecialState(HWD_SET_FOG_DENSITY, (INT32)(CALCFOGDENSITYFLOOR(light)));
 			else // everything else is drawn like walls
+			{
 				HWD.pfnSetSpecialState(HWD_SET_FOG_DENSITY, (INT32)(CALCFOGDENSITY(light)));
+			}	
 		}
 		else
 		{
-			fogcolor.s.red = (UINT8)((CALCLIGHT(fogcolor.s.red,(255-light)))+(CALCLIGHT(realcolor.s.red,light)));
-			fogcolor.s.green = (UINT8)((CALCLIGHT(fogcolor.s.green,(255-light)))+(CALCLIGHT(realcolor.s.green,light)));
-			fogcolor.s.blue = (UINT8)((CALCLIGHT(fogcolor.s.blue,(255-light)))+(CALCLIGHT(realcolor.s.blue,light)));
+			fogcolor.s.red = (UINT8)((CALCLIGHT(fogcolor.s.red,(255-light)))+(CALCLIGHT(realcolor.s.red,clightfac)));
+			fogcolor.s.green = (UINT8)((CALCLIGHT(fogcolor.s.green,(255-light)))+(CALCLIGHT(realcolor.s.green,clightfac)));
+			fogcolor.s.blue = (UINT8)((CALCLIGHT(fogcolor.s.blue,(255-light)))+(CALCLIGHT(realcolor.s.blue,clightfac)));
 
 			fogalpha = (UINT8)((CALCLIGHT(fogalpha,(255-light)))+(CALCLIGHT(alpha,light)));
 
@@ -488,12 +506,73 @@ UINT32 HWR_Lighting(INT32 light, UINT32 color, UINT32 fadecolor, boolean fogbloc
 	return surfcolor.rgba;
 }
 
+// simplified HWR_Lighting: best result for regular lighting is gr_fog on and gr_softwarefog off
+UINT32 HWR_NoColormapLighting(INT32 light, UINT32 color, UINT32 fadecolor, boolean fogblockpoly, boolean plane)
+{
+	RGBA_t realcolor, fogcolor, surfcolor;
+	INT32 alpha, fogalpha;
+
+	(void)fogblockpoly;
+	
+	// You see the problem is that darker light isn't actually as dark as it SHOULD be.
+	light = 255 - ((255 - light)*100/96);
+	
+	// Don't go out of bounds
+	if (light < 0)
+		light = 0;
+	else if (light > 255)
+		light = 255;
+
+	realcolor.rgba = color;
+	fogcolor.rgba = fadecolor;
+
+	alpha = (realcolor.s.alpha*255)/25;
+	fogalpha = (fogcolor.s.alpha*255)/25;
+
+	// Modulate the colors by alpha.
+	realcolor.s.red = (UINT8)(CALCLIGHT(alpha,realcolor.s.red));
+	realcolor.s.green = (UINT8)(CALCLIGHT(alpha,realcolor.s.green));
+	realcolor.s.blue = (UINT8)(CALCLIGHT(alpha,realcolor.s.blue));
+
+	// Set the surface colors and further modulate the colors by light.
+	surfcolor.s.red = (UINT8)(CALCLIGHT((0xFF-alpha),light)+CALCLIGHT(realcolor.s.red,light));
+	surfcolor.s.green = (UINT8)(CALCLIGHT((0xFF-alpha),light)+CALCLIGHT(realcolor.s.green,light));
+	surfcolor.s.blue = (UINT8)(CALCLIGHT((0xFF-alpha),light)+CALCLIGHT(realcolor.s.blue,light));
+
+	// Modulate the colors by alpha.
+	fogcolor.s.red = (UINT8)(CALCLIGHT(fogalpha,fogcolor.s.red));
+	fogcolor.s.green = (UINT8)(CALCLIGHT(fogalpha,fogcolor.s.green));
+	fogcolor.s.blue = (UINT8)(CALCLIGHT(fogalpha,fogcolor.s.blue));
+
+	// Set the surface colors and further modulate the colors by light.
+	surfcolor.s.red = surfcolor.s.red+((UINT8)(CALCLIGHT((0xFF-fogalpha),(255-light))+CALCLIGHT(fogcolor.s.red,(255-light))));
+	surfcolor.s.green = surfcolor.s.green+((UINT8)(CALCLIGHT((0xFF-fogalpha),(255-light))+CALCLIGHT(fogcolor.s.green,(255-light))));
+	surfcolor.s.blue = surfcolor.s.blue+((UINT8)(CALCLIGHT((0xFF-fogalpha),(255-light))+CALCLIGHT(fogcolor.s.blue,(255-light))));
+	surfcolor.s.alpha = 0xFF;
+
+	fogcolor.s.red = (UINT8)((CALCLIGHT(fogcolor.s.red,(255-light)))+(CALCLIGHT(realcolor.s.red,light)));
+	fogcolor.s.green = (UINT8)((CALCLIGHT(fogcolor.s.green,(255-light)))+(CALCLIGHT(realcolor.s.green,light)));
+	fogcolor.s.blue = (UINT8)((CALCLIGHT(fogcolor.s.blue,(255-light)))+(CALCLIGHT(realcolor.s.blue,light)));
+
+	fogalpha = (UINT8)((CALCLIGHT(fogalpha,(255-light)))+(CALCLIGHT(alpha,light)));
+
+	// Set the fog options.
+	light = (UINT8)(CALCLIGHT(light,(255-fogalpha)));
+	HWD.pfnSetSpecialState(HWD_SET_FOG_DENSITY, (INT32)(cv_grfogdensity.value-(cv_grfogdensity.value*(float)light/255.0f)));
+	HWD.pfnSetSpecialState(HWD_SET_FOG_COLOR, (fogcolor.s.red*0x10000)+(fogcolor.s.green*0x100)+fogcolor.s.blue);
+	HWD.pfnSetSpecialState(HWD_SET_FOG_MODE, 1);
+
+	return surfcolor.rgba;
+}
 
 static UINT8 HWR_FogBlockAlpha(INT32 light, UINT32 color) // Let's see if this can work
 {
 	RGBA_t realcolor, surfcolor;
 	INT32 alpha;
-
+	
+	// You see the problem is that darker light isn't actually as dark as it SHOULD be.
+	light = light - ((255 - light)*24/22);
+	
 	// Don't go out of bounds
 	if (light < 0)
 		light = 0;
@@ -749,10 +828,10 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, boolean is
 		if (psector->extra_colormap)
 			Surf.FlatColor.rgba = HWR_Lighting(lightlevel,psector->extra_colormap->rgba,psector->extra_colormap->fadergba, false, true);
 		else
-			Surf.FlatColor.rgba = HWR_Lighting(lightlevel,NORMALFOG,FADEFOG, false, true);
+			Surf.FlatColor.rgba = HWR_NoColormapLighting(lightlevel,NORMALFOG,FADEFOG, false, true);
 	}
 	else
-		Surf.FlatColor.rgba = HWR_Lighting(lightlevel,NORMALFOG,FADEFOG, false, true);
+		Surf.FlatColor.rgba = HWR_NoColormapLighting(lightlevel,NORMALFOG,FADEFOG, false, true);
 
 #endif // NOPE
 
@@ -766,9 +845,9 @@ static void HWR_RenderPlane(sector_t *sector, extrasubsector_t *xsub, boolean is
 	else
 	{
 		if (fogplane)
-			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, NORMALFOG, FADEFOG, true, false);
+			Surf.FlatColor.rgba = HWR_NoColormapLighting(lightlevel, NORMALFOG, FADEFOG, true, false);
 		else
-			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, NORMALFOG, FADEFOG, false, true);
+			Surf.FlatColor.rgba = HWR_NoColormapLighting(lightlevel, NORMALFOG, FADEFOG, false, true);
 	}
 
 	if (PolyFlags & (PF_Translucent|PF_Fog))
@@ -1006,7 +1085,7 @@ static void HWR_ProjectWall(wallVert3D   * wallVerts,
 	}
 	else
 	{
-		pSurf->FlatColor.rgba = HWR_Lighting(lightlevel, NORMALFOG, FADEFOG, false, false);
+		pSurf->FlatColor.rgba = HWR_NoColormapLighting(lightlevel, NORMALFOG, FADEFOG, false, false);
 	}
 
 	HWD.pfnDrawPolygon(pSurf, trVerts, 4, blendmode|PF_Modulated|PF_Occlude|PF_Clip);
@@ -2901,8 +2980,8 @@ static boolean HWR_CheckBBox(fixed_t *bspcoord)
 	py2 = bspcoord[checkcoord[boxpos][3]];
 
 	// check clip list for an open space
-	angle1 = R_PointToAngle2(dup_viewx>>1, dup_viewy>>1, px1>>1, py1>>1) - dup_viewangle;
-	angle2 = R_PointToAngle2(dup_viewx>>1, dup_viewy>>1, px2>>1, py2>>1) - dup_viewangle;
+	angle1 = R_PointToAngle(px1, py1) - dup_viewangle;
+	angle2 = R_PointToAngle(px2, py2) - dup_viewangle;
 
 	span = angle1 - angle2;
 
@@ -3147,7 +3226,7 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 	if (planecolormap)
 		Surf.FlatColor.rgba = HWR_Lighting(lightlevel, planecolormap->rgba, planecolormap->fadergba, false, true);
 	else
-		Surf.FlatColor.rgba = HWR_Lighting(lightlevel, NORMALFOG, FADEFOG, false, true);
+		Surf.FlatColor.rgba = HWR_NoColormapLighting(lightlevel, NORMALFOG, FADEFOG, false, true);
 
 	if (blendmode & PF_Translucent)
 	{
@@ -4227,10 +4306,10 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 	colormap = list[sector->numlights - 1].extra_colormap;
 	i = 0;
 	temp = FLOAT_TO_FIXED(realtop);
-
+	
 	if (spr->mobj->frame & FF_FULLBRIGHT)
 		lightlevel = 255;
-
+	
 #ifdef ESLOPE
 	for (i = 1; i < sector->numlights; i++)
 	{
@@ -4240,6 +4319,7 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 		{
 			if (!(spr->mobj->frame & FF_FULLBRIGHT))
 				lightlevel = *list[i-1].lightlevel;
+
 			colormap = list[i-1].extra_colormap;
 			break;
 		}
@@ -4335,7 +4415,7 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 		if (colormap)
 			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, colormap->rgba, colormap->fadergba, false, false);
 		else
-			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, NORMALFOG, FADEFOG, false, false);
+			Surf.FlatColor.rgba = HWR_NoColormapLighting(lightlevel, NORMALFOG, FADEFOG, false, false);
 
 		Surf.FlatColor.s.alpha = alpha;
 
@@ -4377,12 +4457,13 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 	if (colormap)
 		Surf.FlatColor.rgba = HWR_Lighting(lightlevel, colormap->rgba, colormap->fadergba, false, false);
 	else
-		Surf.FlatColor.rgba = HWR_Lighting(lightlevel, NORMALFOG, FADEFOG, false, false);
+		Surf.FlatColor.rgba = HWR_NoColormapLighting(lightlevel, NORMALFOG, FADEFOG, false, false);
 
 	Surf.FlatColor.s.alpha = alpha;
 
 	HWD.pfnDrawPolygon(&Surf, wallVerts, 4, blend|PF_Modulated|PF_Clip);
 }
+
 
 // -----------------+
 // HWR_DrawSprite   : Draw flat sprites
@@ -4504,7 +4585,7 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 		if (colormap)
 			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, colormap->rgba, colormap->fadergba, false, false);
 		else
-			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, NORMALFOG, FADEFOG, false, false);
+			Surf.FlatColor.rgba = HWR_NoColormapLighting(lightlevel, NORMALFOG, FADEFOG, false, false);
 	}
 
 	{
@@ -4610,7 +4691,7 @@ static inline void HWR_DrawPrecipitationSprite(gr_vissprite_t *spr)
 		if (colormap)
 			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, colormap->rgba, colormap->fadergba, false, false);
 		else
-			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, NORMALFOG, FADEFOG, false, false);
+			Surf.FlatColor.rgba = HWR_NoColormapLighting(lightlevel, NORMALFOG, FADEFOG, false, false);
 	}
 
 	if (spr->mobj->flags2 & MF2_SHADOW)
@@ -6373,9 +6454,9 @@ static void HWR_RenderWall(wallVert3D   *wallVerts, FSurfaceInfo *pSurf, FBITFIE
 	else
 	{
 		if (fogwall)
-			pSurf->FlatColor.rgba = HWR_Lighting(lightlevel, NORMALFOG, FADEFOG, true, false);
+			pSurf->FlatColor.rgba = HWR_NoColormapLighting(lightlevel, NORMALFOG, FADEFOG, true, false);
 		else
-			pSurf->FlatColor.rgba = HWR_Lighting(lightlevel, NORMALFOG, FADEFOG, false, false);
+			pSurf->FlatColor.rgba = HWR_NoColormapLighting(lightlevel, NORMALFOG, FADEFOG, false, false);
 	}
 
 	pSurf->FlatColor.s.alpha = alpha; // put the alpha back after lighting
