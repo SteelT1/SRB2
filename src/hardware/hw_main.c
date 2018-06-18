@@ -4178,6 +4178,8 @@ static void HWR_DrawSpriteShadow(gr_vissprite_t *spr, GLPatch_t *gpatch, float t
 	}
 }
 
+static double WHAT_THE_FUCK = 0;
+
 static void HWR_SplitSprite(gr_vissprite_t *spr)
 {
 	float this_scale = 1.0f;
@@ -4230,11 +4232,15 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 		////////////////////
 		HWR_DrawSpriteShadow(spr, gpatch, this_scale);
 	}
-
-	wallVerts[0].x = wallVerts[3].x = spr->x1;
-	wallVerts[2].x = wallVerts[1].x = spr->x2;
-	wallVerts[0].z = wallVerts[3].z = spr->z1;
-	wallVerts[1].z = wallVerts[2].z = spr->z2;
+	
+	angle_t ang = R_PointToAngle(spr->mobj->x, spr->mobj->y);
+	
+	wallVerts[0].x = wallVerts[3].x = spr->x1 - WHAT_THE_FUCK*FIXED_TO_FLOAT(FINECOSINE(ang>>ANGLETOFINESHIFT));
+	wallVerts[2].x = wallVerts[1].x = spr->x2 - WHAT_THE_FUCK*FIXED_TO_FLOAT(FINECOSINE(ang>>ANGLETOFINESHIFT));
+	wallVerts[0].z = wallVerts[3].z = spr->z1 - WHAT_THE_FUCK*FIXED_TO_FLOAT(FINESINE(ang>>ANGLETOFINESHIFT));
+	wallVerts[1].z = wallVerts[2].z = spr->z2 - WHAT_THE_FUCK*FIXED_TO_FLOAT(FINESINE(ang>>ANGLETOFINESHIFT));
+	
+	WHAT_THE_FUCK += 0.005;
 
 	wallVerts[2].y = wallVerts[3].y = spr->ty;
 	if (spr->mobj && this_scale != 1.0f)
@@ -4470,6 +4476,7 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 //                  : (monsters, bonuses, weapons, lights, ...)
 // Returns          :
 // -----------------+
+
 static void HWR_DrawSprite(gr_vissprite_t *spr)
 {
 	float this_scale = 1.0f;
@@ -4514,20 +4521,28 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 	//  | /|
 	//  |/ |
 	//  0--1
+	
+	// get angle from cam:
+	angle_t ang = R_PointToAngle(spr->mobj->x, spr->mobj->y); // uses viewx,viewy
 
 	// these were already scaled in HWR_ProjectSprite
-	wallVerts[0].x = wallVerts[3].x = spr->x1;
-	wallVerts[2].x = wallVerts[1].x = spr->x2;
+	
+	 //FIXED_TO_FLOAT(FINESINE((viewangle + ANGLE_90)>>ANGLETOFINESHIFT));
+	
+	wallVerts[0].x = wallVerts[3].x = spr->x1 - WHAT_THE_FUCK*FIXED_TO_FLOAT(FINECOSINE(ang>>ANGLETOFINESHIFT));
+	wallVerts[2].x = wallVerts[1].x = spr->x2 - WHAT_THE_FUCK*FIXED_TO_FLOAT(FINECOSINE(ang>>ANGLETOFINESHIFT));
 	wallVerts[2].y = wallVerts[3].y = spr->ty;
 	if (spr->mobj && this_scale != 1.0f)
 		wallVerts[0].y = wallVerts[1].y = spr->ty - gpatch->height * this_scale;
 	else
 		wallVerts[0].y = wallVerts[1].y = spr->ty - gpatch->height;
-
+	
 	// make a wall polygon (with 2 triangles), using the floor/ceiling heights,
 	// and the 2d map coords of start/end vertices
-	wallVerts[0].z = wallVerts[3].z = spr->z1;
-	wallVerts[1].z = wallVerts[2].z = spr->z2;
+	wallVerts[0].z = wallVerts[3].z = spr->z1 - WHAT_THE_FUCK*FIXED_TO_FLOAT(FINESINE(ang>>ANGLETOFINESHIFT));
+	wallVerts[1].z = wallVerts[2].z = spr->z2 - WHAT_THE_FUCK*FIXED_TO_FLOAT(FINESINE(ang>>ANGLETOFINESHIFT));
+	
+	WHAT_THE_FUCK += 0.005;
 
 	if (spr->flip)
 	{
@@ -5174,6 +5189,7 @@ static void HWR_DrawSprites(void)
 				}
 		}
 	}
+	WHAT_THE_FUCK = 0;
 }
 #endif
 
