@@ -43,6 +43,7 @@ enum hook {
 	hook_PlayerMsg,
 	hook_HurtMsg,
 	hook_PlayerSpawn,
+	hook_PlayerCmd,
 
 	hook_MAX // last hook
 };
@@ -74,8 +75,9 @@ boolean LUAh_MobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source); // Ho
 boolean LUAh_BotTiccmd(player_t *bot, ticcmd_t *cmd); // Hook for B_BuildTiccmd
 boolean LUAh_BotAI(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd); // Hook for B_BuildTailsTiccmd by skin name
 boolean LUAh_LinedefExecute(line_t *line, mobj_t *mo, sector_t *sector); // Hook for linedef executors
-boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg); // Hook for chat messages
+boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg, int mute); // Hook for chat messages
 boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source); // Hook for hurt messages
 #define LUAh_PlayerSpawn(player) LUAh_PlayerHook(player, hook_PlayerSpawn) // Hook for G_SpawnPlayer
+boolean LUAh_PlayerCmd(player_t *player, ticcmd_t *cmd); // Hook for B_BuildTiccmd
 
 #endif

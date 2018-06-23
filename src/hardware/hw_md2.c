@@ -1245,7 +1245,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 		if (colormap)
 			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, colormap->rgba, colormap->fadergba, false, false);
 		else
-			Surf.FlatColor.rgba = HWR_Lighting(lightlevel, NORMALFOG, FADEFOG, false, false);
+			Surf.FlatColor.rgba = HWR_NoColormapLighting(lightlevel, NORMALFOG, FADEFOG, false, false);
 	}
 
 	// Look at HWR_ProjectSprite for more

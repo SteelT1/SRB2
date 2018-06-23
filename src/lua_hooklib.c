@@ -54,6 +54,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"PlayerMsg",
 	"HurtMsg",
 	"PlayerSpawn",
+	"PlayerCmd",
 	NULL
 };
 
@@ -858,6 +859,44 @@ boolean LUAh_BotTiccmd(player_t *bot, ticcmd_t *cmd)
 	return hooked;
 }
 
+// Hook for G_BuildTiccmd
+boolean LUAh_PlayerCmd(player_t *player, ticcmd_t *cmd)
+{
+	hook_p hookp;
+	boolean hooked = false;
+	if (!gL || !(hooksAvailable[hook_PlayerCmd/8] & (1<<(hook_PlayerCmd%8))))
+		return false;
+
+	lua_settop(gL, 0);
+
+	for (hookp = roothook; hookp; hookp = hookp->next)
+		if (hookp->type == hook_PlayerCmd)
+		{
+			if (lua_gettop(gL) == 0)
+			{
+				LUA_PushUserdata(gL, player, META_PLAYER);
+				LUA_PushUserdata(gL, cmd, META_TICCMD);
+			}
+			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+			lua_gettable(gL, LUA_REGISTRYINDEX);
+			lua_pushvalue(gL, -3);
+			lua_pushvalue(gL, -3);
+			if (lua_pcall(gL, 2, 1, 0)) {
+				if (!hookp->error || cv_debug & DBG_LUA)
+					CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+				lua_pop(gL, 1);
+				hookp->error = true;
+				continue;
+			}
+			if (lua_toboolean(gL, -1))
+				hooked = true;
+			lua_pop(gL, 1);
+		}
+
+	lua_settop(gL, 0);
+	return hooked;
+}
+
 // Hook for B_BuildTailsTiccmd by skin name
 boolean LUAh_BotAI(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 {
@@ -952,7 +991,9 @@ boolean LUAh_LinedefExecute(line_t *line, mobj_t *mo, sector_t *sector)
 }
 
 // Hook for player chat
-boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg)
+// Added the "mute" field. It's set to true if the message was supposed to be eaten by spam protection. 
+// But for netgame consistency purposes, this hook is ran first reguardless, so this boolean allows for modders to adapt if they so desire.
+boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg, int mute)
 {
 	hook_p hookp;
 	boolean hooked = false;
@@ -981,14 +1022,19 @@ boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg)
 					LUA_PushUserdata(gL, &players[target-1], META_PLAYER); // target
 				}
 				lua_pushstring(gL, msg); // msg
+				if (mute)
+					lua_pushboolean(gL, true); // the message was supposed to be eaten by spamprotecc.
+				else
+					lua_pushboolean(gL, false);	
 			}
 			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
 			lua_gettable(gL, LUA_REGISTRYINDEX);
-			lua_pushvalue(gL, -5);
-			lua_pushvalue(gL, -5);
-			lua_pushvalue(gL, -5);
-			lua_pushvalue(gL, -5);
-			if (lua_pcall(gL, 4, 1, 0)) {
+			lua_pushvalue(gL, -6);
+			lua_pushvalue(gL, -6);
+			lua_pushvalue(gL, -6);
+			lua_pushvalue(gL, -6);
+			lua_pushvalue(gL, -6);
+			if (lua_pcall(gL, 5, 1, 0)) {
 				if (!hookp->error || cv_debug & DBG_LUA)
 					CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 				lua_pop(gL, 1);
