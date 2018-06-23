@@ -48,6 +48,9 @@ void D_ProcessEvents(void);
 
 const char *D_Home(void);
 
+// Used by setpalette command
+char setpal[9];
+
 //
 // BASE LEVEL
 //

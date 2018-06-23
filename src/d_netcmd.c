@@ -129,6 +129,7 @@ static void Command_Playintro_f(void);
 
 static void Command_Displayplayer_f(void);
 static void Command_Tunes_f(void);
+static void Command_Setpal_f(void);
 static void Command_RestartAudio_f(void);
 
 static void Command_ExitLevel_f(void);
@@ -670,6 +671,7 @@ void D_RegisterClientCommands(void)
 	COM_AddCommand("displayplayer", Command_Displayplayer_f);
 	COM_AddCommand("tunes", Command_Tunes_f);
 	COM_AddCommand("restartaudio", Command_RestartAudio_f);
+	COM_AddCommand("setpalette", Command_Setpal_f);
 	CV_RegisterVar(&cv_resetmusic);
 
 	// FIXME: not to be here.. but needs be done for config loading
@@ -3873,6 +3875,22 @@ static void Command_Displayplayer_f(void)
 	CONS_Printf(M_GetText("Displayplayer is %d\n"), displayplayer);
 }
 
+static void Command_Setpal_f(void)
+{
+
+	// If the server uses login, it will effectively just remove admin privileges
+	// from whoever has them. This is good.
+	if (COM_Argc() != 2)
+	{
+		CONS_Printf(M_GetText("setpalette <palette>: Sets current palette\n"));
+		return;
+	}
+
+	strcpy(setpal, COM_Argv(1));
+	V_SetPaletteLump(setpal);
+}
+
+
 static void Command_Tunes_f(void)
 {
 	const char *tunearg;
@@ -3951,7 +3969,7 @@ static void Command_RestartAudio_f(void)
 	I_ShutdownSound();
 	I_StartupSound();
 	I_InitMusic();
-	
+
 // These must be called or no sound and music until manually set.
 
 	I_SetSfxVolume(cv_soundvolume.value);
@@ -3959,7 +3977,7 @@ static void Command_RestartAudio_f(void)
 	I_SetMIDIMusicVolume(cv_midimusicvolume.value);
 	if (Playing()) // Gotta make sure the player is in a level
 		P_RestoreMusic(&players[consoleplayer]);
-	
+
 }
 
 /** Quits a game and returns to the title screen.

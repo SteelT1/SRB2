@@ -2504,7 +2504,7 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// Reset the palette
 	if (rendermode != render_none)
-		V_SetPaletteLump("PLAYPAL");
+		V_SetPaletteLump(setpal);
 
 	// Initialize sector node list.
 	P_Initsecnode();
