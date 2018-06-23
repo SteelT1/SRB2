@@ -30,6 +30,7 @@
 #include "r_sky.h"
 #include "p_polyobj.h"
 #include "lua_script.h"
+#include "i_video.h"
 #ifdef ESLOPE
 #include "p_slopes.h"
 #endif
@@ -3356,7 +3357,6 @@ boolean P_LoadGame(INT16 mapoverride)
 	// Only do this after confirming savegame is ok
 	G_DeferedInitNew(false, G_BuildMapName(gamemap), savedata.skin, false, true);
 	COM_BufAddText("dummyconsvar 1\n"); // G_DeferedInitNew doesn't do this
-
 	return true;
 }
 

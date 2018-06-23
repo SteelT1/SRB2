@@ -835,6 +835,7 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 		return 0;
 
 	lumpsize = wadfiles[wad]->lumpinfo[lump].size;
+
 	// empty resource (usually markers like S_START, F_END ..)
 	if (!lumpsize || lumpsize<offset)
 		return 0;
@@ -842,6 +843,7 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 	// zero size means read all the lump
 	if (!size || size+offset > lumpsize)
 		size = lumpsize - offset;
+	I_BeginRead(size);
 
 	if (wadfiles[wad]->lumpinfo[lump].compressed)
 	{
@@ -862,19 +864,19 @@ size_t W_ReadLumpHeader(lumpnum_t lumpnum, void *dest, size_t size, size_t offse
 }
 
 /** Reads a lump into memory.
-  *
-  * \param lump Lump number to read from.
+    * \param lump Lump number to read from.*
+
   * \param dest Buffer in memory to serve as destination. Size must be >=
   *             W_LumpLength().
   * \sa W_ReadLumpHeader
   */
 void W_ReadLump(lumpnum_t lumpnum, void *dest)
-{
+{	
 	W_ReadLumpHeaderPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum),dest,0,0);
 }
 
 void W_ReadLumpPwad(UINT16 wad, UINT16 lump, void *dest)
-{
+{	
 	W_ReadLumpHeaderPwad(wad, lump, dest, 0, 0);
 }
 
@@ -882,7 +884,7 @@ void W_ReadLumpPwad(UINT16 wad, UINT16 lump, void *dest)
 // W_CacheLumpNum
 // ==========================================================================
 void *W_CacheLumpNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
-{
+{	
 	lumpcache_t *lumpcache;
 
 	if (!TestValidLump(wad,lump))
@@ -1124,8 +1126,7 @@ void W_VerifyFileMD5(UINT16 wadfilenum, const char *matchmd5)
 
 // Note: This never opens lumps themselves and therefore doesn't have to
 // deal with compressed lumps.
-static int W_VerifyFile(const char *filename, lumpchecklist_t *checklist,
-	boolean status)
+static int W_VerifyFile(const char *filename, lumpchecklist_t *checklist, boolean status)
 {
 	FILE *handle;
 	size_t i, j;
@@ -1217,6 +1218,12 @@ static int W_VerifyFile(const char *filename, lumpchecklist_t *checklist,
   */
 int W_VerifyNMUSlumps(const char *filename)
 {
+	if (strcasecmp(filename, "palettes.wad") == 0)
+    return 1;
+
+	if (strcasecmp(filename, "diskico.wad") == 0)
+    return 1;
+
 	// MIDI, MOD/S3M/IT/XM/OGG/MP3/WAV, WAVE SFX
 	// ENDOOM text and palette lumps
 	lumpchecklist_t NMUSlist[] =
@@ -1230,6 +1237,8 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"PAL", 3},
 		{"CLM", 3},
 		{"TRANS", 5},
+		{"STDISK", 6},
+		{"RSTDISK", 7},
 		{NULL, 0},
 	};
 	return W_VerifyFile(filename, NMUSlist, false);

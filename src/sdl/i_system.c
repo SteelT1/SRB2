@@ -178,6 +178,11 @@ static char returnWadPath[256];
 #include "../byteptr.h"
 #endif
 
+const int diskicon_threshold = 20*1024;
+size_t recent_bytes_read = 0;
+boolean savinggame = false;
+int16_t savetic = 0;
+
 /**	\brief	The JoyReset function
 
 	\param	JoySet	Joystick info to reset
@@ -2143,12 +2148,19 @@ void I_WaitVBL(INT32 count)
 	SDL_Delay(count);
 }
 
-FUNCMATH void I_BeginRead(void)
+FUNCMATH void I_BeginRead(size_t nbytes)
 {
-}
+	recent_bytes_read += nbytes;
+}	
 
 FUNCMATH void I_EndRead(void)
 {
+	recent_bytes_read = 0;
+}
+
+void I_BeginSave(void)
+{
+	savetic = 70;
 }
 
 //
@@ -2161,6 +2173,7 @@ static INT32 errorcount = 0;
 /**	\brief recursive error detecting
 */
 static boolean shutdowning = false;
+boolean draw_diskicon = false;
 
 void I_Error(const char *error, ...)
 {

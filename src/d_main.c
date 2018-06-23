@@ -129,6 +129,8 @@ boolean nomidimusic = false, nosound = false;
 boolean nodigimusic = false; // No fmod-based music
 #endif
 
+char setpal[9] = "PLAYPAL";
+
 // These variables are only true if
 // the respective sound system is initialized
 // and active, but no sounds/music should play.
@@ -181,6 +183,7 @@ void D_PostEvent_end(void) {};
 UINT8 shiftdown = 0; // 0x1 left, 0x2 right
 UINT8 ctrldown = 0; // 0x1 left, 0x2 right
 UINT8 altdown = 0; // 0x1 left, 0x2 right
+boolean capslock = 0;	// you'd never guess what this does.
 //
 // D_ModifierKeyResponder
 // Sets global shift/ctrl/alt variables, never actually eats events
@@ -310,7 +313,6 @@ static void D_Display(void)
 				F_WipeEndScreen();
 				F_RunWipe(wipedefs[wipedefindex], gamestate != GS_TIMEATTACK);
 			}
-
 			F_WipeStartScreen();
 		}
 	}
@@ -517,6 +519,9 @@ static void D_Display(void)
 			snprintf(s, sizeof s - 1, "SysMiss %.2f%%", lostpercent);
 			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-10, V_YELLOWMAP, s);
 		}
+
+		V_DrawDiskIcon();
+		V_DrawSaveDiskIcon();
 
 		I_FinishUpdate(); // page flip or blit buffer
 	}
@@ -731,7 +736,7 @@ void D_StartTitle(void)
 
 	// Reset the palette
 	if (rendermode != render_none)
-		V_SetPaletteLump("PLAYPAL");
+		V_SetPaletteLump(setpal);
 }
 
 //
