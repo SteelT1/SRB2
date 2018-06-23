@@ -134,10 +134,13 @@ void I_BeginRead(size_t nbytes);
 /**	\brief Stop disk icon
 */
 
-/**	\brief Flag to enable or disable save indicator
-*/
 void I_EndRead(void);
 
+/**	\brief Flag to enable or disable save indicator
+*/
+
 void I_BeginSave(void);
+
+
 
 #endif
