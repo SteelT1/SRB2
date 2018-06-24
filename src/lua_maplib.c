@@ -1248,6 +1248,74 @@ static int mapheaderinfo_get(lua_State *L)
 	return 1;
 }
 
+static int mapheaderinfo_set(lua_State *L)
+{
+	mapheader_t *header = *((mapheader_t **)luaL_checkudata(L, 1, META_MAPHEADER));
+	const char *field = luaL_checkstring(L, 2);
+
+	if (!header)
+		return LUA_ErrInvalid(L, "mapheader_t");
+
+	if (hud_running)
+		return luaL_error(L, "Do not alter mapheader_t in HUD rendering code!");
+
+	if (fastcmp(field,"lvlttl"))
+		strcpy(header->lvlttl, luaL_checkstring(L, 3));
+	else if (fastcmp(field,"subttl"))
+		strcpy(header->subttl, luaL_checkstring(L, 3));
+	else if (fastcmp(field,"actnum"))
+		header->actnum = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"typeoflevel"))
+		header->typeoflevel = (UINT16)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"nextlevel"))
+		header->nextlevel = (INT16)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"musname"))
+		strcpy(header->musname, luaL_checkstring(L, 3));
+	else if (fastcmp(field,"mustrack"))
+		header->mustrack = (UINT16)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"forcecharacter"))
+		strcpy(header->forcecharacter, luaL_checkstring(L, 3));
+	else if (fastcmp(field,"weather"))
+		header->weather = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"skynum"))
+		header->skynum = (INT16)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"skybox_scalex"))
+		header->skybox_scalex = (INT16)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"skybox_scaley"))
+		header->skybox_scaley = (INT16)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"skybox_scalez"))
+		header->skybox_scalez = (INT16)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"interscreen"))
+		strcpy(header->interscreen, luaL_checkstring(L, 3));
+	else if (fastcmp(field,"runsoc"))
+		strcpy(header->runsoc, luaL_checkstring(L, 3));
+	else if (fastcmp(field,"scriptname"))
+		strcpy(header->scriptname, luaL_checkstring(L, 3));
+	else if (fastcmp(field,"precutscenenum"))
+		header->precutscenenum = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"cutscenenum"))
+		header->cutscenenum = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"countdown"))
+		header->countdown = (INT16)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"palette"))
+		header->palette = (UINT16)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"numlaps"))
+		header->numlaps = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"unlockrequired"))
+		header->unlockrequired = (SINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"levelselect"))
+		header->levelselect = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"bonustype"))
+		header->bonustype = (SINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"levelflags"))
+		header->levelflags = (UINT8)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"menuflags"))
+		header->menuflags = (UINT8)luaL_checkinteger(L, 3);
+
+
+	return 0;
+}
+
 int LUA_MapLib(lua_State *L)
 {
 	luaL_newmetatable(L, META_SECTORLINES);
@@ -1320,6 +1388,9 @@ int LUA_MapLib(lua_State *L)
 	luaL_newmetatable(L, META_MAPHEADER);
 		lua_pushcfunction(L, mapheaderinfo_get);
 		lua_setfield(L, -2, "__index");
+
+    lua_pushcfunction(L, mapheaderinfo_set);
+        lua_setfield(L, -2, "__newindex");
 
 		//lua_pushcfunction(L, mapheaderinfo_num);
 		//lua_setfield(L, -2, "__len");
