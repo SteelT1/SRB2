@@ -2160,7 +2160,7 @@ FUNCMATH void I_EndRead(void)
 
 void I_BeginSave(void)
 {
-	savetic = 70;
+	savetic = TICRATE;
 }
 
 //
