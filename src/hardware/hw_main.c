@@ -2252,38 +2252,44 @@ static void HWR_StoreWallRange(double startfrac, double endfrac)
                 wallVerts[2].y = wallVerts[3].y = FIXED_TO_FLOAT(h);
                 wallVerts[0].y = wallVerts[1].y = FIXED_TO_FLOAT(l);
 #endif
-                if (rover->flags & FF_FOG)
-                {
-                    wallVerts[3].t = wallVerts[2].t = 0;
-                    wallVerts[0].t = wallVerts[1].t = 0;
-                    wallVerts[0].s = wallVerts[3].s = 0;
-                    wallVerts[2].s = wallVerts[1].s = 0;
-                }
-                else if (drawtextured)
-                {
-#ifdef ESLOPE // P.S. this is better-organized than the old version
-                    fixed_t offs = sides[(newline ? newline : rover->master)->sidenum[0]].rowoffset;
-                    grTex = HWR_GetTexture(texnum);
+				if (rover->flags & FF_FOG)
+				{
+					wallVerts[3].t = wallVerts[2].t = 0;
+					wallVerts[0].t = wallVerts[1].t = 0;
+					wallVerts[0].s = wallVerts[3].s = 0;
+					wallVerts[2].s = wallVerts[1].s = 0;
+				}
+				else if (drawtextured)
+				{
+					fixed_t texturevpeg;
 
-                    wallVerts[3].t = (*rover->topheight - h + offs) * grTex->scaleY;
-                    wallVerts[2].t = (*rover->topheight - hS + offs) * grTex->scaleY;
-                    wallVerts[0].t = (*rover->topheight - l + offs) * grTex->scaleY;
-                    wallVerts[1].t = (*rover->topheight - lS + offs) * grTex->scaleY;
+					// Wow, how was this missing from OpenGL for so long?
+					// ...Oh well, anyway, Lower Unpegged now changes pegging of FOFs like in software
+					// -- Monster Iestyn 26/06/18
+					if (newline)
+					{
+						texturevpeg = sides[newline->sidenum[0]].rowoffset;
+						if (newline->flags & ML_DONTPEGBOTTOM)
+							texturevpeg -= *rover->topheight - *rover->bottomheight;
+					}
+					else
+					{
+						texturevpeg = sides[rover->master->sidenum[0]].rowoffset;
+						if (gr_linedef->flags & ML_DONTPEGBOTTOM)
+							texturevpeg -= *rover->topheight - *rover->bottomheight;
+					}
+
+					grTex = HWR_GetTexture(texnum);
+
+#ifdef ESLOPE
+					wallVerts[3].t = (*rover->topheight - h + texturevpeg) * grTex->scaleY;
+					wallVerts[2].t = (*rover->topheight - hS + texturevpeg) * grTex->scaleY;
+					wallVerts[0].t = (*rover->topheight - l + texturevpeg) * grTex->scaleY;
+					wallVerts[1].t = (*rover->topheight - lS + texturevpeg) * grTex->scaleY;
 #else
-                    grTex = HWR_GetTexture(texnum);
-
-                    if (newline)
-                    {
-                        wallVerts[3].t = wallVerts[2].t = (*rover->topheight - h + sides[newline->sidenum[0]].rowoffset) * grTex->scaleY;
-                        wallVerts[0].t = wallVerts[1].t = (h - l + (*rover->topheight - h + sides[newline->sidenum[0]].rowoffset)) * grTex->scaleY;
-                    }
-                    else
-                    {
-                        wallVerts[3].t = wallVerts[2].t = (*rover->topheight - h + sides[rover->master->sidenum[0]].rowoffset) * grTex->scaleY;
-                        wallVerts[0].t = wallVerts[1].t = (h - l + (*rover->topheight - h + sides[rover->master->sidenum[0]].rowoffset)) * grTex->scaleY;
-                    }
+					wallVerts[3].t = wallVerts[2].t = (*rover->topheight - h + texturevpeg) * grTex->scaleY;
+					wallVerts[0].t = wallVerts[1].t = (*rover->topheight - l + texturevpeg) * grTex->scaleY;
 #endif
-
                     wallVerts[0].s = wallVerts[3].s = cliplow * grTex->scaleX;
                     wallVerts[2].s = wallVerts[1].s = cliphigh * grTex->scaleX;
                 }
@@ -4007,6 +4013,7 @@ static boolean HWR_DoCulling(line_t *cullheight, line_t *viewcullheight, float v
 
 static void HWR_DrawSpriteShadow(gr_vissprite_t *spr, GLPatch_t *gpatch, float this_scale)
 {
+<<<<<<< HEAD
     FOutVector swallVerts[4];
     FSurfaceInfo sSurf;
     fixed_t floorheight, mobjfloor;
@@ -4176,6 +4183,177 @@ static void HWR_DrawSpriteShadow(gr_vissprite_t *spr, GLPatch_t *gpatch, float t
         sSurf.FlatColor.s.alpha = (UINT8)(sSurf.FlatColor.s.alpha - floorheight/4);
         HWD.pfnDrawPolygon(&sSurf, swallVerts, 4, PF_Translucent|PF_Modulated|PF_Clip);
     }
+=======
+	FOutVector swallVerts[4];
+	FSurfaceInfo sSurf;
+	fixed_t floorheight, mobjfloor;
+	float offset = 0;
+
+	mobjfloor = HWR_OpaqueFloorAtPos(
+		spr->mobj->x, spr->mobj->y,
+		spr->mobj->z, spr->mobj->height);
+	if (cv_shadowoffs.value)
+	{
+		angle_t shadowdir;
+
+		// Set direction
+		if (splitscreen && stplyr == &players[secondarydisplayplayer])
+			shadowdir = localangle2 + FixedAngle(cv_cam2_rotate.value);
+		else
+			shadowdir = localangle + FixedAngle(cv_cam_rotate.value);
+
+		// Find floorheight
+		floorheight = HWR_OpaqueFloorAtPos(
+			spr->mobj->x + P_ReturnThrustX(spr->mobj, shadowdir, spr->mobj->z - mobjfloor),
+			spr->mobj->y + P_ReturnThrustY(spr->mobj, shadowdir, spr->mobj->z - mobjfloor),
+			spr->mobj->z, spr->mobj->height);
+
+		// The shadow is falling ABOVE it's mobj?
+		// Don't draw it, then!
+		if (spr->mobj->z < floorheight)
+			return;
+		else
+		{
+			fixed_t floorz;
+			floorz = HWR_OpaqueFloorAtPos(
+				spr->mobj->x + P_ReturnThrustX(spr->mobj, shadowdir, spr->mobj->z - floorheight),
+				spr->mobj->y + P_ReturnThrustY(spr->mobj, shadowdir, spr->mobj->z - floorheight),
+				spr->mobj->z, spr->mobj->height);
+			// The shadow would be falling on a wall? Don't draw it, then.
+			// Would draw midair otherwise.
+			if (floorz < floorheight)
+				return;
+		}
+
+		floorheight = FixedInt(spr->mobj->z - floorheight);
+
+		offset = floorheight;
+	}
+	else
+		floorheight = FixedInt(spr->mobj->z - mobjfloor);
+
+	// create the sprite billboard
+	//
+	//  3--2
+	//  | /|
+	//  |/ |
+	//  0--1
+
+	// x1/x2 were already scaled in HWR_ProjectSprite
+	// First match the normal sprite
+	swallVerts[0].x = swallVerts[3].x = spr->x1;
+	swallVerts[2].x = swallVerts[1].x = spr->x2;
+	swallVerts[0].z = swallVerts[3].z = spr->z1;
+	swallVerts[2].z = swallVerts[1].z = spr->z2;
+
+	if (spr->mobj && this_scale != 1.0f)
+	{
+		// Always a pixel above the floor, perfectly flat.
+		swallVerts[0].y = swallVerts[1].y = swallVerts[2].y = swallVerts[3].y = spr->ty - gpatch->topoffset * this_scale - (floorheight+3);
+
+		// Now transform the TOP vertices along the floor in the direction of the camera
+		swallVerts[3].x = spr->x1 + ((gpatch->height * this_scale) + offset) * gr_viewcos;
+		swallVerts[2].x = spr->x2 + ((gpatch->height * this_scale) + offset) * gr_viewcos;
+		swallVerts[3].z = spr->z1 + ((gpatch->height * this_scale) + offset) * gr_viewsin;
+		swallVerts[2].z = spr->z2 + ((gpatch->height * this_scale) + offset) * gr_viewsin;
+	}
+	else
+	{
+		// Always a pixel above the floor, perfectly flat.
+		swallVerts[0].y = swallVerts[1].y = swallVerts[2].y = swallVerts[3].y = spr->ty - gpatch->topoffset - (floorheight+3);
+
+		// Now transform the TOP vertices along the floor in the direction of the camera
+		swallVerts[3].x = spr->x1 + (gpatch->height + offset) * gr_viewcos;
+		swallVerts[2].x = spr->x2 + (gpatch->height + offset) * gr_viewcos;
+		swallVerts[3].z = spr->z1 + (gpatch->height + offset) * gr_viewsin;
+		swallVerts[2].z = spr->z2 + (gpatch->height + offset) * gr_viewsin;
+	}
+
+	// We also need to move the bottom ones away when shadowoffs is on
+	if (cv_shadowoffs.value)
+	{
+		swallVerts[0].x = spr->x1 + offset * gr_viewcos;
+		swallVerts[1].x = spr->x2 + offset * gr_viewcos;
+		swallVerts[0].z = spr->z1 + offset * gr_viewsin;
+		swallVerts[1].z = spr->z2 + offset * gr_viewsin;
+	}
+
+	if (spr->flip)
+	{
+		swallVerts[0].sow = swallVerts[3].sow = gpatch->max_s;
+		swallVerts[2].sow = swallVerts[1].sow = 0;
+	}
+	else
+	{
+		swallVerts[0].sow = swallVerts[3].sow = 0;
+		swallVerts[2].sow = swallVerts[1].sow = gpatch->max_s;
+	}
+
+	// flip the texture coords (look familiar?)
+	if (spr->vflip)
+	{
+		swallVerts[3].tow = swallVerts[2].tow = gpatch->max_t;
+		swallVerts[0].tow = swallVerts[1].tow = 0;
+	}
+	else
+	{
+		swallVerts[3].tow = swallVerts[2].tow = 0;
+		swallVerts[0].tow = swallVerts[1].tow = gpatch->max_t;
+	}
+
+	sSurf.FlatColor.s.red = 0x00;
+	sSurf.FlatColor.s.blue = 0x00;
+	sSurf.FlatColor.s.green = 0x00;
+
+	/*if (spr->mobj->frame & FF_TRANSMASK || spr->mobj->flags2 & MF2_SHADOW)
+	{
+		sector_t *sector = spr->mobj->subsector->sector;
+		UINT8 lightlevel = 255;
+		extracolormap_t *colormap = sector->extra_colormap;
+
+		if (sector->numlights)
+		{
+			INT32 light = R_GetPlaneLight(sector, spr->mobj->floorz, false);
+
+			if (!(spr->mobj->frame & FF_FULLBRIGHT))
+				lightlevel = *sector->lightlist[light].lightlevel;
+
+			if (sector->lightlist[light].extra_colormap)
+				colormap = sector->lightlist[light].extra_colormap;
+		}
+		else
+		{
+			lightlevel = sector->lightlevel;
+
+			if (sector->extra_colormap)
+				colormap = sector->extra_colormap;
+		}
+
+		if (colormap)
+			sSurf.FlatColor.rgba = HWR_Lighting(lightlevel/2, colormap->rgba, colormap->fadergba, false, true);
+		else
+			sSurf.FlatColor.rgba = HWR_Lighting(lightlevel/2, NORMALFOG, FADEFOG, false, true);
+	}*/
+
+	// shadow is always half as translucent as the sprite itself
+	if (!cv_translucency.value) // use default translucency (main sprite won't have any translucency)
+		sSurf.FlatColor.s.alpha = 0x80; // default
+	else if (spr->mobj->flags2 & MF2_SHADOW)
+		sSurf.FlatColor.s.alpha = 0x20;
+	else if (spr->mobj->frame & FF_TRANSMASK)
+	{
+		HWR_TranstableToAlpha((spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &sSurf);
+		sSurf.FlatColor.s.alpha /= 2; //cut alpha in half!
+	}
+	else
+		sSurf.FlatColor.s.alpha = 0x80; // default
+
+	if (sSurf.FlatColor.s.alpha > floorheight/4)
+	{
+		sSurf.FlatColor.s.alpha = (UINT8)(sSurf.FlatColor.s.alpha - floorheight/4);
+		HWD.pfnDrawPolygon(&sSurf, swallVerts, 4, PF_Translucent|PF_Modulated|PF_Clip);
+	}
+>>>>>>> upstream/master
 }
 
 static double WHAT_THE_FUCK = 0;
@@ -5343,6 +5521,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
         I_Error("sprframes NULL for sprite %d\n", thing->sprite);
 #endif
 
+<<<<<<< HEAD
     if (sprframe->rotate)
     {
         // choose a different rotation based on player view
@@ -5461,6 +5640,129 @@ static void HWR_ProjectSprite(mobj_t *thing)
         vis->vflip = false;
 
     vis->precip = false;
+=======
+	if (sprframe->rotate)
+	{
+		// choose a different rotation based on player view
+		ang = R_PointToAngle(thing->x, thing->y); // uses viewx,viewy
+		rot = (ang-thing->angle+ANGLE_202h)>>29;
+		//Fab: lumpid is the index for spritewidth,spriteoffset... tables
+		lumpoff = sprframe->lumpid[rot];
+		flip = sprframe->flip & (1<<rot);
+	}
+	else
+	{
+		// use single rotation for all views
+		rot = 0;                        //Fab: for vis->patch below
+		lumpoff = sprframe->lumpid[0];     //Fab: see note above
+		flip = sprframe->flip; // Will only be 0x00 or 0xFF
+	}
+
+	if (thing->skin && ((skin_t *)thing->skin)->flags & SF_HIRES)
+		this_scale = this_scale * FIXED_TO_FLOAT(((skin_t *)thing->skin)->highresscale);
+
+	rightsin = FIXED_TO_FLOAT(FINESINE((viewangle + ANGLE_90)>>ANGLETOFINESHIFT));
+	rightcos = FIXED_TO_FLOAT(FINECOSINE((viewangle + ANGLE_90)>>ANGLETOFINESHIFT));
+	if (flip)
+	{
+		x1 = (FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width - spritecachedinfo[lumpoff].offset) * this_scale);
+		x2 = (FIXED_TO_FLOAT(spritecachedinfo[lumpoff].offset) * this_scale);
+	}
+	else
+	{
+		x1 = (FIXED_TO_FLOAT(spritecachedinfo[lumpoff].offset) * this_scale);
+		x2 = (FIXED_TO_FLOAT(spritecachedinfo[lumpoff].width - spritecachedinfo[lumpoff].offset) * this_scale);
+	}
+
+	z1 = tr_y + x1 * rightsin;
+	z2 = tr_y - x2 * rightsin;
+	x1 = tr_x + x1 * rightcos;
+	x2 = tr_x - x2 * rightcos;
+
+	if (thing->eflags & MFE_VERTICALFLIP)
+	{
+		gz = FIXED_TO_FLOAT(thing->z+thing->height) - FIXED_TO_FLOAT(spritecachedinfo[lumpoff].topoffset) * this_scale;
+		gzt = gz + FIXED_TO_FLOAT(spritecachedinfo[lumpoff].height) * this_scale;
+	}
+	else
+	{
+		gzt = FIXED_TO_FLOAT(thing->z) + FIXED_TO_FLOAT(spritecachedinfo[lumpoff].topoffset) * this_scale;
+		gz = gzt - FIXED_TO_FLOAT(spritecachedinfo[lumpoff].height) * this_scale;
+	}
+
+	if (thing->subsector->sector->cullheight)
+	{
+		if (HWR_DoCulling(thing->subsector->sector->cullheight, viewsector->cullheight, gr_viewz, gz, gzt))
+			return;
+	}
+
+	heightsec = thing->subsector->sector->heightsec;
+	if (viewplayer->mo && viewplayer->mo->subsector)
+		phs = viewplayer->mo->subsector->sector->heightsec;
+	else
+		phs = -1;
+
+	if (heightsec != -1 && phs != -1) // only clip things which are in special sectors
+	{
+		if (gr_viewz < FIXED_TO_FLOAT(sectors[phs].floorheight) ?
+		FIXED_TO_FLOAT(thing->z) >= FIXED_TO_FLOAT(sectors[heightsec].floorheight) :
+		gzt < FIXED_TO_FLOAT(sectors[heightsec].floorheight))
+			return;
+		if (gr_viewz > FIXED_TO_FLOAT(sectors[phs].ceilingheight) ?
+		gzt < FIXED_TO_FLOAT(sectors[heightsec].ceilingheight) && gr_viewz >= FIXED_TO_FLOAT(sectors[heightsec].ceilingheight) :
+		FIXED_TO_FLOAT(thing->z) >= FIXED_TO_FLOAT(sectors[heightsec].ceilingheight))
+			return;
+	}
+
+	// store information in a vissprite
+	vis = HWR_NewVisSprite();
+	vis->x1 = x1;
+	vis->x2 = x2;
+	vis->z1 = z1;
+	vis->z2 = z2;
+	vis->tz = tz; // Keep tz for the simple sprite sorting that happens
+	vis->dispoffset = thing->info->dispoffset; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
+	vis->patchlumpnum = sprframe->lumppat[rot];
+	vis->flip = flip;
+	vis->mobj = thing;
+
+	//Hurdler: 25/04/2000: now support colormap in hardware mode
+	if ((vis->mobj->flags & MF_BOSS) && (vis->mobj->flags2 & MF2_FRET) && (leveltime & 1)) // Bosses "flash"
+	{
+		if (vis->mobj->type == MT_CYBRAKDEMON)
+			vis->colormap = R_GetTranslationColormap(TC_ALLWHITE, 0, GTC_CACHE);
+		else if (vis->mobj->type == MT_METALSONIC_BATTLE)
+			vis->colormap = R_GetTranslationColormap(TC_METALSONIC, 0, GTC_CACHE);
+		else
+			vis->colormap = R_GetTranslationColormap(TC_BOSS, 0, GTC_CACHE);
+	}
+	else if (thing->color)
+	{
+		// New colormap stuff for skins Tails 06-07-2002
+		if (thing->skin && thing->sprite == SPR_PLAY) // This thing is a player!
+		{
+			size_t skinnum = (skin_t*)thing->skin-skins;
+			vis->colormap = R_GetTranslationColormap((INT32)skinnum, thing->color, GTC_CACHE);
+		}
+		else
+			vis->colormap = R_GetTranslationColormap(TC_DEFAULT, vis->mobj->color ? vis->mobj->color : SKINCOLOR_CYAN, GTC_CACHE);
+	}
+	else
+		vis->colormap = colormaps;
+
+	// set top/bottom coords
+	vis->ty = gzt;
+
+	//CONS_Debug(DBG_RENDER, "------------------\nH: sprite  : %d\nH: frame   : %x\nH: type    : %d\nH: sname   : %s\n\n",
+	//            thing->sprite, thing->frame, thing->type, sprnames[thing->sprite]);
+
+	if (thing->eflags & MFE_VERTICALFLIP)
+		vis->vflip = true;
+	else
+		vis->vflip = false;
+
+	vis->precip = false;
+>>>>>>> upstream/master
 }
 
 #ifdef HWPRECIP
