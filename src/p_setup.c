@@ -3168,11 +3168,15 @@ void P_SetDiscordStatus(void)
 	strcpy(mapkey, G_BuildMapName(gamemap));
 
 	if ((strcasecmp(skins[players[consoleplayer].skin].name,"sonic")==0) || (strcasecmp(skins[players[consoleplayer].skin].name,"knuckles")==0) || (strcasecmp(skins[players[consoleplayer].skin].name,"tails")==0))
+	{
 		strcpy(currentskin, skins[players[consoleplayer].skin].name);
-		strcpy(realskinname, skins[players[consoleplayer].skin].realname)
+		strcpy(realskinname, skins[players[consoleplayer].skin].realname);
+	}
 	else
+	{
 		strcpy(currentskin, "unknown");
 		strcpy(realskinname, "Unknown");
+	}
 
 	DiscordRichPresence dp;
 	memset(&dp, 0, sizeof(dp));
