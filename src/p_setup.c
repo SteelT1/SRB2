@@ -3156,34 +3156,36 @@ boolean P_DelWadFile(void)
 
 void P_SetDiscordStatus(void)
 {
-	int i;
-	// Start the timer
-	static int64_t StartTime;
-	StartTime = time(0);
-
 	char mapname[8];
+	char mapkey[8];
+	char currentskin[255];
+	char realskinname[255];
 	strcpy(mapname, G_BuildMapName(gamemap));
-	
-	DiscordRichPresence discordPresence;
-	memset(&discordPresence, 0, sizeof(discordPresence));
-	discordPresence.state = G_BuildMapTitle(gamemap);
+	strcpy(mapkey, G_BuildMapName(gamemap));
+
+	if ((strcasecmp(skins[players[consoleplayer].skin].name,"sonic")==0) || (strcasecmp(skins[players[consoleplayer].skin].name,"knuckles")==0) || (strcasecmp(skins[players[consoleplayer].skin].name,"tails")==0))
+		strcpy(currentskin, skins[players[consoleplayer].skin].name);
+		strcpy(realskinname, skins[players[consoleplayer].skin].realname)
+	else
+		strcpy(currentskin, "unknown");
+		strcpy(realskinname, "Unknown");
+
+	DiscordRichPresence dp;
+	memset(&dp, 0, sizeof(dp));
+	dp.state = G_BuildMapTitle(gamemap);
 
 	// Current gametype
-	for (i = 0; i < MAXPLAYERS; i++)	
-	{
-		if (playeringame[i] && players[i].bot == 0)
-			{
-				if (!(netgame || multiplayer)) // Send "Single player" instead of "Co-op"
-					discordPresence.details = va("Single player, Score: %u", players[i].score);
-				else if (gametype == GT_COOP && (multiplayer || netgame))
-					discordPresence.details = va("%s, Score: %u", gametype_cons_t[gametype].strvalue, players[i].score);
-				else
-					discordPresence.details = gametype_cons_t[gametype].strvalue;
-			}		
-	}
+	if (!(netgame || multiplayer)) // Send "Single Player" instead of "Co-op"
+		dp.details = va("Playing Single Player, Score: %u", players[consoleplayer].score);
+	else if (gametype == GT_COOP && (multiplayer || netgame))
+		dp.details = va("Playing %s, Score: %u", gametype_cons_t[gametype].strvalue, players[consoleplayer].score);
+	else
+		dp.details = va("Playing %s", gametype_cons_t[gametype].strvalue);
 	
-	discordPresence.largeImageKey = strlwr(mapname); // Map image
-	discordPresence.smallImageKey = "skin_sonic"; // I DON'T KNOW HOW TO DO THIS ONE BUT UPDATES SHOULD BE IN r_things.c:2411 I THINK!!!!
-	discordPresence.startTimestamp = StartTime;
-	Discord_UpdatePresence(&discordPresence);
+	dp.largeImageText = mapname; // Map tooltip
+	dp.largeImageKey = strlwr(mapkey); // Map image
+	dp.smallImageKey = currentskin; // Current skin
+	dp.smallImageText = realskinname; // Real skin name
+	CONS_Printf("%s\n", currentskin);
+	Discord_UpdatePresence(&dp);
 }
