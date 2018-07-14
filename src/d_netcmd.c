@@ -26,6 +26,7 @@
 #include "p_local.h"
 #include "p_setup.h"
 #include "s_sound.h"
+#include "i_sound.h"
 #include "m_misc.h"
 #include "am_map.h"
 #include "byteptr.h"
@@ -130,6 +131,7 @@ static void Command_Playintro_f(void);
 
 static void Command_Displayplayer_f(void);
 static void Command_Tunes_f(void);
+static void Command_RestartAudio_f(void);
 
 static void Command_ExitLevel_f(void);
 static void Command_Showmap_f(void);
@@ -582,7 +584,6 @@ void D_RegisterServerCommands(void)
   */
 void D_RegisterClientCommands(void)
 {
-	const char *username;
 	INT32 i;
 
 	for (i = 0; i < MAXSKINCOLORS; i++)
@@ -639,8 +640,6 @@ void D_RegisterClientCommands(void)
 #endif
 
 	// register these so it is saved to config
-	if ((username = I_GetUserName()))
-		cv_playername.defaultvalue = username;
 	CV_RegisterVar(&cv_playername);
 	CV_RegisterVar(&cv_playercolor);
 	CV_RegisterVar(&cv_skin); // r_things.c (skin NAME)
@@ -672,6 +671,7 @@ void D_RegisterClientCommands(void)
 
 	COM_AddCommand("displayplayer", Command_Displayplayer_f);
 	COM_AddCommand("tunes", Command_Tunes_f);
+	COM_AddCommand("restartaudio", Command_RestartAudio_f);
 	CV_RegisterVar(&cv_resetmusic);
 
 	// FIXME: not to be here.. but needs be done for config loading
@@ -2659,10 +2659,12 @@ static void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt,
 
 #define BASESALT "basepasswordstorage"
 static UINT8 adminpassmd5[16];
+static boolean adminpasswordset = false;
 
 void D_SetPassword(const char *pw)
 {
 	D_MD5PasswordPass((const UINT8 *)pw, strlen(pw), BASESALT, &adminpassmd5);
+	adminpasswordset = true;
 }
 
 // Remote Administration
@@ -2730,6 +2732,12 @@ static void Got_Login(UINT8 **cp, INT32 playernum)
 	UINT8 sentmd5[16], finalmd5[16];
 
 	READMEM(*cp, sentmd5, 16);
+
+	if (!adminpasswordset)
+	{
+		CONS_Printf(M_GetText("Password from %s failed (no password set).\n"), player_names[playernum]);
+		return;
+	}
 
 	if (client)
 		return;
@@ -3015,8 +3023,31 @@ static void Command_Addfile(void)
 		if (*p == '\\' || *p == '/' || *p == ':')
 			break;
 	++p;
+	// check total packet size and no of files currently loaded
+	{
+		size_t packetsize = 0;
+		serverinfo_pak *dummycheck = NULL;
+
+		// Shut the compiler up.
+		(void)dummycheck;
+
+		// See W_LoadWadFile in w_wad.c
+		for (i = 0; i < numwadfiles; i++)
+			packetsize += nameonlylength(wadfiles[i]->filename) + 22;
+
+		packetsize += nameonlylength(fn) + 22;
+
+		if ((numwadfiles >= MAX_WADFILES)
+		|| (packetsize > sizeof(dummycheck->fileneeded)))
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("Too many files loaded to add %s\n"), fn);
+			return;
+		}
+	}
+
 	WRITESTRINGN(buf_p,p,240);
 
+	// calculate and check md5
 	{
 		UINT8 md5sum[16];
 #ifdef NOMD5
@@ -3034,6 +3065,15 @@ static void Command_Addfile(void)
 		}
 		else // file not found
 			return;
+
+		for (i = 0; i < numwadfiles; i++)
+		{
+			if (!memcmp(wadfiles[i]->md5sum, md5sum, 16))
+			{
+				CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), fn);
+				return;
+			}
+		}
 #endif
 		WRITEMEM(buf_p, md5sum, 16);
 	}
@@ -3910,6 +3950,27 @@ static void Command_Tunes_f(void)
 		if (speed > 0.0f)
 			S_SpeedMusic(speed);
 	}
+}
+
+static void Command_RestartAudio_f(void)
+{
+	if (dedicated)  // No point in doing anything if game is a dedicated server.
+		return;
+
+	S_StopMusic();
+	I_ShutdownMusic();
+	I_ShutdownSound();
+	I_StartupSound();
+	I_InitMusic();
+
+// These must be called or no sound and music until manually set.
+
+	I_SetSfxVolume(cv_soundvolume.value);
+	I_SetDigMusicVolume(cv_digmusicvolume.value);
+	I_SetMIDIMusicVolume(cv_midimusicvolume.value);
+	if (Playing()) // Gotta make sure the player is in a level
+		P_RestoreMusic(&players[consoleplayer]);
+
 }
 
 /** Quits a game and returns to the title screen.

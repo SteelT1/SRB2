@@ -478,10 +478,10 @@ static const struct {
 	{NULL,          ARCH_NULL}
 };
 
-static UINT8 GetUserdataArchType(void)
+static UINT8 GetUserdataArchType(int index)
 {
 	UINT8 i;
-	lua_getmetatable(gL, -1);
+	lua_getmetatable(gL, index);
 
 	for (i = 0; meta2arch[i].meta; i++)
 	{
@@ -560,7 +560,7 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 		break;
 	}
 	case LUA_TUSERDATA:
-		switch (GetUserdataArchType())
+		switch (GetUserdataArchType(myindex))
 		{
 		case ARCH_MOBJINFO:
 		{
@@ -715,8 +715,15 @@ static void ArchiveExtVars(void *pointer, const char *ptype)
 	for (i = 0; lua_next(gL, -2); i++)
 		lua_pop(gL, 1);
 
-	if (i == 0 && !fastcmp(ptype,"player")) // skip anything that has an empty table and isn't a player.
+	// skip anything that has an empty table and isn't a player.
+	if (i == 0)
+	{
+		if (fastcmp(ptype,"player")) // always include players even if they have no extra variables
+			WRITEUINT16(save_p, 0);
+		lua_pop(gL, 1);
 		return;
+	}
+
 	if (fastcmp(ptype,"mobj")) // mobjs must write their mobjnum as a header
 		WRITEUINT32(save_p, ((mobj_t *)pointer)->mobjnum);
 	WRITEUINT16(save_p, i);
@@ -770,6 +777,7 @@ static void ArchiveTables(void)
 				CONS_Alert(CONS_ERROR, "Type of value for table %d entry '%s' (%s) could not be archived!\n", i, lua_tostring(gL, -1), luaL_typename(gL, -1));
 				lua_pop(gL, 1);
 			}
+
 			lua_pop(gL, 1);
 		}
 		lua_pop(gL, 1);
