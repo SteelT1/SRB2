@@ -22,6 +22,10 @@
 #include "p_tick.h"
 #include "r_defs.h"
 #include "p_maputl.h"
+#include "m_menu.h" //gametype_cons_t
+
+// Discord rich presence
+#include "discord-rpc.h"
 
 #define FLOATSPEED (FRACUNIT*4)
 

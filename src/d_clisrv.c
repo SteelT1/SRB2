@@ -1587,6 +1587,7 @@ static void CL_LoadReceivedSavegame(void)
 		CONS_Alert(CONS_ERROR, M_GetText("Can't delete %s\n"), tmpsave);
 	consistancy[gametic%BACKUPTICS] = Consistancy();
 	CON_ToggleOff();
+	P_SetDiscordStatus();
 }
 #endif
 

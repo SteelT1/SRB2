@@ -75,6 +75,7 @@
 #ifdef ESLOPE
 #include "p_slopes.h"
 #endif
+#include <time.h>
 
 //
 // Map MD5, calculated on level load.
@@ -3152,3 +3153,37 @@ boolean P_DelWadFile(void)
 	return false;
 }
 #endif
+
+void P_SetDiscordStatus(void)
+{
+	int i;
+	// Start the timer
+	static int64_t StartTime;
+	StartTime = time(0);
+
+	char mapname[8];
+	strcpy(mapname, G_BuildMapName(gamemap));
+	
+	DiscordRichPresence discordPresence;
+	memset(&discordPresence, 0, sizeof(discordPresence));
+	discordPresence.state = G_BuildMapTitle(gamemap);
+
+	// Current gametype
+	for (i = 0; i < MAXPLAYERS; i++)	
+	{
+		if (playeringame[i] && players[i].bot == 0)
+			{
+				if (!(netgame || multiplayer)) // Send "Single player" instead of "Co-op"
+					discordPresence.details = va("Single player, Score: %u", players[i].score);
+				else if (gametype == GT_COOP && (multiplayer || netgame))
+					discordPresence.details = va("%s, Score: %u", gametype_cons_t[gametype].strvalue, players[i].score);
+				else
+					discordPresence.details = gametype_cons_t[gametype].strvalue;
+			}		
+	}
+	
+	discordPresence.largeImageKey = strlwr(mapname); // Map image
+	discordPresence.smallImageKey = "skin_sonic"; // I DON'T KNOW HOW TO DO THIS ONE BUT UPDATES SHOULD BE IN r_things.c:2411 I THINK!!!!
+	discordPresence.startTimestamp = StartTime;
+	Discord_UpdatePresence(&discordPresence);
+}

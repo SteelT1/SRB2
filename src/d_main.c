@@ -106,22 +106,22 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 
 // App ID
 // ThatAwesomeGuy173: this app is managed by me, feel free to make and use your own app if you like
-static const char* APPLICATION_ID = "386469217806843914";
+static const char* APPLICATION_ID = "467115173761777664";
 
 // Straight copy-paste from the C demo app, lul
 static void handleDiscordReady()
 {
-    printf("\nDiscord: ready\n");
+    CONS_Printf("Discord: ready\n");
 }
 
 static void handleDiscordDisconnected(int errcode, const char* message)
 {
-    printf("\nDiscord: disconnected (%d: %s)\n", errcode, message);
+    CONS_Printf("Discord: disconnected (%d: %s)\n", errcode, message);
 }
 
 static void handleDiscordError(int errcode, const char* message)
 {
-    printf("\nDiscord: error (%d: %s)\n", errcode, message);
+    CONS_Printf("Discord: error (%d: %s)\n", errcode, message);
 }
 
 // Function to set the Main Menu presence

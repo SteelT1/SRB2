@@ -57,7 +57,6 @@
 // ------
 // protos
 // ------
-
 static void Got_NameAndColor(UINT8 **cp, INT32 playernum);
 static void Got_WeaponPref(UINT8 **cp, INT32 playernum);
 static void Got_Mapcmd(UINT8 **cp, INT32 playernum);
@@ -66,7 +65,7 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum);
 #ifdef DELFILE
 static void Got_Delfilecmd(UINT8 **cp, INT32 playernum);
 #endif
-static void Got_Addfilecmd(UINT8 **cp, INT32 playernum);
+static void Got_Addfilecmd(UINT8 	**cp, INT32 playernum);
 static void Got_Pause(UINT8 **cp, INT32 playernum);
 static void Got_Suicide(UINT8 **cp, INT32 playernum);
 static void Got_RandomSeed(UINT8 **cp, INT32 playernum);
@@ -1840,21 +1839,8 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	if (demorecording) // Okay, level loaded, character spawned and skinned,
 		G_BeginRecording(); // I AM NOW READY TO RECORD.
 	demo_start = true;
-	
-	// Set the Rich Presence status every map change
-	// Start the timer
-	static int64_t StartTime;
-	StartTime = time(0);
-	
-	DiscordRichPresence discordPresence;
-	memset(&discordPresence, 0, sizeof(discordPresence));
-	discordPresence.state = G_BuildMapTitle(gamemap);
-	discordPresence.details = "FILLER DETAILS"; // THIS SHOULD BE THE GAMETYPE!!!!
-	discordPresence.largeImageKey = "map01"; // THIS SHOULD BE G_BuildMapName(gamemap) CONVERTED TO LOWERCASE!!!!
-	discordPresence.smallImageKey = "skin_sonic"; // I DON'T KNOW HOW TO DO THIS ONE BUT UPDATES SHOULD BE IN r_things.c:2411 I THINK!!!!
-	discordPresence.startTimestamp = StartTime;
-	Discord_UpdatePresence(&discordPresence);
-}
+	P_SetDiscordStatus();
+}	
 
 static void Command_Pause(void)
 {

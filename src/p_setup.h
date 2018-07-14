@@ -76,4 +76,7 @@ UINT8 P_GetGrade(UINT32 pscore, INT16 map, UINT8 mare);
 UINT8 P_HasGrades(INT16 map, UINT8 mare);
 UINT32 P_GetScoreForGrade(INT16 map, UINT8 mare, UINT8 grade);
 
+// Dicord rich presence
+void P_SetDiscordStatus(void);
+
 #endif
