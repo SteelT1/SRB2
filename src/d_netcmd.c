@@ -52,6 +52,10 @@
 #define CV_RESTRICT 0
 #endif
 
+#ifdef HAVE_SDL
+#include "SDL.h"
+#endif 
+
 // ------
 // protos
 // ------
@@ -156,6 +160,7 @@ static void Command_ShowTime_f(void);
 
 static void Command_Isgamemodified_f(void);
 static void Command_Cheats_f(void);
+static void Command_Gay_f(void);
 #ifdef _DEBUG
 static void Command_Togglemodified_f(void);
 #ifdef HAVE_BLUA
@@ -615,6 +620,7 @@ void D_RegisterClientCommands(void)
 	COM_AddCommand("screenshot", M_ScreenShot);
 	COM_AddCommand("startmovie", Command_StartMovie_f);
 	COM_AddCommand("stopmovie", Command_StopMovie_f);
+	COM_AddCommand("gay", Command_Gay_f);
 
 	CV_RegisterVar(&cv_screenshot_option);
 	CV_RegisterVar(&cv_screenshot_folder);
@@ -4367,4 +4373,47 @@ static void Command_ShowTime_f(void)
 	}
 
 	CONS_Printf(M_GetText("The current time is %f.\nThe timelimit is %f\n"), (double)leveltime/TICRATE, (double)timelimitintics/TICRATE);
+}
+
+static void Command_Gay_f(void)
+{
+	int color = 0;
+	int i;
+	for (i = 0; i < 100; i++)
+	{
+		color++;
+	}
+	
+	const SDL_MessageBoxButtonData buttons[] = {
+        { /* .flags, .buttonid, .text */        0, 0, "No I don't" },
+        { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 1, "Yes I do" },
+    };
+
+	const SDL_MessageBoxColorScheme colorScheme = {
+        { /* .colors (.r, .g, .b) */
+            /* [SDL_MESSAGEBOX_COLOR_BACKGROUND] */
+            { color,   color+2, color+3 },
+            /* [SDL_MESSAGEBOX_COLOR_TEXT] */
+            {   color+4, color+5, color+6 },
+            /* [SDL_MESSAGEBOX_COLOR_BUTTON_BORDER] */
+            { 255, 255, color+7 },
+            /* [SDL_MESSAGEBOX_COLOR_BUTTON_BACKGROUND] */
+            {   0,   0, 255 },
+            /* [SDL_MESSAGEBOX_COLOR_BUTTON_SELECTED] */
+            { 255,   0, 255 }
+        } 
+    };
+    const SDL_MessageBoxData messageboxdata = {
+        SDL_MESSAGEBOX_INFORMATION, /* .flags */
+        NULL, /* .window */
+        "HA GAY!", /* .title */
+        "You have gay!", /* .message */
+        SDL_arraysize(buttons), /* .numbuttons */
+        buttons, /* .buttons */
+        &colorScheme /* .colorScheme */
+    };
+    int buttonid;
+    if (SDL_ShowMessageBox(&messageboxdata, &buttonid) < 0) {
+        I_Error("error displaying message box");
+    }      
 }

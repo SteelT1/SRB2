@@ -220,5 +220,3 @@ void D_SetPassword(const char *pw);
 UINT8 CanChangeSkin(INT32 playernum);
 
 #endif
-
-
