@@ -406,6 +406,7 @@ UINT32 HWR_Lighting(INT32 light, UINT32 color, UINT32 fadecolor, boolean fogbloc
     INT32 alpha, fogalpha, newalpha, clightfac;
 
     (void)fogblockpoly;
+    (void)plane;
     
     // You see the problem is that darker light isn't actually as dark as it SHOULD be.
     light = 255 - ((255 - light)*100/90);
@@ -513,7 +514,8 @@ UINT32 HWR_NoColormapLighting(INT32 light, UINT32 color, UINT32 fadecolor, boole
     INT32 alpha, fogalpha;
 
     (void)fogblockpoly;
-    
+    (void)plane;    
+
     // You see the problem is that darker light isn't actually as dark as it SHOULD be.
     light = 255 - ((255 - light)*100/96);
     

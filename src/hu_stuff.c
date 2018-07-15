@@ -328,7 +328,7 @@ static UINT32 chat_nummsg_min = 0;
 static UINT32 chat_scroll = 0;		
 static tic_t chat_scrolltime = 0;
 
-static UINT32 chat_maxscroll = 0;	// how far can we scroll? 
+static INT32 chat_maxscroll = 0;	// how far can we scroll? 
 
 //static chatmsg_t chat_mini[CHAT_BUFSIZE];	// Display the last few messages sent.
 //static chatmsg_t chat_log[CHAT_BUFSIZE];	// Keep every message sent to us in memory so we can scroll n shit, it's cool.
@@ -825,7 +825,7 @@ static inline boolean HU_keyInChatString(char *s, char ch)
 			{	
 				
 				// move everything past c_input for new characters:
-				INT32 m = HU_MAXMSGLEN-1;
+				UINT32 m = HU_MAXMSGLEN-1;
 				for (;(m>=c_input);m--)
 				{
 					if (s[m])
