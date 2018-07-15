@@ -178,7 +178,7 @@ static char returnWadPath[256];
 #include "../byteptr.h"
 #endif
 
-const int diskicon_threshold = 20*1024;
+const size_t diskicon_threshold = 20*1024;
 size_t recent_bytes_read = 0;
 boolean savinggame = false;
 int16_t savetic = 0;

@@ -73,7 +73,7 @@ patch_t *cred_font[CRED_FONTSIZE];
 static player_t *plr;
 boolean chat_on; // entering a chat message?
 static char w_chat[HU_MAXMSGLEN];
-static INT32 c_input = 0;	// let's try to make the chat input less shitty.
+static UINT32 c_input = 0;	// let's try to make the chat input less shitty.
 static boolean headsupactive = false;
 boolean hu_showscores; // draw rankings
 static char hu_tick;
@@ -328,7 +328,7 @@ static UINT32 chat_nummsg_min = 0;
 static UINT32 chat_scroll = 0;		
 static tic_t chat_scrolltime = 0;
 
-static INT32 chat_maxscroll = 0;	// how far can we scroll? 
+static UINT32 chat_maxscroll = 0;	// how far can we scroll? 
 
 //static chatmsg_t chat_mini[CHAT_BUFSIZE];	// Display the last few messages sent.
 //static chatmsg_t chat_log[CHAT_BUFSIZE];	// Keep every message sent to us in memory so we can scroll n shit, it's cool.
@@ -346,7 +346,7 @@ static INT16 addy = 0;	// use this to make the messages scroll smoothly when one
 static void HU_removeChatText_Mini(void)
 {
     // MPC: Don't create new arrays, just iterate through an existing one
-	int i;
+	UINT i;
     for(i=0;i<chat_nummsg_min-1;i++) {
         strcpy(chat_mini[i], chat_mini[i+1]);
         chat_timers[i] = chat_timers[i+1];
@@ -362,8 +362,8 @@ static void HU_removeChatText_Mini(void)
 static void HU_removeChatText_Log(void)
 {
 	// MPC: Don't create new arrays, just iterate through an existing one
-	int i;
-    for(i=0;i<chat_nummsg_log-1;i++) {
+	UINT i;
+    for(i=0; i<chat_nummsg_log-1; i++) {
         strcpy(chat_log[i], chat_log[i+1]);
     }
     chat_nummsg_log--;	// lost 1 msg.
@@ -487,7 +487,7 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 		}
 		buf[0] = target;
 		const char *newmsg = msg+5+spc;
-		memcpy(msg, newmsg, 255);
+		memcpy(msg, newmsg, 252);
 	}
 
 	SendNetXCmd(XD_SAY, buf, strlen(msg) + 1 + msg-buf);
@@ -1000,7 +1000,7 @@ static boolean justscrolledup;
 //
 boolean HU_Responder(event_t *ev)
 {
-	UINT8 c=0;
+	UINT32 c=0;
 		
 	if (ev->type != ev_keydown)
 		return false;
@@ -1044,7 +1044,7 @@ boolean HU_Responder(event_t *ev)
 		 || ev->data1 == KEY_LALT || ev->data1 == KEY_RALT)
 			return true;
 
-		c = (UINT8)ev->data1;
+		c = (UINT32)ev->data1;
 		
 		// capslock
 		if (c && c == KEY_CAPSLOCK)	// it's a toggle.
@@ -1090,8 +1090,8 @@ boolean HU_Responder(event_t *ev)
 			}
 			else	// otherwise, we need to shift everything and make space, etc etc
 			{	
-				size_t i = HU_MAXMSGLEN-1;
-				for (; i>=c_input;i--)
+				UINT i = HU_MAXMSGLEN-1;
+				for (; i>=c_input; i--)
 				{
 					if (w_chat[i])
 						w_chat[i+pastelen] = w_chat[i];

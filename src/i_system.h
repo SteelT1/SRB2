@@ -22,7 +22,7 @@
 #endif
 
 extern size_t recent_bytes_read;
-extern const int diskicon_threshold;
+extern const size_t diskicon_threshold;
 extern int16_t savetic;
 
 /**	\brief max quit functions

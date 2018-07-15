@@ -112,6 +112,8 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer);
 void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, INT32 whiteplayer);
 void HU_DrawEmeralds(INT32 x, INT32 y, INT32 pemeralds);
+char *CHAT_WordWrap(INT32 x, INT32 w, INT32 option, const char *string);
+void HU_Draw32TabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, INT32 whiteplayer);
 
 INT32 HU_CreateTeamScoresTbl(playersort_t *tab, UINT32 dmtotals[]);
 

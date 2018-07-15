@@ -199,5 +199,5 @@ void VID_BlitLinearScreen(const UINT8 *srcptr, UINT8 *destptr, INT32 width, INT3
 	size_t destrowbytes);
 
 void V_DrawDiskIcon(void);
-void V_DrawSaveDiskIcon();
+void V_DrawSaveDiskIcon(void);
 #endif
