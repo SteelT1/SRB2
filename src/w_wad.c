@@ -1218,12 +1218,6 @@ static int W_VerifyFile(const char *filename, lumpchecklist_t *checklist, boolea
   */
 int W_VerifyNMUSlumps(const char *filename)
 {
-	if (strcasecmp(filename, "palettes.wad") == 0)
-    return 1;
-
-	if (strcasecmp(filename, "diskico.wad") == 0)
-    return 1;
-
 	// MIDI, MOD/S3M/IT/XM/OGG/MP3/WAV, WAVE SFX
 	// ENDOOM text and palette lumps
 	lumpchecklist_t NMUSlist[] =
@@ -1241,5 +1235,12 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"RSTDISK", 7},
 		{NULL, 0},
 	};
+
+	if (strcasecmp(filename, "palettes.wad") == 0)
+    return 1;
+
+	if (strcasecmp(filename, "diskico.wad") == 0)
+    return 1;
+	
 	return W_VerifyFile(filename, NMUSlist, false);
 }

@@ -4199,6 +4199,7 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
     FUINT lightlevel;
     FBITFIELD blend = 0;
     UINT8 alpha;
+    angle_t ang;
 
     INT32 i;
     float realtop, realbot, top, bot;
@@ -4241,7 +4242,7 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
         HWR_DrawSpriteShadow(spr, gpatch, this_scale);
     }
     
-    angle_t ang = R_PointToAngle(spr->mobj->x, spr->mobj->y);
+    ang = R_PointToAngle(spr->mobj->x, spr->mobj->y);
     
     wallVerts[0].x = wallVerts[3].x = spr->x1 - WHAT_THE_FUCK*FIXED_TO_FLOAT(FINECOSINE(ang>>ANGLETOFINESHIFT));
     wallVerts[2].x = wallVerts[1].x = spr->x2 - WHAT_THE_FUCK*FIXED_TO_FLOAT(FINECOSINE(ang>>ANGLETOFINESHIFT));
