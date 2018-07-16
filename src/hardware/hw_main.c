@@ -4492,6 +4492,7 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
     FOutVector wallVerts[4];
     GLPatch_t *gpatch; // sprite patch converted to hardware
     FSurfaceInfo Surf;
+    angle_t ang;
     const boolean hires = (spr->mobj && spr->mobj->skin && ((skin_t *)spr->mobj->skin)->flags & SF_HIRES);
     if (spr->mobj)
         this_scale = FIXED_TO_FLOAT(spr->mobj->scale);
@@ -4532,7 +4533,7 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
     //  0--1
     
     // get angle from cam:
-    angle_t ang = R_PointToAngle(spr->mobj->x, spr->mobj->y); // uses viewx,viewy
+    ang = R_PointToAngle(spr->mobj->x, spr->mobj->y); // uses viewx,viewy
 
     // these were already scaled in HWR_ProjectSprite
     

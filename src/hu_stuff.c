@@ -1397,7 +1397,7 @@ static void HU_drawChatLog(void)
 	
 	// getmaxscroll through a lazy hack. We do all these loops, so let's not do more loops that are gonna lag the game more. :P
 	chat_maxscroll = (dy/charheight)-cv_chatheight.value;	// welcome to C, we don't know what min() and max() are.
-	if (chat_maxscroll < 0)
+	if (chat_maxscroll)
 		chat_maxscroll = 0;
 	
 	// if we're not bound by the time, autoscroll for next frame:
@@ -1431,7 +1431,8 @@ static void HU_DrawChat(void)
 	const char *talk = ntalk;
 	char *nodenum;
 	int count;
-	INT32 n;
+	size_t n;
+	INT32 p_dispy;
 	
 	if (teamtalk)
 	{
@@ -1493,7 +1494,7 @@ static void HU_DrawChat(void)
 	{	
 		i = 0;
 		count = 0;
-		INT32 p_dispy = chaty+2;
+		p_dispy = chaty+2;
 		V_DrawFillConsoleMap(chatx-50, p_dispy-2, 48, 2, 239 | V_SNAPTOTOP | V_SNAPTORIGHT);	// top (don't mind me)
 		for(i=0; (i<MAXPLAYERS); i++)
 		{
@@ -1507,7 +1508,7 @@ static void HU_DrawChat(void)
 					break;
 					
 				
-				*nodenum = (char*) malloc(3);
+				nodenum = (char*) malloc(3);
 				strncpy(nodenum, w_chat+3, 4);
 				n = atoi((const char*) nodenum);	// turn that into a number
 				// special cases:
@@ -2223,6 +2224,7 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 	INT32 redplayers = 0, blueplayers = 0;
 	boolean smol = false;
 	const UINT8 *colormap;
+	char name[MAXPLAYERNAME+1];
 
 	// before we draw, we must count how many players are in each team. It makes an additional loop, but we need to know if we have to draw a big or a small ranking.
 	for (i = 0; i < MAXPLAYERS; i++)
@@ -2261,8 +2263,6 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 	V_DrawFill(160, 26, 1, 154, 0); //Draw a vertical line to separate the two teams.
 	V_DrawFill(1, 26, 318, 1, 0); //And a horizontal line to make a T.
 	V_DrawFill(1, 180, 318, 1, 0); //And a horizontal line near the bottom.
-	
-	char name[MAXPLAYERNAME+1];
 	
 	i=0, redplayers=0, blueplayers=0;
 	

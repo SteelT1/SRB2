@@ -110,6 +110,7 @@ static int lib_chatprint(lua_State *L)
 static int lib_chatprintf(lua_State *L)
 {
 	const char *str;
+	int len;
 	int n = lua_gettop(L);  /* number of arguments */
 	player_t *plr;
 	if (n < 2)
@@ -124,7 +125,7 @@ static int lib_chatprintf(lua_State *L)
 	str = luaL_checkstring(L, 2);	// retrieve string
 	if (str == NULL)	// error if we don't have a string!
 		return luaL_error(L, LUA_QL("tostring") " must return a string to " LUA_QL("chatprintf"));
-	int len = strlen(str);
+	len = strlen(str);
 	if (len > 255)	// string is too long!!!
 		return luaL_error(L, "String exceeds the 255 characters limit of the chat buffer.");
 	
