@@ -3194,6 +3194,5 @@ void P_SetDiscordStatus(void)
 	dp.largeImageKey = strlwr(mapkey); // Map image
 	dp.smallImageKey = currentskin; // Current skin
 	dp.smallImageText = realskinname; // Real skin name
-	CONS_Printf("%s\n", currentskin);
 	Discord_UpdatePresence(&dp);
 }
