@@ -21,6 +21,8 @@
 #include "m_random.h"
 #include "lua_script.h"
 #include "lua_hook.h"
+#include "d_main.h"
+#include "p_setup.h"
 
 // Object place
 #include "m_cheat.h"

@@ -2957,7 +2957,7 @@ boolean P_SetupLevel(boolean skipprecip)
 		LUAh_MapLoad();
 #endif
 	}
-
+	StartTimeStamp = time(0);
 	return true;
 }
 
@@ -3158,41 +3158,53 @@ boolean P_DelWadFile(void)
 }
 #endif
 
+// Discord rich presence
+// Grab the name of a skin
+void P_UpdateSkin(const char *skinname)
+{
+	INT32 i;
+	for (i = 0; i < numskins; i++)
+	{
+		// search in the skin list
+		if (stricmp(skins[i].name, skinname) == 0)
+		{
+			strcpy(currentskin, skinname);
+			return;
+		}
+	}
+}
+
 void P_SetDiscordStatus(void)
 {
 	char mapname[8];
 	char mapkey[8];
-	char currentskin[255];
-	char realskinname[255];
+
+	memset(&dp, 0, sizeof(dp));
 	strcpy(mapname, G_BuildMapName(gamemap));
 	strcpy(mapkey, G_BuildMapName(gamemap));
+	strcpy(realskinname, skins[players[consoleplayer].skin].realname);
 
-	if ((strcasecmp(skins[players[consoleplayer].skin].name,"sonic")==0) || (strcasecmp(skins[players[consoleplayer].skin].name,"knuckles")==0) || (strcasecmp(skins[players[consoleplayer].skin].name,"tails")==0))
-	{
-		strcpy(currentskin, skins[players[consoleplayer].skin].name);
-		strcpy(realskinname, skins[players[consoleplayer].skin].realname);
-	}
-	else
+	if (!((strcasecmp(currentskin,"sonic")==0) || (strcasecmp(currentskin,"knuckles")==0) || (strcasecmp(currentskin,"tails")==0) || (strcasecmp(currentskin,"dirk")==0) || (strcasecmp(currentskin,"shadow")==0) || (strcasecmp(currentskin,"silver")==0) || (strcasecmp(currentskin,"fsonic")==0)))
 	{
 		strcpy(currentskin, "unknown");
 		strcpy(realskinname, "Unknown");
 	}
 
-	DiscordRichPresence dp;
-	memset(&dp, 0, sizeof(dp));
 	dp.state = G_BuildMapTitle(gamemap);
 
 	// Current gametype
-	if (!(netgame || multiplayer)) // Send "Single Player" instead of "Co-op"
-		dp.details = va("Playing Single Player, Score: %u", players[consoleplayer].score);
-	else if (gametype == GT_COOP && (multiplayer || netgame))
-		dp.details = va("Playing %s, Score: %u", gametype_cons_t[gametype].strvalue, players[consoleplayer].score);
-	else
-		dp.details = va("Playing %s", gametype_cons_t[gametype].strvalue);
-	
+	if (!(netgame || multiplayer)) // Send "Solo" instead of "Co-op" for single player
+		dp.details = va("Solo, Score: %u", players[consoleplayer].score);
+	else if (multiplayer || netgame)
+		dp.details = va("%s, Score: %u", gametype_cons_t[gametype].strvalue, players[consoleplayer].score);
+
 	dp.largeImageText = mapname; // Map tooltip
 	dp.largeImageKey = strlwr(mapkey); // Map image
 	dp.smallImageKey = currentskin; // Current skin
 	dp.smallImageText = realskinname; // Real skin name
+	if(!dp.startTimestamp)
+	{
+		dp.startTimestamp = StartTimeStamp;
+	}
 	Discord_UpdatePresence(&dp);
 }

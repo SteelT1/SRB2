@@ -1158,6 +1158,9 @@ static void SendNameAndColor(void)
 			SetPlayerSkin(consoleplayer, cv_skin.string);
 		}
 
+		// Discord rich presence
+		// Useful for when you end up changing skins in the middle of SP games!
+		P_UpdateSkin(cv_skin.string);
 		return;
 	}
 
@@ -1187,6 +1190,10 @@ static void SendNameAndColor(void)
 	WRITEUINT8(p, (UINT8)cv_playercolor.value);
 	WRITEUINT8(p, (UINT8)cv_skin.value);
 	SendNetXCmd(XD_NAMEANDCOLOR, buf, p - buf);
+
+	// Discord rich presence
+	// Updates skin for netgames
+	P_UpdateSkin(cv_skin.string);
 }
 
 // splitscreen
@@ -1839,8 +1846,7 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	if (demorecording) // Okay, level loaded, character spawned and skinned,
 		G_BeginRecording(); // I AM NOW READY TO RECORD.
 	demo_start = true;
-	P_SetDiscordStatus();
-}	
+}
 
 static void Command_Pause(void)
 {

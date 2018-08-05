@@ -1300,6 +1300,7 @@ static menuitem_t OP_GameOptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Uppercase Console",      &cv_allcaps,     120},
 
 	{IT_STRING | IT_CVAR, NULL, "Title Screen Demos",     &cv_rollingdemos, 140},
+	{IT_STRING | IT_CVAR, NULL, "Discord Rich Presence",     &cv_discordrp, 150},
 };
 
 static menuitem_t OP_ServerOptionsMenu[] =
@@ -2400,6 +2401,9 @@ boolean M_Responder(event_t *ev)
 					MSCloseUDPSocket();		// Clean up so we can re-open the connection later.
 					netgame = false;
 					multiplayer = false;
+
+					// Discord rich presence
+					RPC_MainMenuPresence(0);
 				}
 
 				if (currentMenu == &SP_TimeAttackDef || currentMenu == &SP_NightsAttackDef)
@@ -5967,6 +5971,9 @@ static void M_DrawConnectMenu(void)
 	localservercount = serverlistcount;
 
 	M_DrawGenericMenu();
+
+	// Discord rich presence
+	RPC_MainMenuPresence(1);
 }
 
 static boolean M_CancelConnect(void)

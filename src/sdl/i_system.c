@@ -2137,8 +2137,11 @@ void I_Quit(void)
 	}
 
 	// Discord rich presence
-	Discord_Shutdown();
-	
+	if (cv_discordrp.value == 1)
+	{
+		Discord_Shutdown();
+	}
+
 death:
 	W_Shutdown();
 	exit(0);
@@ -2269,8 +2272,10 @@ void I_Error(const char *error, ...)
 #endif
 
 	// Discord rich presence
-	Discord_Shutdown();
-
+	if (cv_discordrp.value == 1)
+	{
+		Discord_Shutdown();
+	}
 	exit(-1);
 }
 

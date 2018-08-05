@@ -99,13 +99,18 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 
 #ifdef HAVE_BLUA
 #include "lua_script.h"
+#include "lua_hook.h"
 #endif
 
 // Discord rich presence
 #include "discord-rpc.h"
 
+static void DiscordRP_OnChange(void);
+
+consvar_t cv_discordrp = {"discordrp", "On", CV_SAVE|CV_CALL, CV_OnOff, DiscordRP_OnChange, 0, NULL, NULL, 0, 0, NULL};
+
 // App ID
-// ThatAwesomeGuy173: this app is managed by me, feel free to make and use your own app if you like
+// SteelTitanium: this app is managed by me, feel free to make and use your own app if you like
 static const char* APPLICATION_ID = "467115173761777664";
 
 // Straight copy-paste from the C demo app, lul
@@ -124,17 +129,22 @@ static void handleDiscordError(int errcode, const char* message)
     CONS_Printf("Discord: error (%d: %s)\n", errcode, message);
 }
 
-// Function to set the Main Menu presence
-static void RPC_MainMenuPresence()
+// Function to set the status while in the menus
+// presence_status is set to 1 when entering the Join Game (Search) menu
+
+void RPC_MainMenuPresence(int presence_status)
 {
 	DiscordRichPresence discordPresence;
     memset(&discordPresence, 0, sizeof(discordPresence));
-    discordPresence.state = "SRB2RPC Beta v1.0";
-    discordPresence.details = "Main Menu";
+	if (presence_status == 1)
+		discordPresence.details = "Looking for a netgame";
+	else
+		discordPresence.details = "Idle";
     discordPresence.largeImageKey = "main_menu";
     discordPresence.instance = 0;
 	Discord_UpdatePresence(&discordPresence);
 }
+
 
 // Establish connection to Discord
 // This is only needed once
@@ -142,13 +152,28 @@ static void RPC_DiscordInit()
 {
 	DiscordEventHandlers handlers;
 	memset(&handlers, 0, sizeof(handlers));
-	
+
 	// we only need these anyway, joining and spectating require approval
 	handlers.ready = handleDiscordReady;
 	handlers.disconnected = handleDiscordDisconnected;
 	handlers.errored = handleDiscordError;
-	
+
 	Discord_Initialize(APPLICATION_ID, &handlers, 1, NULL);
+}
+
+static void DiscordRP_OnChange(void)
+{
+	if (cv_discordrp.value == 1)
+	{
+		RPC_DiscordInit();
+		dp.details = "Idle";
+		dp.largeImageKey = "main_menu";
+		Discord_UpdatePresence(&dp);
+	}
+	else if (cv_discordrp.value == 0)
+	{
+		Discord_Shutdown();
+	}
 }
 
 // platform independant focus loss
@@ -704,6 +729,12 @@ void D_SRB2Loop(void)
 #ifdef HAVE_BLUA
 		LUA_Step();
 #endif
+
+	if (cv_discordrp.value == 1 && Playing()) // We want to make sure the player is in-game first.
+	{
+		P_SetDiscordStatus();
+	}
+
 	}
 }
 
@@ -782,9 +813,9 @@ void D_StartTitle(void)
 	// Reset the palette
 	if (rendermode != render_none)
 		V_SetPaletteLump("PLAYPAL");
-	
+
 	// Set main menu presence every time the menu's created
-	RPC_MainMenuPresence();
+	RPC_MainMenuPresence(0);
 }
 
 //
@@ -1231,6 +1262,9 @@ void D_SRB2Main(void)
 
 	I_RegisterSysCommands();
 
+	// Register discord rich presence
+	CV_RegisterVar(&cv_discordrp);
+
 	//--------------------------------------------------------- CONFIG.CFG
 	M_FirstLoadConfig(); // WARNING : this do a "COM_BufExecute()"
 
@@ -1440,9 +1474,6 @@ void D_SRB2Main(void)
 		if (!P_SetupLevel(false))
 			I_Quit(); // fail so reset game stuff
 	}
-	
-	// Initialize Discord connection
-	RPC_DiscordInit();
 }
 
 const char *D_Home(void)

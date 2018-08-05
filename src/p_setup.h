@@ -18,6 +18,9 @@
 #include "doomstat.h"
 #include "r_defs.h"
 
+// Discord rich presence
+#include "discord-rpc.h"
+
 // map md5, sent to players via PT_SERVERINFO
 extern unsigned char mapmd5[16];
 
@@ -78,5 +81,10 @@ UINT32 P_GetScoreForGrade(INT16 map, UINT8 mare, UINT8 grade);
 
 // Dicord rich presence
 void P_SetDiscordStatus(void);
+void P_UpdateSkin(const char *skinname);
+DiscordRichPresence dp;
+char currentskin[255];
+char realskinname[255];
+int64_t StartTimeStamp;
 
 #endif

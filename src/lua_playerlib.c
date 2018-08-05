@@ -21,6 +21,10 @@
 #include "lua_script.h"
 #include "lua_libs.h"
 #include "lua_hud.h" // hud_running errors
+#ifndef NONET // I_GetNodeAddress
+#include "i_net.h"
+#include "d_clisrv.h"
+#endif
 
 static int lib_iteratePlayers(lua_State *L)
 {
@@ -317,6 +321,10 @@ static int player_get(lua_State *L)
 #ifdef HWRENDER
 	else if (fastcmp(field,"fovadd"))
 		lua_pushfixed(L, plr->fovadd);
+#endif
+#ifndef NONET
+	else if (fastcmp(field,"ip"))
+		lua_pushstring(L, netbuffer->u.msaskinfo.clientaddr);
 #endif
 	else {
 		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
