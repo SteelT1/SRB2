@@ -4389,27 +4389,33 @@ static void Command_ShowTime_f(void)
 #ifdef HAVE_SDL
 static void Command_Gay_f(void)
 {
-	int color = 0;
 	int buttonid;
 	static const char *message;
-
+	
 	const SDL_MessageBoxButtonData buttons[] = {
-        {SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 0, "No I don't"},
-        {SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 1, "Yes I do"},
-    };
+            {
+                SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT,
+                0,
+                "Yes I do"
+            },{
+                SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT,
+                1,
+                "No I don't"
+            },
+        };
 
 	const SDL_MessageBoxColorScheme colorScheme = {
-        { /* .colors (.r, .g, .b) */
-            /* [SDL_MESSAGEBOX_COLOR_BACKGROUND] */
-            { 255,   255, 255 },
+        { 	/* .colors (.r, .g, .b) */
+			/* [SDL_MESSAGEBOX_COLOR_BACKGROUND] */
+            {255,255,255},
             /* [SDL_MESSAGEBOX_COLOR_TEXT] */
-            {   color+4, color+5, color+6 },
+            {0,0,0},
             /* [SDL_MESSAGEBOX_COLOR_BUTTON_BORDER] */
-            { 255, 255, color+7 },
+            {255,255,255},
             /* [SDL_MESSAGEBOX_COLOR_BUTTON_BACKGROUND] */
-            {   0,   0, 255 },
+            {0,0,255},
             /* [SDL_MESSAGEBOX_COLOR_BUTTON_SELECTED] */
-            { 255,   0, 255 }
+            {255,0,255}
         } 
     };
 

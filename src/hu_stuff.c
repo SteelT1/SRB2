@@ -1230,7 +1230,7 @@ char *CHAT_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
 	return newstring;
 }
 
-INT16 chatx = 160, chaty = 16;	// let's use this as our coordinates, shh
+UINT16 chatx = 160, chaty = 16;	// let's use this as our coordinates, shh
 
 // chat stuff by VincyTM LOL XD!
 
@@ -1238,8 +1238,8 @@ INT16 chatx = 160, chaty = 16;	// let's use this as our coordinates, shh
 
 static void HU_drawMiniChat(void)
 {
-	INT32 charwidth = (vid.width < 640) ? 8 : 4, charheight = (vid.width < 640) ? 8 : 6;
-	INT32 x = chatx+2, y = chaty+2, dx = 0, dy = 0;
+	UINT32 charwidth = (vid.width < 640) ? 8 : 4, charheight = (vid.width < 640) ? 8 : 6;
+	UINT32 x = chatx+2, y = chaty+2, dx = 0, dy = 0;
 	size_t i = 0;
 	
 	for (i=0; i<chat_nummsg_min; i++)	// iterate through our hot messages
@@ -1424,8 +1424,8 @@ static void HU_drawChatLog(void)
 static INT16 typelines = 1;	// number of drawfill lines we need. it's some weird hack and might be one frame off but I'm lazy to make another loop.
 static void HU_DrawChat(void)
 {	
-	INT32 charwidth = (vid.width < 640) ? 8 : 4, charheight = (vid.width < 640) ? 8 : 6;
-	INT32 t = 0, c = 0, y = chaty + 4 + cv_chatheight.value*charheight;
+	UINT32 charwidth = (vid.width < 640) ? 8 : 4, charheight = (vid.width < 640) ? 8 : 6;
+	UINT32 t = 0, c = 0, y = chaty + 4 + cv_chatheight.value*charheight;
 	size_t i = 0;
 	const char *ntalk = "Say: ", *ttalk = "Team: ";
 	const char *talk = ntalk;
