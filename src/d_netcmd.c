@@ -160,13 +160,20 @@ static void Command_ShowTime_f(void);
 
 static void Command_Isgamemodified_f(void);
 static void Command_Cheats_f(void);
+#ifdef HAVE_SDL
 static void Command_Gay_f(void);
+#endif
 #ifdef _DEBUG
 static void Command_Togglemodified_f(void);
 #ifdef HAVE_BLUA
 static void Command_Archivetest_f(void);
 #endif
 #endif
+
+#ifdef GETTEXT
+static void Command_SetLanguage_f(void);
+#endif
+
 
 // =========================================================================
 //                           CLIENT VARIABLES
@@ -485,6 +492,10 @@ void D_RegisterServerCommands(void)
 	COM_AddCommand("archivetest", Command_Archivetest_f);
 #endif
 #endif
+#ifdef GETTEXT
+	COM_AddCommand("setlanguage", Command_SetLanguage_f);
+#endif	
+
 
 	// for master server connection
 	AddMServCommands();
@@ -4375,24 +4386,22 @@ static void Command_ShowTime_f(void)
 	CONS_Printf(M_GetText("The current time is %f.\nThe timelimit is %f\n"), (double)leveltime/TICRATE, (double)timelimitintics/TICRATE);
 }
 
+#ifdef HAVE_SDL
 static void Command_Gay_f(void)
 {
 	int color = 0;
-	int i;
-	for (i = 0; i < 100; i++)
-	{
-		color++;
-	}
-	
+	int buttonid;
+	static const char *message;
+
 	const SDL_MessageBoxButtonData buttons[] = {
-        { /* .flags, .buttonid, .text */        0, 0, "No I don't" },
-        { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 1, "Yes I do" },
+        {SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 0, "No I don't"},
+        {SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 1, "Yes I do"},
     };
 
 	const SDL_MessageBoxColorScheme colorScheme = {
         { /* .colors (.r, .g, .b) */
             /* [SDL_MESSAGEBOX_COLOR_BACKGROUND] */
-            { color,   color+2, color+3 },
+            { 255,   255, 255 },
             /* [SDL_MESSAGEBOX_COLOR_TEXT] */
             {   color+4, color+5, color+6 },
             /* [SDL_MESSAGEBOX_COLOR_BUTTON_BORDER] */
@@ -4403,17 +4412,57 @@ static void Command_Gay_f(void)
             { 255,   0, 255 }
         } 
     };
+
+    if (strcmp(player_names[consoleplayer], "White") == 0 || strcmp(player_names[consoleplayer], "white") == 0)
+    	message = va("%s, You have super ultra gay!", player_names[consoleplayer]);
+    else
+    	message = va("%s, You have gay!", player_names[consoleplayer]);
+
     const SDL_MessageBoxData messageboxdata = {
         SDL_MESSAGEBOX_INFORMATION, /* .flags */
         NULL, /* .window */
         "HA GAY!", /* .title */
-        "You have gay!", /* .message */
+        message, /* .message */
         SDL_arraysize(buttons), /* .numbuttons */
         buttons, /* .buttons */
         &colorScheme /* .colorScheme */
     };
-    int buttonid;
+  
     if (SDL_ShowMessageBox(&messageboxdata, &buttonid) < 0) {
         I_Error("error displaying message box");
-    }      
+    }
+
+    if (buttonid) {
+    	I_Quit();
+    }
+
+}    
+#endif          
+
+#ifdef GETTEXT
+static void Command_SetLanguage_f(void)
+{
+	if (COM_Argc() != 2)
+	{
+		CONS_Printf(M_GetText("setlanguage <language>: Sets current language\n"));
+		return;
+	}
+	
+	if (strcasecmp("english", COM_Argv(1)) == 0)
+	{
+		if (setlocale(LC_MESSAGES, "en_US") == NULL) {
+			CONS_Printf("Unable to set locale");
+		}
+		bindtextdomain("srb2", ".");
+		textdomain("srb2");			
+	}
+	else if (strcasecmp("spanish", COM_Argv(1)) == 0)
+	{
+		if (setlocale(LC_MESSAGES, "en_ES") == NULL) {
+			CONS_Printf("Unable to set locale");
+		}
+		bindtextdomain("srb2", ".");
+		textdomain("srb2");
+	}
 }
+#endif

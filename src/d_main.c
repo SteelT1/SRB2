@@ -946,6 +946,11 @@ void D_SRB2Main(void)
 #ifdef GETTEXT
 	// initialise locale code
 	M_StartupLocale();
+
+	if (setlocale(LC_MESSAGES, "en_ES") == NULL) {
+			CONS_Printf("Unable to set locale");
+		}
+
 #endif
 
 	// get parameters from a response file (eg: srb2 @parms.txt)

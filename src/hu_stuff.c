@@ -1336,7 +1336,7 @@ static void HU_drawChatLog(void)
 		chat_scroll = chat_maxscroll;
 	
 	UINT32 charwidth = (vid.width < 640) ? 8 : 4, charheight = (vid.width < 640) ? 8 : 6;
-	INT32 x = chatx+2, y = chaty+2-(chat_scroll*charheight), dx = 0, dy = 0;
+	UINT32 x = chatx+2, y = chaty+2-(chat_scroll*charheight), dx = 0, dy = 0;
 	size_t i = 0;
 	boolean atbottom = false;
 	
