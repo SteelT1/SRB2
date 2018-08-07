@@ -503,4 +503,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 /// \note   Required for proper collision with moving sloped surfaces that have sector specials on them.
 //#define SECTORSPECIALSAFTERTHINK
 
+//#define HAVEGAY
+
 #endif // __DOOMDEF__

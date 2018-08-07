@@ -160,7 +160,7 @@ static void Command_ShowTime_f(void);
 
 static void Command_Isgamemodified_f(void);
 static void Command_Cheats_f(void);
-#ifdef HAVE_SDL
+#if defined(HAVE_SDL) && defined(HAVEGAY)
 static void Command_Gay_f(void);
 #endif
 #ifdef _DEBUG
@@ -631,7 +631,9 @@ void D_RegisterClientCommands(void)
 	COM_AddCommand("screenshot", M_ScreenShot);
 	COM_AddCommand("startmovie", Command_StartMovie_f);
 	COM_AddCommand("stopmovie", Command_StopMovie_f);
+#if defined(HAVE_SDL) && defined(HAVEGAY)	
 	COM_AddCommand("gay", Command_Gay_f);
+#endif 	
 
 	CV_RegisterVar(&cv_screenshot_option);
 	CV_RegisterVar(&cv_screenshot_folder);
@@ -4386,7 +4388,7 @@ static void Command_ShowTime_f(void)
 	CONS_Printf(M_GetText("The current time is %f.\nThe timelimit is %f\n"), (double)leveltime/TICRATE, (double)timelimitintics/TICRATE);
 }
 
-#ifdef HAVE_SDL
+#if defined(HAVE_SDL) && defined(HAVEGAY)
 static void Command_Gay_f(void)
 {
 	int buttonid;
