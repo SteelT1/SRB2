@@ -413,6 +413,7 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 	XBOXSTATIC char buf[254];
 	size_t numwords, ix;
 	char *msg = &buf[2];
+	const char *newmsg;
 	const size_t msgspace = sizeof buf - 2;
 
 	numwords = COM_Argc() - usedargs;
@@ -486,7 +487,7 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 			return;
 		}
 		buf[0] = target;
-		const char *newmsg = msg+5+spc;
+		newmsg = msg+5+spc;
 		memcpy(msg, newmsg, 252);
 	}
 
