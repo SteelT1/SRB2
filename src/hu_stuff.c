@@ -1549,7 +1549,7 @@ static void HU_DrawChat(void)
 				char name[MAXPLAYERNAME+1];
 				strlcpy(name, player_names[i], 7);	// shorten name to 7 characters.
 				V_DrawFillConsoleMap(chatx-50, p_dispy+ (6*count), 48, 6, 239 | V_SNAPTOTOP | V_SNAPTORIGHT);	// fill it like the chat so the text doesn't become hard to read because of the hud.
-				V_DrawSmallString(chatx-48, p_dispy+ (6*count), V_SNAPTOTOP|V_SNAPTORIGHT|V_ALLOWLOWERCASE, va("\x82%d\x80 - %s", i, name));
+				V_DrawSmallString(chatx-48, p_dispy+ (6*count), V_SNAPTOTOP|V_SNAPTORIGHT|V_ALLOWLOWERCASE, va("\x82%d\x80 - %s", (unsigned long int) i, name));
 				count++;
 			}
 		}
