@@ -895,6 +895,9 @@ static void HU_queueChatChar(char c)
 	int spc;
 	INT32 target;
 	const char *newmsg;
+	char *nodenum;
+	size_t i;
+
 	// send automaticly the message (no more chat char)
 	if (c == KEY_ENTER)
 	{
@@ -906,7 +909,7 @@ static void HU_queueChatChar(char c)
 			if (!c || (c >= ' ' && !(c & 0x80))) // copy printable characters and terminating '\0' only.
 				buf[ci-1]=c;
 		} while (c);
-		size_t i = 0;
+		i = 0;
 		for (;(i<HU_MAXMSGLEN);i++)
 			w_chat[i] = 0;	// reset this.
 		
@@ -934,7 +937,7 @@ static void HU_queueChatChar(char c)
 			}	
 			
 			spc = 1;	// used if nodenum[1] is a space.
-			char *nodenum = (char*) malloc(3);
+			nodenum = (char*) malloc(3);
 			strncpy(nodenum, msg+3, 5);
 			// check for undesirable characters in our "number"
 			if 	(((nodenum[0] < '0') || (nodenum[0] > '9')) || ((nodenum[1] < '0') || (nodenum[1] > '9')))
@@ -1239,7 +1242,8 @@ UINT16 chatx = 160, chaty = 16;	// let's use this as our coordinates, shh
 static void HU_drawMiniChat(void)
 {
 	UINT32 charwidth = (vid.width < 640) ? 8 : 4, charheight = (vid.width < 640) ? 8 : 6;
-	UINT32 x = chatx+2, y = chaty+2, dx = 0, dy = 0;
+	int dx = 0;
+	UINT32 x = chatx+2, y = chaty+2, dy = 0;
 	size_t i = 0;
 	
 	for (i=0; i<chat_nummsg_min; i++)	// iterate through our hot messages
@@ -1330,15 +1334,14 @@ static void HU_DrawDownArrow(INT32 x, INT32 y, INT32 options)
 
 static void HU_drawChatLog(void)
 {
-	
-	// before we do anything, make sure that our scroll position isn't "illegal";
-	if (chat_scroll > chat_maxscroll)
-		chat_scroll = chat_maxscroll;
-	
 	UINT32 charwidth = (vid.width < 640) ? 8 : 4, charheight = (vid.width < 640) ? 8 : 6;
 	UINT32 x = chatx+2, y = chaty+2-(chat_scroll*charheight), dx = 0, dy = 0;
 	size_t i = 0;
 	boolean atbottom = false;
+	
+	// before we do anything, make sure that our scroll position isn't "illegal";
+	if (chat_scroll > chat_maxscroll)
+		chat_scroll = chat_maxscroll;
 	
 	V_DrawFillConsoleMap(chatx, chaty, cv_chatwidth.value, cv_chatheight.value*charheight +2, 239|V_SNAPTOTOP|V_SNAPTORIGHT);	// INUT
 		
