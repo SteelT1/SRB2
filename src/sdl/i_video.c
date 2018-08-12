@@ -93,6 +93,17 @@ boolean highcolor = false;
 consvar_t cv_vidwait = {"vid_wait", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 static consvar_t cv_stretch = {"stretch", "Off", CV_SAVE|CV_NOSHOWHELP, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
+#ifdef ONTOP
+static void Ontop_OnChange(void);
+static CV_PossibleValue_t CV_NeverOnOff[] = {{-1, "Never"}, {0, "Off"}, {1, "On"}, {0, NULL}};
+static consvar_t cv_ontop = {"ontop", "Off", CV_SAVE|CV_CALL|CV_NOINIT, CV_NeverOnOff, Ontop_OnChange, 0, NULL, NULL, 0, 0, NULL};
+#endif
+
+static void Winpos_OnChange(void);
+
+consvar_t cv_winxpos = {"winxpos", "320", CV_SAVE|CV_CALL|CV_NOINIT, CV_Natural, Winpos_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_winypos = {"winypos", "200", CV_SAVE|CV_CALL|CV_NOINIT, CV_Natural, Winpos_OnChange, 0, NULL, NULL, 0, 0, NULL};
+
 UINT8 graphics_started = 0; // Is used in console.c and screen.c
 
 // To disable fullscreen at startup; is set in VID_PrepareModeList
@@ -164,6 +175,8 @@ static void Impl_VideoSetupBuffer(void);
 static SDL_bool Impl_CreateWindow(SDL_bool fullscreen);
 //static void Impl_SetWindowName(const char *title);
 static void Impl_SetWindowIcon(void);
+
+int flags = 0;
 
 static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 {
@@ -1247,7 +1260,6 @@ INT32 VID_SetMode(INT32 modeNum)
 
 static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 {
-	int flags = 0;
 
 	if (rendermode == render_none) // dedicated
 		return SDL_TRUE; // Monster Iestyn -- not sure if it really matters what we return here tbh
@@ -1297,6 +1309,7 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 			flags |= SDL_RENDERER_SOFTWARE;
 		else if (cv_vidwait.value)
 			flags |= SDL_RENDERER_PRESENTVSYNC;
+
 
 		renderer = SDL_CreateRenderer(window, -1, flags);
 		if (renderer == NULL)
@@ -1392,6 +1405,11 @@ void I_StartupGraphics(void)
 	COM_AddCommand ("vid_mode", VID_Command_Mode_f);
 	CV_RegisterVar (&cv_vidwait);
 	CV_RegisterVar (&cv_stretch);
+	CV_RegisterVar (&cv_winxpos);
+	CV_RegisterVar (&cv_winypos);
+#ifdef ONTOP
+	CV_RegisterVar (&cv_ontop);
+#endif	
 	disable_mouse = M_CheckParm("-nomouse");
 	disable_fullscreen = M_CheckParm("-win") ? 1 : 0;
 
@@ -1541,6 +1559,7 @@ void I_ShutdownGraphics(void)
 		I_OutputMsg("graphics never started\n");
 		return;
 	}
+
 	graphics_started = false;
 	I_OutputMsg("shut down\n");
 
@@ -1554,5 +1573,33 @@ void I_ShutdownGraphics(void)
 #endif
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
 	framebuffer = SDL_FALSE;
+}
+
+#ifdef ONTOP
+static void Ontop_OnChange(void)
+{
+	if (cv_ontop.value == -1)
+		return;
+
+	SDLdoUngrabMouse();
+	SDL_DestroyWindow(window);
+	free(window);
+	window = NULL;
+
+	if (cv_ontop.value == 1) {
+		flags |= SDL_WINDOW_ALWAYS_ON_TOP;
+	} else if (cv_ontop.value == 0) {
+		flags &= ~SDL_WINDOW_ALWAYS_ON_TOP;
+	}
+
+	Impl_CreateWindow(USE_FULLSCREEN); // Calling this instead of SDL_CreateWindow, as it not only creates a window for us, but handles renderer specific stuff.
+	Impl_SetWindowIcon();
+	COM_BufInsertText(va("vid_mode \"%i\"\n", vid.modenum));
+}
+#endif
+
+static void Winpos_OnChange(void)
+{
+	SDL_SetWindowPosition(window, cv_winxpos.value, cv_winypos.value);
 }
 #endif

@@ -505,4 +505,7 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 //#define HAVEGAY
 
+/// Always on top flag, disabled for time being, until I can resolve those major bugs. 
+#define ONTOP
+
 #endif // __DOOMDEF__

@@ -15,6 +15,7 @@
 #define __I_VIDEO__
 
 #include "doomtype.h"
+#include "command.h"
 
 #ifdef __GNUG__
 #pragma interface
@@ -31,6 +32,12 @@ typedef enum
 	/// Dedicated
 	render_none = 3  // for dedicated server
 } rendermode_t;
+
+/**	\brief window positon
+*/
+
+extern consvar_t cv_winxpos;
+extern consvar_t cv_winypos;
 
 /**	\brief currect render mode
 */

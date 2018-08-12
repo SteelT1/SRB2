@@ -129,6 +129,11 @@ boolean nomidimusic = false, nosound = false;
 boolean nodigimusic = false; // No fmod-based music
 #endif
 
+#ifdef HAVE_SDL
+#include "SDL.h"
+SDL_Window *window;
+#endif
+
 char setpal[9] = "PLAYPAL";
 
 // These variables are only true if
@@ -560,6 +565,7 @@ void D_SRB2Loop(void)
 
 	// make sure to do a d_display to init mode _before_ load a level
 	SCR_SetMode(); // change video mode
+	SDL_SetWindowPosition(window, cv_winxpos.value, cv_winypos.value);
 	SCR_Recalc();
 
 	// Check and print which version is executed.

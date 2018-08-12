@@ -2102,12 +2102,16 @@ INT32 I_StartupSystem(void)
 //
 void I_Quit(void)
 {
+	int winx,winy;
 	static SDL_bool quiting = SDL_FALSE;
 
 	/* prevent recursive I_Quit() */
 	if (quiting) goto death;
 	SDLforceUngrabMouse();
 	quiting = SDL_FALSE;
+	SDL_GetWindowPosition(window, &winx, &winy);
+	CV_StealthSetValue(&cv_winxpos, winx);
+	CV_StealthSetValue(&cv_winypos, winy);
 	I_ShutdownConsole();
 	M_SaveConfig(NULL); //save game config, cvars..
 #ifndef NONET
