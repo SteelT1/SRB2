@@ -828,7 +828,7 @@ static inline boolean HU_keyInChatString(char *s, char ch)
 			{	
 				
 				// move everything past c_input for new characters:
-				INT32 m = HU_MAXMSGLEN-1;
+				UINT32 m = HU_MAXMSGLEN-1;
 				for (;(m>=c_input);m--)
 				{
 					if (s[m])
@@ -1339,6 +1339,7 @@ static void HU_drawChatLog(void)
 	INT32 dx;
 	INT32 dy;
 	size_t i;
+	boolean atbottom;
 	// before we do anything, make sure that our scroll position isn't "illegal";
 	if (chat_scroll > chat_maxscroll)
 		chat_scroll = chat_maxscroll;
@@ -1346,7 +1347,7 @@ static void HU_drawChatLog(void)
 	charwidth = (vid.width < 640) ? 8 : 4, charheight = (vid.width < 640) ? 8 : 6;
 	x = chatx+2, y = chaty+2-(chat_scroll*charheight), dx = 0, dy = 0;
 	i = 0;
-	boolean atbottom = false;
+	atbottom = false;
 	
 	V_DrawFillConsoleMap(chatx, chaty, cv_chatwidth.value, cv_chatheight.value*charheight +2, 239|V_SNAPTOTOP|V_SNAPTORIGHT);	// INUT
 		
@@ -1405,8 +1406,6 @@ static void HU_drawChatLog(void)
 	
 	// getmaxscroll through a lazy hack. We do all these loops, so let's not do more loops that are gonna lag the game more. :P
 	chat_maxscroll = (dy/charheight)-cv_chatheight.value;	// welcome to C, we don't know what min() and max() are.
-	if (chat_maxscroll < 0)
-		chat_maxscroll = 0;
 	
 	// if we're not bound by the time, autoscroll for next frame:
 	if (atbottom)
