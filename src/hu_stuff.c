@@ -897,6 +897,7 @@ static void HU_queueChatChar(char c)
 	int spc;
 	INT32 target;
 	size_t i;
+	char *nodenum;
 	// send automaticly the message (no more chat char)
 	if (c == KEY_ENTER)
 	{
@@ -936,7 +937,7 @@ static void HU_queueChatChar(char c)
 			}	
 			
 			spc = 1;	// used if nodenum[1] is a space.
-			char *nodenum = (char*) malloc(3);
+			nodenum = (char*) malloc(3);
 			strncpy(nodenum, msg+3, 5);
 			// check for undesirable characters in our "number"
 			if 	(((nodenum[0] < '0') || (nodenum[0] > '9')) || ((nodenum[1] < '0') || (nodenum[1] > '9')))
@@ -1009,6 +1010,7 @@ boolean HU_Responder(event_t *ev)
 {
 	UINT8 c=0;
 	size_t chatlen;
+	size_t pastelen;
 		
 	if (ev->type != ev_keydown)
 		return false;
@@ -1081,7 +1083,7 @@ boolean HU_Responder(event_t *ev)
 				return true;
 			
 			chatlen = strlen(w_chat);
-			size_t pastelen = strlen(paste);
+			pastelen = strlen(paste);
 			if (chatlen+pastelen > HU_MAXMSGLEN)
 				return true; // we can't paste this!!
 			
@@ -1332,12 +1334,16 @@ static void HU_drawChatLog(void)
 {
 	INT32 charwidth;
 	INT32 charheight;
+	INT32 x;
+	INT32 y;
+	INT32 dx;
+	INT32 dy;
 	// before we do anything, make sure that our scroll position isn't "illegal";
 	if (chat_scroll > chat_maxscroll)
 		chat_scroll = chat_maxscroll;
 	
 	charwidth = (vid.width < 640) ? 8 : 4, charheight = (vid.width < 640) ? 8 : 6;
-	INT32 x = chatx+2, y = chaty+2-(chat_scroll*charheight), dx = 0, dy = 0;
+	x = chatx+2, y = chaty+2-(chat_scroll*charheight), dx = 0, dy = 0;
 	size_t i = 0;
 	boolean atbottom = false;
 	
@@ -1431,6 +1437,7 @@ static void HU_DrawChat(void)
 	size_t i = 0;
 	int count = 0;
 	char *nodenum;
+	INT32 p_dispy;
 	const char *ntalk = "Say: ", *ttalk = "Team: ";
 	const char *talk = ntalk;
 	
@@ -1494,7 +1501,7 @@ static void HU_DrawChat(void)
 	{	
 		i = 0;
 		count = 0;
-		INT32 p_dispy = chaty+2;
+		p_dispy = chaty+2;
 		V_DrawFillConsoleMap(chatx-50, p_dispy-2, 48, 2, 239 | V_SNAPTOTOP | V_SNAPTORIGHT);	// top (don't mind me)
 		for(i=0; (i<MAXPLAYERS); i++)
 		{
@@ -2220,6 +2227,7 @@ static void HU_Draw32TeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 //
 void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 {
+	char name[MAXPLAYERNAME+1];
 	INT32 i,x,y;
 	INT32 redplayers = 0, blueplayers = 0;
 	const UINT8 *colormap;
@@ -2262,9 +2270,7 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 	V_DrawFill(160, 26, 1, 154, 0); //Draw a vertical line to separate the two teams.
 	V_DrawFill(1, 26, 318, 1, 0); //And a horizontal line to make a T.
 	V_DrawFill(1, 180, 318, 1, 0); //And a horizontal line near the bottom.
-	
-	char name[MAXPLAYERNAME+1];
-	
+		
 	i=0, redplayers=0, blueplayers=0;
 	
 	for (i = 0; i < MAXPLAYERS; i++)
