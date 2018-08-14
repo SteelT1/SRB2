@@ -1434,7 +1434,7 @@ static void HU_DrawChat(void)
 	INT32 charwidth = (vid.width < 640) ? 8 : 4, charheight = (vid.width < 640) ? 8 : 6;
 	INT32 t = 0, c = 0, y = chaty + 4 + cv_chatheight.value*charheight;
 	UINT32 n;
-	size_t i = 0;
+	UINT32 i = 0;
 	int count = 0;
 	char *nodenum;
 	INT32 p_dispy;
