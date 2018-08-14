@@ -73,7 +73,7 @@ patch_t *cred_font[CRED_FONTSIZE];
 static player_t *plr;
 boolean chat_on; // entering a chat message?
 static char w_chat[HU_MAXMSGLEN];
-static INT32 c_input = 0;	// let's try to make the chat input less shitty.
+static UINT32 c_input = 0;	// let's try to make the chat input less shitty.
 static boolean headsupactive = false;
 boolean hu_showscores; // draw rankings
 static char hu_tick;
@@ -328,7 +328,7 @@ static UINT32 chat_nummsg_min = 0;
 static UINT32 chat_scroll = 0;		
 static tic_t chat_scrolltime = 0;
 
-static INT32 chat_maxscroll = 0;	// how far can we scroll? 
+static UINT32 chat_maxscroll = 0;	// how far can we scroll? 
 
 //static chatmsg_t chat_mini[CHAT_BUFSIZE];	// Display the last few messages sent.
 //static chatmsg_t chat_log[CHAT_BUFSIZE];	// Keep every message sent to us in memory so we can scroll n shit, it's cool.
@@ -346,7 +346,7 @@ static INT16 addy = 0;	// use this to make the messages scroll smoothly when one
 static void HU_removeChatText_Mini(void)
 {
     // MPC: Don't create new arrays, just iterate through an existing one
-	int i;
+	UINT32 i;
     for(i=0;i<chat_nummsg_min-1;i++) {
         strcpy(chat_mini[i], chat_mini[i+1]);
         chat_timers[i] = chat_timers[i+1];
@@ -362,7 +362,7 @@ static void HU_removeChatText_Mini(void)
 static void HU_removeChatText_Log(void)
 {
 	// MPC: Don't create new arrays, just iterate through an existing one
-	int i;
+	UINT32 i;
     for(i=0;i<chat_nummsg_log-1;i++) {
         strcpy(chat_log[i], chat_log[i+1]);
     }
@@ -1008,7 +1008,7 @@ static boolean justscrolledup;
 //
 boolean HU_Responder(event_t *ev)
 {
-	UINT8 c=0;
+	UINT32 c=0;
 	size_t chatlen;
 	size_t pastelen;
 		
@@ -1338,13 +1338,14 @@ static void HU_drawChatLog(void)
 	INT32 y;
 	INT32 dx;
 	INT32 dy;
+	size_t i;
 	// before we do anything, make sure that our scroll position isn't "illegal";
 	if (chat_scroll > chat_maxscroll)
 		chat_scroll = chat_maxscroll;
 	
 	charwidth = (vid.width < 640) ? 8 : 4, charheight = (vid.width < 640) ? 8 : 6;
 	x = chatx+2, y = chaty+2-(chat_scroll*charheight), dx = 0, dy = 0;
-	size_t i = 0;
+	i = 0;
 	boolean atbottom = false;
 	
 	V_DrawFillConsoleMap(chatx, chaty, cv_chatwidth.value, cv_chatheight.value*charheight +2, 239|V_SNAPTOTOP|V_SNAPTORIGHT);	// INUT
@@ -1433,7 +1434,7 @@ static void HU_DrawChat(void)
 {	
 	INT32 charwidth = (vid.width < 640) ? 8 : 4, charheight = (vid.width < 640) ? 8 : 6;
 	INT32 t = 0, c = 0, y = chaty + 4 + cv_chatheight.value*charheight;
-	INT32 n;
+	UINT32 n;
 	size_t i = 0;
 	int count = 0;
 	char *nodenum;
