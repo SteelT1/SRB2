@@ -488,7 +488,7 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 		}
 		buf[0] = target;
 		newmsg = msg+5+spc;
-		memcpy(msg, newmsg, 254);
+		memcpy(msg, newmsg, 252);
 	}
 
 	SendNetXCmd(XD_SAY, buf, strlen(msg) + 1 + msg-buf);
