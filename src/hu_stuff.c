@@ -413,6 +413,7 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 	XBOXSTATIC char buf[254];
 	size_t numwords, ix;
 	char *msg = &buf[2];
+	const char *newmsg;
 	const size_t msgspace = sizeof buf - 2;
 
 	numwords = COM_Argc() - usedargs;
@@ -486,7 +487,7 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 			return;
 		}
 		buf[0] = target;
-		const char *newmsg = msg+5+spc;
+		newmsg = msg+5+spc;
 		memcpy(msg, newmsg, 255);
 	}
 
@@ -588,6 +589,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	char *msg;
 	boolean action = false;
 	char *ptr;
+	int spam_eatmsg;
 	
 	CONS_Debug(DBG_NETPLAY,"Received SAY cmd from Player %d (%s)\n", playernum+1, player_names[playernum]);
 
@@ -634,7 +636,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 		}
 	}
 	
-	int spam_eatmsg = 0;
+	spam_eatmsg = 0;
 	
 	// before we do anything, let's verify the guy isn't spamming, get this easier on us.
 	
@@ -809,6 +811,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 static inline boolean HU_keyInChatString(char *s, char ch)
 {
 	size_t l;
+	size_t i;
 
 	if ((ch >= HU_FONTSTART && ch <= HU_FONTEND && hu_font[ch-HU_FONTSTART])
 	  || ch == ' ') // Allow spaces, of course
@@ -842,7 +845,7 @@ static inline boolean HU_keyInChatString(char *s, char ch)
 	{
 		if (c_input <= 0)
 			return false;
-		size_t i = c_input;
+		i = c_input;
 		if (!s[i-1])
 			return false;
 		
@@ -890,6 +893,10 @@ static INT32 head = 0, tail = 0;*/
 //
 static void HU_queueChatChar(char c)
 {
+	const char *newmsg;
+	int spc;
+	INT32 target;
+	size_t i;
 	// send automaticly the message (no more chat char)
 	if (c == KEY_ENTER)
 	{
@@ -901,7 +908,7 @@ static void HU_queueChatChar(char c)
 			if (!c || (c >= ' ' && !(c & 0x80))) // copy printable characters and terminating '\0' only.
 				buf[ci-1]=c;
 		} while (c);
-		size_t i = 0;
+		i = 0;
 		for (;(i<HU_MAXMSGLEN);i++)
 			w_chat[i] = 0;	// reset this.
 		
@@ -914,7 +921,7 @@ static void HU_queueChatChar(char c)
 			return;
 		}
 		
-		INT32 target = 0;
+		target = 0;
 		
 		if (strlen(msg) > 4 && strnicmp(msg, "/pm", 3) == 0)	// used /pm
 		{
@@ -928,7 +935,7 @@ static void HU_queueChatChar(char c)
 				return;
 			}	
 			
-			int spc = 1;	// used if nodenum[1] is a space.
+			spc = 1;	// used if nodenum[1] is a space.
 			char *nodenum = (char*) malloc(3);
 			strncpy(nodenum, msg+3, 5);
 			// check for undesirable characters in our "number"
@@ -966,7 +973,7 @@ static void HU_queueChatChar(char c)
 				return;
 			}
 			// we need to get rid of the /pm<node>
-			const char *newmsg = msg+5+spc;
+			newmsg = msg+5+spc;
 			memcpy(msg, newmsg, 255);
 		}	
 		if (ci > 3) // don't send target+flags+empty message.
@@ -1001,6 +1008,7 @@ static boolean justscrolledup;
 boolean HU_Responder(event_t *ev)
 {
 	UINT8 c=0;
+	size_t chatlen;
 		
 	if (ev->type != ev_keydown)
 		return false;
@@ -1072,7 +1080,7 @@ boolean HU_Responder(event_t *ev)
 			if (paste == NULL)
 				return true;
 			
-			size_t chatlen = strlen(w_chat);
+			chatlen = strlen(w_chat);
 			size_t pastelen = strlen(paste);
 			if (chatlen+pastelen > HU_MAXMSGLEN)
 				return true; // we can't paste this!!
@@ -1322,12 +1330,13 @@ static void HU_DrawDownArrow(INT32 x, INT32 y, INT32 options)
 
 static void HU_drawChatLog(void)
 {
-	
+	INT32 charwidth;
+	INT32 charheight;
 	// before we do anything, make sure that our scroll position isn't "illegal";
 	if (chat_scroll > chat_maxscroll)
 		chat_scroll = chat_maxscroll;
 	
-	INT32 charwidth = (vid.width < 640) ? 8 : 4, charheight = (vid.width < 640) ? 8 : 6;
+	charwidth = (vid.width < 640) ? 8 : 4, charheight = (vid.width < 640) ? 8 : 6;
 	INT32 x = chatx+2, y = chaty+2-(chat_scroll*charheight), dx = 0, dy = 0;
 	size_t i = 0;
 	boolean atbottom = false;
@@ -1418,7 +1427,10 @@ static void HU_DrawChat(void)
 {	
 	INT32 charwidth = (vid.width < 640) ? 8 : 4, charheight = (vid.width < 640) ? 8 : 6;
 	INT32 t = 0, c = 0, y = chaty + 4 + cv_chatheight.value*charheight;
+	INT32 n;
 	size_t i = 0;
+	int count = 0;
+	char *nodenum;
 	const char *ntalk = "Say: ", *ttalk = "Team: ";
 	const char *talk = ntalk;
 	
@@ -1481,7 +1493,7 @@ static void HU_DrawChat(void)
 	if (strnicmp(w_chat, "/pm", 3) == 0 && vid.width >= 400 && !teamtalk)	// 320x200 unsupported kthxbai
 	{	
 		i = 0;
-		int count = 0;
+		count = 0;
 		INT32 p_dispy = chaty+2;
 		V_DrawFillConsoleMap(chatx-50, p_dispy-2, 48, 2, 239 | V_SNAPTOTOP | V_SNAPTORIGHT);	// top (don't mind me)
 		for(i=0; (i<MAXPLAYERS); i++)
@@ -1496,9 +1508,9 @@ static void HU_DrawChat(void)
 					break;
 					
 				
-				char *nodenum = (char*) malloc(3);
+				nodenum = (char*) malloc(3);
 				strncpy(nodenum, w_chat+3, 4);
-				INT32 n = atoi((const char*) nodenum);	// turn that into a number
+				n = atoi((const char*) nodenum);	// turn that into a number
 				// special cases:
 				
 				if ((n == 0) && !(w_chat[4] == '0'))
@@ -1968,6 +1980,7 @@ void HU_drawPing(INT32 x, INT32 y, INT32 ping, boolean notext)
 	UINT8 barcolor = 128;	// color we use for the bars (green, yellow or red)
 	SINT8 i = 0;
 	SINT8 yoffset = 6;
+	INT32 dx;
 	if (ping < 128)
 	{	
 		numbars = 3;
@@ -1979,7 +1992,7 @@ void HU_drawPing(INT32 x, INT32 y, INT32 ping, boolean notext)
 		barcolor = 103;
 	}	
 	
-	INT32 dx = x+1 - (V_SmallStringWidth(va("%dms", ping), V_ALLOWLOWERCASE)/2);
+	dx = x+1 - (V_SmallStringWidth(va("%dms", ping), V_ALLOWLOWERCASE)/2);
 	if (!notext || vid.width >= 640)	// how sad, we're using a shit resolution.
 		V_DrawSmallString(dx, y+4, V_ALLOWLOWERCASE, va("%dms", ping));
 	
@@ -2209,6 +2222,7 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 {
 	INT32 i,x,y;
 	INT32 redplayers = 0, blueplayers = 0;
+	const UINT8 *colormap;
 	boolean smol = false;
 
 	// before we draw, we must count how many players are in each team. It makes an additional loop, but we need to know if we have to draw a big or a small ranking.
@@ -2249,7 +2263,6 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 	V_DrawFill(1, 26, 318, 1, 0); //And a horizontal line to make a T.
 	V_DrawFill(1, 180, 318, 1, 0); //And a horizontal line near the bottom.
 	
-	const UINT8 *colormap;
 	char name[MAXPLAYERNAME+1];
 	
 	i=0, redplayers=0, blueplayers=0;
