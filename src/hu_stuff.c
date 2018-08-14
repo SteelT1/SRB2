@@ -1516,7 +1516,7 @@ static void HU_DrawChat(void)
 					
 				
 				nodenum = (char*) malloc(3);
-				strncpy(nodenum, w_chat+3, 4);
+				strncpy(nodenum, w_chat+3, 2);
 				n = atoi((const char*) nodenum);	// turn that into a number
 				// special cases:
 				
