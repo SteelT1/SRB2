@@ -749,13 +749,6 @@ static int R_PolyobjCompare(const void *p1, const void *p2)
 //
 void R_SortPolyObjects(subsector_t *sub)
 {
-	/// MPC 13-08-2018
-	#define DISTFUNC(x0,y0,x1,y1) R_PointToDist2  (x0,y0,x1,y1)
-	if (precisionfixes.value) {
-		#undef DISTFUNC
-		#define DISTFUNC(x0,y0,x1,y1) R_JimboEuclidean(x0,y0,x1,y1)
-	}
-
 	if (numpolys)
 	{
 		polyobj_t *po;
@@ -774,8 +767,17 @@ void R_SortPolyObjects(subsector_t *sub)
 
 		while (po)
 		{
-			po->zdist = DISTFUNC(viewx, viewy,
-				po->centerPt.x, po->centerPt.y);
+			// fucking hell
+			if (precisionfixes.value)
+			{
+				po->zdist = (fixed_t)R_JimboEuclidean(viewx, viewy,
+					po->centerPt.x, po->centerPt.y);
+			}
+			else
+			{
+				po->zdist = R_PointToDist2(viewx, viewy,
+					po->centerPt.x, po->centerPt.y);
+			}
 			po_ptrs[i++] = po;
 			po = (polyobj_t *)(po->link.next);
 		}
@@ -788,7 +790,6 @@ void R_SortPolyObjects(subsector_t *sub)
 				R_PolyobjCompare);
 		}
 	}
-	#undef DISTFUNC
 }
 
 //
@@ -803,19 +804,7 @@ static int R_PolysegCompare(const void *p1, const void *p2)
 	const seg_t *seg2 = *(const seg_t * const *)p2;
 	fixed_t dist1v1, dist1v2, dist2v1, dist2v2;
 
-	// TODO might be a better way to get distance?
-
-	/// MPC 13-08-2018
-	#define DISTFUNC(x,y) R_PointToDist(x,y)
-	#define ANGLEFUNC(x,y) R_PointToAngle(x,y)
-	if (precisionfixes.value) {
-		#undef DISTFUNC
-		#undef ANGLEFUNC
-		#define DISTFUNC(x,y) R_JimboEuclidean(viewx,viewy,x,y)
-		#define ANGLEFUNC(x,y) R_JimboPointToAngle(viewx,viewy,x,y)
-	}
-
-	#define pdist(x, y) (FixedMul(DISTFUNC(x,y),FINECOSINE((ANGLEFUNC(x,y)-viewangle)>>ANGLETOFINESHIFT))+0xFFFFFFF)
+	#define pdist(x, y) (FixedMul(R_JimboEuclidean(viewx,viewy,x,y),FINECOSINE((R_JimboPointToAngle(viewx,viewy,x,y)-viewangle)>>ANGLETOFINESHIFT))+0xFFFFFFF)
 	#define vxdist(v) pdist(v->x, v->y)
 
 	dist1v1 = vxdist(seg1->v1);
@@ -875,9 +864,6 @@ static int R_PolysegCompare(const void *p1, const void *p2)
 
 	#undef vxdist
 	#undef pdist
-	/// MPC 13-08-2018
-	#undef DISTFUNC
-	#undef ANGLEFUNC
 }
 
 //
