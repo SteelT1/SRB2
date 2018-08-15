@@ -373,6 +373,11 @@ static void R_AddLine(seg_t *line)
 {
 	INT32 x1, x2;
 	angle_t angle1, angle2, span, tspan;
+	/// MPC 14-08-2018
+	/*vector2_t t1, t2;
+	vector2_t w1, w2;
+	INT32 lclip, rclip;*/
+
 	static sector_t tempsec; // ceiling/water hack
 
 	if (line->polyseg && !(line->polyseg->flags & POF_RENDERSIDES))
@@ -381,9 +386,15 @@ static void R_AddLine(seg_t *line)
 	curline = line;
 	portalline = false;
 
-	// OPTIMIZE: quickly reject orthogonal back sides.
-	angle1 = R_PointToAngle(line->v1->x, line->v1->y);
-	angle2 = R_PointToAngle(line->v2->x, line->v2->y);
+	/// MPC 13-08-2018
+	if (precisionfixes.value) {
+		angle1 = R_JimboPointToAngle(viewx, viewy, line->v1->x, line->v1->y);
+		angle2 = R_JimboPointToAngle(viewx, viewy, line->v2->x, line->v2->y);
+	} else {
+		// OPTIMIZE: quickly reject orthogonal back sides.
+		angle1 = R_PointToAngle(line->v1->x, line->v1->y);
+		angle2 = R_PointToAngle(line->v2->x, line->v2->y);
+	}
 
 	// Clip to view edges.
 	span = angle1 - angle2;
@@ -425,6 +436,31 @@ static void R_AddLine(seg_t *line)
 	angle2 = (angle2+ANGLE_90)>>ANGLETOFINESHIFT;
 	x1 = viewangletox[angle1];
 	x2 = viewangletox[angle2];
+
+	// Line isn't facing camera.
+	/*if (R_PointOnSegSide(viewx, viewy, line) != 0)
+		return;
+
+	// Translate the line seg endpoints from world-space to camera-space.
+	R_RotatePoint(line->v1->x-viewx,line->v1->y-viewy,ANGLE_90-viewangle,&t1.x,&t1.y);
+	R_RotatePoint(line->v2->x-viewx,line->v2->y-viewy,ANGLE_90-viewangle,&t2.x,&t2.y);
+
+	// Clip the line seg to the viewing window.
+	if (!R_ClipLineToFrustum(&t1,&t2,NEARCLIP,&lclip,&rclip))
+		return;
+
+	// Apply the view frustum clipping.
+	R_ClipLine(&t1,&t2,lclip,rclip,&t1,&t2);
+
+	// Project the line end points.
+	x1 = R_ProjectPointX(t1.x,t1.y);
+	x2 = R_ProjectPointX(t2.x,t2.y)-1;
+	if (!R_CheckProjectionX(&x1,&x2))
+		return;
+
+	// Clip the line end points in world-space.
+	R_ClipLine(&line->v1,&line->v2,lclip,rclip,&w1,&w2);
+	R_PrepWall(w1.x,w1.y,w2.x,w2.y,t1.y,t2.y,x1,x2);*/
 
 	// Does not cross a pixel?
 	if (x1 >= x2)       // killough 1/31/98 -- change == to >= for robustness
@@ -621,8 +657,14 @@ static boolean R_CheckBBox(fixed_t *bspcoord)
 	py2 = bspcoord[checkcoord[boxpos][3]];
 
 	// check clip list for an open space
-	angle1 = R_PointToAngle2(viewx>>1, viewy>>1, px1>>1, py1>>1) - viewangle;
-	angle2 = R_PointToAngle2(viewx>>1, viewy>>1, px2>>1, py2>>1) - viewangle;
+	/// MPC 15-08-2018
+	if (precisionfixes.value) {
+		angle1 = R_JimboPointToAngle(viewx>>1, viewy>>1, px1>>1, py1>>1) - viewangle;
+		angle2 = R_JimboPointToAngle(viewx>>1, viewy>>1, px2>>1, py2>>1) - viewangle;
+	} else {
+		angle1 = R_PointToAngle2(viewx>>1, viewy>>1, px1>>1, py1>>1) - viewangle;
+		angle2 = R_PointToAngle2(viewx>>1, viewy>>1, px2>>1, py2>>1) - viewangle;
+	}
 
 	span = angle1 - angle2;
 
@@ -707,6 +749,13 @@ static int R_PolyobjCompare(const void *p1, const void *p2)
 //
 void R_SortPolyObjects(subsector_t *sub)
 {
+	/// MPC 13-08-2018
+	#define DISTFUNC(x0,y0,x1,y1) R_PointToDist2  (x0,y0,x1,y1)
+	if (precisionfixes.value) {
+		#undef DISTFUNC
+		#define DISTFUNC(x0,y0,x1,y1) R_JimboEuclidean(x0,y0,x1,y1)
+	}
+
 	if (numpolys)
 	{
 		polyobj_t *po;
@@ -725,7 +774,7 @@ void R_SortPolyObjects(subsector_t *sub)
 
 		while (po)
 		{
-			po->zdist = R_PointToDist2(viewx, viewy,
+			po->zdist = DISTFUNC(viewx, viewy,
 				po->centerPt.x, po->centerPt.y);
 			po_ptrs[i++] = po;
 			po = (polyobj_t *)(po->link.next);
@@ -739,6 +788,7 @@ void R_SortPolyObjects(subsector_t *sub)
 				R_PolyobjCompare);
 		}
 	}
+	#undef DISTFUNC
 }
 
 //
@@ -754,8 +804,19 @@ static int R_PolysegCompare(const void *p1, const void *p2)
 	fixed_t dist1v1, dist1v2, dist2v1, dist2v2;
 
 	// TODO might be a better way to get distance?
-#define pdist(x, y) (FixedMul(R_PointToDist(x, y), FINECOSINE((R_PointToAngle(x, y)-viewangle)>>ANGLETOFINESHIFT))+0xFFFFFFF)
-#define vxdist(v) pdist(v->x, v->y)
+
+	/// MPC 13-08-2018
+	#define DISTFUNC(x,y) R_PointToDist(x,y)
+	#define ANGLEFUNC(x,y) R_PointToAngle(x,y)
+	if (precisionfixes.value) {
+		#undef DISTFUNC
+		#undef ANGLEFUNC
+		#define DISTFUNC(x,y) R_JimboEuclidean(viewx,viewy,x,y)
+		#define ANGLEFUNC(x,y) R_JimboPointToAngle(viewx,viewy,x,y)
+	}
+
+	#define pdist(x, y) (FixedMul(DISTFUNC(x,y),FINECOSINE((ANGLEFUNC(x,y)-viewangle)>>ANGLETOFINESHIFT))+0xFFFFFFF)
+	#define vxdist(v) pdist(v->x, v->y)
 
 	dist1v1 = vxdist(seg1->v1);
 	dist1v2 = vxdist(seg1->v2);
@@ -769,8 +830,14 @@ static int R_PolysegCompare(const void *p1, const void *p2)
 		fixed_t delta1, delta2, x1, y1, x2, y2;
 		vertex_t *near1, *near2, *far1, *far2; // wherever you are~
 
-		delta1 = R_PointToDist2(seg1->v1->x, seg1->v1->y, seg1->v2->x, seg1->v2->y);
-		delta2 = R_PointToDist2(seg2->v1->x, seg2->v1->y, seg2->v2->x, seg2->v2->y);
+		/// MPC 13-08-2018
+		if (precisionfixes.value) {
+			delta1 = R_JimboEuclidean(seg1->v1->x, seg1->v1->y, seg1->v2->x, seg1->v2->y);
+			delta2 = R_JimboEuclidean(seg2->v1->x, seg2->v1->y, seg2->v2->x, seg2->v2->y);
+		} else {
+			delta1 = R_PointToDist2(seg1->v1->x, seg1->v1->y, seg1->v2->x, seg1->v2->y);
+			delta2 = R_PointToDist2(seg2->v1->x, seg2->v1->y, seg2->v2->x, seg2->v2->y);
+		}
 
 		delta1 = FixedDiv(128<<FRACBITS, delta1);
 		delta2 = FixedDiv(128<<FRACBITS, delta2);
@@ -805,8 +872,12 @@ static int R_PolysegCompare(const void *p1, const void *p2)
 
 		return pdist(x1, y1)-pdist(x2, y2);
 	}
-#undef vxdist
-#undef pdist
+
+	#undef vxdist
+	#undef pdist
+	/// MPC 13-08-2018
+	#undef DISTFUNC
+	#undef ANGLEFUNC
 }
 
 //

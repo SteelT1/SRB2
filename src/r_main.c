@@ -164,6 +164,11 @@ consvar_t cv_homremoval = {"homremoval", "No", CV_SAVE, homremoval_cons_t, NULL,
 
 consvar_t cv_maxportals = {"maxportals", "2", CV_SAVE, maxportals_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
+/// MPC 14-08-2018
+consvar_t sortingfixes = {"software_sortingfixes", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t precisionfixes = {"software_precisionfixes", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t wigglefixes = {"software_wobblefixes", "No", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+
 void SplitScreen_OnChange(void)
 {
 	if (!cv_debug && netgame)
@@ -333,6 +338,12 @@ angle_t R_PointToAngle2(fixed_t pviewx, fixed_t pviewy, fixed_t x, fixed_t y)
 		0;
 }
 
+/// MPC 13-08-2018: Floating-point precision.
+angle_t R_JimboPointToAngle(INT64 x2, INT64 y2, INT64 x1, INT64 y1)
+{
+	return (angle_t)(int)((float)atan2f(y1-y2,x1-x2)*ANGLE_180/PI);
+}
+
 fixed_t R_PointToDist2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1)
 {
 	angle_t angle;
@@ -360,6 +371,24 @@ fixed_t R_PointToDist2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1)
 	return dist;
 }
 
+/// MPC 13-08-2018
+/// The Euclidean distance formula,
+/// given by sqrt((x-a)^2+(y-b)^2).
+INT64 R_JimboEuclidean(INT64 x2, INT64 y2, INT64 x1, INT64 y1)
+{
+	INT64 dx = x2-x1;
+	INT64 dy = y2-y1;
+	return (INT64)sqrt(dx*dx+dy*dy);
+}
+
+/// Unused.
+double R_JimboEuclideanDouble(double x2, double y2, double x1, double y1)
+{
+	INT64 dx = x2-x1;
+	INT64 dy = y2-y1;
+	return sqrt((double)dx*dx+(double)dy*dy);
+}
+
 // Little extra utility. Works in the same way as R_PointToAngle2
 fixed_t R_PointToDist(fixed_t x, fixed_t y)
 {
@@ -380,19 +409,34 @@ fixed_t R_ScaleFromGlobalAngle(angle_t visangle)
 	angle_t anglea = ANGLE_90 + (visangle-viewangle);
 	angle_t angleb = ANGLE_90 + (visangle-rw_normalangle);
 	fixed_t den = FixedMul(rw_distance, FINESINE(anglea>>ANGLETOFINESHIFT));
-	// proff 11/06/98: Changed for high-res
 	fixed_t num = FixedMul(projectiony, FINESINE(angleb>>ANGLETOFINESHIFT));
 
-	if (den > num>>16)
-	{
-		num = FixedDiv(num, den);
-		if (num > 64*FRACUNIT)
-			return 64*FRACUNIT;
-		if (num < 256)
-			return 256;
+	#define MIN 256		/// Not a fixed_t.
+
+	/// MPC 13-08-2018
+	/// Please, do NOT enable.
+	if (wigglefixes.value) {
+		num = FixedDiv(num,den);
+		/// Wall wobble fix.
+		#define MAX 512<<FRACBITS
+		if (num > MAX) return MAX;
+		if (num < MIN) return MIN;
 		return num;
+	} else {
+		/// Original behaviour.
+		#undef MAX
+		#define MAX 64<<FRACBITS
+		if (den > num>>16)
+		{
+			num = FixedDiv(num,den);
+			if (num > MAX) return MAX;
+			if (num < MIN) return MIN;
+			return num;
+		}
+		return MAX;
 	}
-	return 64*FRACUNIT;
+	#undef MIN
+	#undef MAX
 }
 
 //
@@ -1396,6 +1440,11 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_cam2_speed);
 	CV_RegisterVar(&cv_cam2_rotate);
 	CV_RegisterVar(&cv_cam2_rotspeed);
+
+	/// MPC 13-08-2018
+	CV_RegisterVar(&sortingfixes);
+	CV_RegisterVar(&precisionfixes);
+	CV_RegisterVar(&wigglefixes);
 
 	CV_RegisterVar(&cv_showhud);
 	CV_RegisterVar(&cv_translucenthud);

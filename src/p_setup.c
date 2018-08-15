@@ -30,6 +30,7 @@
 #include "r_things.h"
 #include "r_sky.h"
 #include "r_draw.h"
+#include "r_segs.h"
 
 #include "s_sound.h"
 #include "st_stuff.h"
@@ -2680,6 +2681,9 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_LoadSegs(lastloadedmaplumpnum + ML_SEGS);
 	P_LoadReject(lastloadedmaplumpnum + ML_REJECT);
 	P_GroupLines();
+
+	/// MPC 13-08-2018
+	R_CalculateLineSegsLength();
 
 	numdmstarts = numredctfstarts = numbluectfstarts = 0;
 

@@ -53,6 +53,10 @@ extern lighttable_t *zlight[LIGHTLEVELS][MAXLIGHTZ];
 // There a 0-31, i.e. 32 LUT in the COLORMAP lump.
 #define NUMCOLORMAPS 32
 
+/// MPC 14-08-2018
+#define NEARCLIP 2<<FRACBITS
+#define PI 3.14159265f
+
 // Utility functions.
 INT32 R_PointOnSide(fixed_t x, fixed_t y, node_t *node);
 INT32 R_PointOnSegSide(fixed_t x, fixed_t y, seg_t *line);
@@ -60,12 +64,31 @@ angle_t R_PointToAngle(fixed_t x, fixed_t y);
 angle_t R_PointToAngle2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1);
 fixed_t R_PointToDist(fixed_t x, fixed_t y);
 fixed_t R_PointToDist2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1);
+INT64 R_JimboEuclidean(INT64 x2, INT64 y2, INT64 x1, INT64 y1);								/// MPC 13-08-2018
+double R_JimboEuclideanDouble(double x2, double y2, double x1, double y1);					/// MPC 13-08-2018
+angle_t R_JimboPointToAngle(INT64 x2, INT64 y2, INT64 x1, INT64 y1);						/// MPC 13-08-2018
+//void R_JimboBresenham(INT32 x1, INT32 x2, INT32 y1, INT32 y2, UINT8 color, UINT8 screen);	/// MPC 15-08-2018
 
 fixed_t R_ScaleFromGlobalAngle(angle_t visangle);
 subsector_t *R_PointInSubsector(fixed_t x, fixed_t y);
 subsector_t *R_IsPointInSubsector(fixed_t x, fixed_t y);
 
 boolean R_DoCulling(line_t *cullheight, line_t *viewcullheight, fixed_t vz, fixed_t bottomh, fixed_t toph);
+
+/// MPC 14-08-2018
+/*boolean R_CheckProjectionX(INT32 *x1, INT32 *x2);
+boolean R_CheckProjectionY(INT32 *y1, INT32 *y2);
+
+INT32 R_ProjectPointX(fixed_t x, fixed_t y);
+INT32 R_ProjectPointY(fixed_t z, fixed_t y);
+
+void R_RotatePoint(fixed_t x, fixed_t y, angle_t ang, fixed_t *tx, fixed_t *ty);
+
+void R_ClipLine(vector2_t *in1, vector2_t *in2, INT32 lclip, INT32 rclip, vector2_t *out1, vector2_t *out2);
+boolean R_ClipLineToFrustum(vector2_t *v1, vector2_t *v2, fixed_t clipdist, INT32 *lclip, INT32 *rclip);
+
+void R_DrawLine(vector3_t *inpt1, vector3_t *inpt2, UINT8 color, UINT8 screen);
+void R_DrawHitBox(mobj_t *thing);*/
 
 //
 // REFRESH - the actual rendering functions.
@@ -80,6 +103,7 @@ extern consvar_t cv_translucency;
 extern consvar_t cv_precipdensity, cv_drawdist, cv_drawdist_nights, cv_drawdist_precip;
 extern consvar_t cv_skybox;
 extern consvar_t cv_tailspickup;
+extern consvar_t precisionfixes, sortingfixes, wigglefixes;			/// MPC 15-08-2018
 
 // Called by startup code.
 void R_Init(void);

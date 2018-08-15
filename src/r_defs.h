@@ -573,6 +573,9 @@ typedef struct seg_s
 	sector_t *frontsector;
 	sector_t *backsector;
 
+	/// MPC 15-08-2018
+	fixed_t length;
+
 #ifdef HWRENDER
 	float flength; // length of the seg, used by hardware renderer
 

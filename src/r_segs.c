@@ -1636,6 +1636,32 @@ static void R_RenderSegLoop (void)
 	}
 }
 
+/// MPC 13-08-2018
+void R_CalculateLineSegsLength(void)
+{
+	for (int i=0;i<numsegs;i++) {
+		seg_t *line = segs+i;
+		line->length = (fixed_t)R_JimboEuclidean(line->v2->x,line->v2->y,line->v1->x,line->v1->y);
+	}
+}
+
+/// MPC 13-08-2018
+INT64 R_CalculateDistanceFromLine(seg_t* line, INT64 x2, INT64 y2)
+{
+	if (!line->linedef->dy)				/// The line is completely vertical.
+		return abs(y2-line->v1->y);
+	else if (!line->linedef->dx)		/// The line is completely horizontal.
+		return abs(x2-line->v1->x);
+	else
+	{
+		INT64 dx = (line->v2->x)-(line->v1->x);
+		INT64 dy = (line->v2->y)-(line->v1->y);
+		INT64 vdx = x2-(line->v1->x);
+		INT64 vdy = y2-(line->v1->y);
+		return ((dy*vdx)-(dx*vdy))/(line->length);		/// line->length is precalculated
+	}
+}
+
 //
 // R_StoreWallRange
 // A wall segment will be drawn
@@ -1643,7 +1669,7 @@ static void R_RenderSegLoop (void)
 //
 void R_StoreWallRange(INT32 start, INT32 stop)
 {
-	fixed_t       hyp;
+	INT64         hyp;
 	fixed_t       sineval;
 	angle_t       distangle, offsetangle;
 #ifndef ESLOPE
@@ -1690,11 +1716,32 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	if (offsetangle > ANGLE_90)
 		offsetangle = ANGLE_90;
 
-	distangle = ANGLE_90 - offsetangle;
-	hyp = R_PointToDist (curline->v1->x, curline->v1->y);
+	distangle = ANGLE_90-offsetangle;
 	sineval = FINESINE(distangle>>ANGLETOFINESHIFT);
-	rw_distance = FixedMul (hyp, sineval);
 
+	hyp = (fixed_t)R_PointToDist(curline->v1->x,curline->v1->y);
+	/// MPC: Fix for the long wall error.
+	/// "hyp" is the length of a line calculated from
+	/// the camera viewpoint and the current line being drawn.
+	if (precisionfixes.value) {
+		if (hyp == INT32_MAX)		/// Overflow.
+			hyp = R_JimboEuclidean(viewx,viewy,curline->v1->x,curline->v1->y);
+			/// The calculation returned by R_JimboEuclidean
+			/// corrects textures not scrolling after a
+			/// certain point due to integer limits.
+	}
+	/// MPC: I don't think it matters if INT64 is casted to fixed_t.
+	if (precisionfixes.value)
+		/// rw_distance is the intersection point between
+		/// the camera viewpoint and the current line being drawn.
+		rw_distance = (fixed_t)R_CalculateDistanceFromLine(curline,viewx,viewy);
+	else {
+		rw_distance = FixedMul(hyp,sineval);
+		/// MPC: Floating point alternative.
+		/*#define PRC .00000000146291808f
+		rw_distance = (int)(hyp*sin((distangle*PRC)));
+		#undef PRC*/
+	}
 
 	ds_p->x1 = rw_x = start;
 	ds_p->x2 = stop;
@@ -1762,10 +1809,11 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		range = 1;
 	}
 
+	/// MPC: Causes visible texture splitting on large segs(?)
 	ds_p->scalestep = rw_scalestep = (ds_p->scale2 - rw_scale) / (range);
 
 	// calculate texture boundaries
-	//  and decide if floor / ceiling marks are needed
+	// and decide if floor / ceiling marks are needed
 #ifdef ESLOPE
 	// Figure out map coordinates of where start and end are mapping to on seg, so we can clip right for slope bullshit
 	if (frontsector->hasslope || (backsector && backsector->hasslope)) // Commenting this out for FOFslop. -Red
@@ -3040,7 +3088,6 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		if (!firstseg)
 		{
 			ds_p->numffloorplanes = numffloors;
-
 			for (i = 0; i < numffloors; i++)
 			{
 				ds_p->ffloorplanes[i] = ffloor[i].plane =

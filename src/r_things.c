@@ -754,6 +754,13 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	if (overflow_test < 0) overflow_test = -overflow_test;
 	if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return; // fixed point mult would overflow
 
+	if (vis->scalestep) // handles right edge too
+	{
+		overflow_test = (INT64)centeryfrac - (((INT64)vis->texturemid*(vis->scale + (vis->scalestep*(vis->x2 - vis->x1))))>>FRACBITS);
+		if (overflow_test < 0) overflow_test = -overflow_test;
+		if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return; // ditto
+	}
+
 	colfunc = basecolfunc; // hack: this isn't resetting properly somewhere.
 	dc_colormap = vis->colormap;
 	if ((vis->mobj->flags & MF_BOSS) && (vis->mobj->flags2 & MF2_FRET) && (leveltime & 1)) // Bosses "flash"
@@ -832,28 +839,29 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		if (!vis->isScaled)
 		{
 			vis->scale = FixedMul(vis->scale, this_scale);
-			spryscale = vis->scale;
-			dc_iscale = FixedDiv(FRACUNIT, vis->scale);
+			vis->scalestep = FixedMul(vis->scalestep, this_scale);
 			vis->xiscale = FixedDiv(vis->xiscale,this_scale);
 			vis->isScaled = true;
 		}
 		dc_texturemid = FixedDiv(dc_texturemid,this_scale);
-
-		//Oh lordy, mercy me. Don't freak out if sprites go offscreen!
-		/*if (vis->xiscale > 0)
-			frac = FixedDiv(frac, this_scale);
-		else if (vis->x1 <= 0)
-			frac = (vis->x1 - vis->x2) * vis->xiscale;*/
-
 		sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
-		//dc_hires = 1;
+	}
+
+	spryscale = vis->scale;
+
+	if (!(vis->scalestep))
+	{
+		sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
+		dc_iscale = FixedDiv(FRACUNIT, vis->scale);
 	}
 
 	x1 = vis->x1;
 	x2 = vis->x2;
 
-	if (vis->x1 < 0)
+	if (vis->x1 < 0) {
+		spryscale += vis->scalestep*(-vis->x1);
 		vis->x1 = 0;
+	}
 
 	if (vis->x2 >= vid.width)
 		vis->x2 = vid.width-1;
@@ -869,10 +877,15 @@ static void R_DrawVisSprite(vissprite_t *vis)
 #else
 		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[frac>>FRACBITS]));
 #endif
+		if (vis->scalestep) {
+			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
+			dc_iscale = (0xffffffffu / (unsigned)spryscale);
+		}
 		if (vis->vflip)
 			R_DrawFlippedMaskedColumn(column, patch->height);
 		else
 			R_DrawMaskedColumn(column);
+		spryscale += vis->scalestep;
 	}
 
 	colfunc = basecolfunc;
@@ -974,10 +987,12 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 			return;
 
 		cutfrac = (INT16)((centeryfrac - FixedMul(testheight - viewz, sprite->scale))>>FRACBITS);
-		if (cutfrac < 0)
-			continue;
-		if (cutfrac > viewheight)
-			return;
+		if (!sortingfixes.value) {
+			if (cutfrac < 0)
+				continue;
+			if (cutfrac > viewheight)
+				return;
+		}
 
 		// Found a split! Make a new sprite, copy the old sprite to it, and
 		// adjust the heights.
@@ -1046,7 +1061,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t tr_x, tr_y;
 	fixed_t gxt, gyt;
 	fixed_t tx, tz;
-	fixed_t xscale, yscale; //added : 02-02-98 : aaargll..if I were a math-guy!!!
+	fixed_t xscale, yscale, sortscale; //added : 02-02-98 : aaargll..if I were a math-guy!!!
 
 	INT32 x1, x2;
 
@@ -1061,8 +1076,10 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	vissprite_t *vis;
 
-	angle_t ang;
+	angle_t ang = 0; // gcc 4.6 and lower fix
 	fixed_t iscale;
+	fixed_t scalestep;
+	fixed_t offset, offset2;
 
 	//SoM: 3/17/2000
 	fixed_t gz, gzt;
@@ -1093,7 +1110,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	// aspect ratio stuff
 	xscale = FixedDiv(projection, tz);
-	yscale = FixedDiv(projectiony, tz);
+	sortscale = yscale = FixedDiv(projectiony, tz);
 
 	// decide which patch to use for sprite relative to player
 #ifdef RANGECHECK
@@ -1159,21 +1176,25 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	// calculate edges of the shape
 	if (flip)
-		tx -= FixedMul(spritecachedinfo[lump].width-spritecachedinfo[lump].offset, this_scale);
+		offset = FixedMul(spritecachedinfo[lump].offset-spritecachedinfo[lump].width,FixedDiv(this_scale,FRACUNIT));
 	else
-		tx -= FixedMul(spritecachedinfo[lump].offset, this_scale);
+		offset = FixedMul(-spritecachedinfo[lump].offset,FixedDiv(this_scale,FRACUNIT));
+	tx += offset;
 	x1 = (centerxfrac + FixedMul (tx,xscale)) >>FRACBITS;
 
 	// off the right side?
 	if (x1 > viewwidth)
 		return;
 
-	tx += FixedMul(spritecachedinfo[lump].width, this_scale);
-	x2 = ((centerxfrac + FixedMul (tx,xscale)) >>FRACBITS) - 1;
+	offset2 = spritecachedinfo[lump].width;
+	tx += FixedMul(FixedDiv(offset2,FRACUNIT),this_scale);
+	x2 = ((centerxfrac + FixedMul (tx,xscale)) >>FRACBITS)-1;
 
 	// off the left side
 	if (x2 < 0)
 		return;
+
+	scalestep = 0;
 
 	// PORTAL SPRITE CLIPPING
 	if (portalrender)
@@ -1256,6 +1277,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->heightsec = heightsec; //SoM: 3/17/2000
 	vis->mobjflags = thing->flags;
 	vis->scale = yscale; //<<detailshift;
+	vis->sortscale = sortscale;
 	vis->dispoffset = thing->info->dispoffset; // Monster Iestyn: 23/11/15
 	vis->gx = thing->x;
 	vis->gy = thing->y;
@@ -1265,6 +1287,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->pz = thing->z;
 	vis->pzt = vis->pz + vis->thingheight;
 	vis->texturemid = vis->gzt - viewz;
+	vis->scalestep = scalestep;
 
 	vis->mobj = thing; // Easy access! Tails 06-07-2002
 
@@ -1729,12 +1752,46 @@ static void R_CreateDrawNodes(void)
 		}
 		if (ds->numffloorplanes)
 		{
-			for (i = 0; i < ds->numffloorplanes; i++)
-			{
-				best = -1;
-				bestdelta = 0;
+			if (!sortingfixes.value) {
+				for (i = 0; i < ds->numffloorplanes; i++)
+				{
+					best = -1;
+					bestdelta = 0;
+					for (p = 0; p < ds->numffloorplanes; p++)
+					{
+						if (!ds->ffloorplanes[p])
+							continue;
+						plane = ds->ffloorplanes[p];
+						R_PlaneBounds(plane);
+
+						if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low || plane->polyobj)
+						{
+							ds->ffloorplanes[p] = NULL;
+							continue;
+						}
+
+						delta = abs(plane->height - viewz);
+						if (delta > bestdelta)
+						{
+							best = p;
+							bestdelta = delta;
+						}
+					}
+					if (best != -1)
+					{
+						entry = R_CreateDrawNode(&nodehead);
+						entry->plane = ds->ffloorplanes[best];
+						entry->seg = ds;
+						ds->ffloorplanes[best] = NULL;
+					}
+					else
+						break;
+				}
+			} else {
+				drawnode_t * firstdrawnode = nodehead.prev; // previous last drawnode
 				for (p = 0; p < ds->numffloorplanes; p++)
 				{
+					fixed_t planecameraz, planecameraz_r2;	/// MPC 13-08-2018
 					if (!ds->ffloorplanes[p])
 						continue;
 					plane = ds->ffloorplanes[p];
@@ -1746,22 +1803,34 @@ static void R_CreateDrawNodes(void)
 						continue;
 					}
 
-					delta = abs(plane->height - viewz);
-					if (delta > bestdelta)
+					planecameraz = plane->height;
+					#ifdef ESLOPE
+					/// MPC 13-08-2018
+					/// FFloor sorting ignored slope planes.
+					if (plane->slope && sortingfixes.value)
+						planecameraz = P_GetZAt(plane->slope, viewx, viewy);
+					#endif
+
+					delta = abs(planecameraz-viewz);
+					/// Merge sort.
+					r2 = firstdrawnode->next;
+					while (r2 != &nodehead)
 					{
-						best = p;
-						bestdelta = delta;
+						planecameraz_r2 = r2->plane->height;
+						#ifdef ESLOPE
+						/// MPC 13-08-2018
+						/// FFloor sorting ignored slope planes.
+						if (r2->plane->slope && sortingfixes.value)
+							planecameraz_r2 = P_GetZAt(r2->plane->slope, viewx, viewy);
+						#endif
+						if (abs(planecameraz_r2-viewz) < delta)
+							break;
+						r2 = r2->next;
 					}
-				}
-				if (best != -1)
-				{
-					entry = R_CreateDrawNode(&nodehead);
-					entry->plane = ds->ffloorplanes[best];
+					entry = R_CreateDrawNode(r2);
+					entry->plane = plane;
 					entry->seg = ds;
-					ds->ffloorplanes[best] = NULL;
 				}
-				else
-					break;
 			}
 		}
 	}
@@ -1795,8 +1864,10 @@ static void R_CreateDrawNodes(void)
 	R_SortVisSprites();
 	for (rover = vsprsortedhead.prev; rover != &vsprsortedhead; rover = rover->prev)
 	{
-		if (rover->szt > vid.height || rover->sz < 0)
-			continue;
+		if (!sortingfixes.value) {
+			if (rover->szt > vid.height || rover->sz < 0)
+				continue;
+		}
 
 		sintersect = (rover->x1 + rover->x2) / 2;
 
@@ -1805,6 +1876,7 @@ static void R_CreateDrawNodes(void)
 			if (r2->plane)
 			{
 				fixed_t planeobjectz, planecameraz;
+
 				if (r2->plane->minx > rover->x2 || r2->plane->maxx < rover->x1)
 					continue;
 				if (rover->szt > r2->plane->low || rover->sz < r2->plane->high)
@@ -1821,7 +1893,7 @@ static void R_CreateDrawNodes(void)
 
 				if (rover->mobjflags & MF_NOCLIPHEIGHT)
 				{
-					//Objects with NOCLIPHEIGHT can appear halfway in.
+					// Objects with NOCLIPHEIGHT can appear halfway in.
 					if (planecameraz < viewz && rover->pz+(rover->thingheight/2) >= planeobjectz)
 						continue;
 					if (planecameraz > viewz && rover->pzt-(rover->thingheight/2) <= planeobjectz)
@@ -1842,17 +1914,19 @@ static void R_CreateDrawNodes(void)
 
 				x1 = rover->x1;
 				x2 = rover->x2;
+
 				if (x1 < r2->plane->minx) x1 = r2->plane->minx;
 				if (x2 > r2->plane->maxx) x2 = r2->plane->maxx;
 
-				if (r2->seg) // if no seg set, assume the whole thing is in front or something stupid
-				{
-					for (i = x1; i <= x2; i++)
-					{
-						if (r2->seg->frontscale[i] > rover->scale)
+				if (r2->seg) {
+					/// MPC: Plane gets drawn over.
+					for (i = x1; i <= x2; i++) {
+						if (r2->seg->frontscale[i] > rover->sortscale) {
 							break;
+						}
 					}
-					if (i > x2)
+					/// MPC: Plane draws over.
+					if (i >= x2)
 						continue;
 				}
 
@@ -1865,14 +1939,49 @@ static void R_CreateDrawNodes(void)
 			else if (r2->thickseg)
 			{
 				fixed_t topplaneobjectz, topplanecameraz, botplaneobjectz, botplanecameraz;
-				if (rover->x1 > r2->thickseg->x2 || rover->x2 < r2->thickseg->x1)
+
+				/// MPC 15-08-2018
+				fixed_t thick_scale_left;
+				fixed_t thick_scale_right;
+
+				fixed_t thick_point_left;
+				fixed_t thick_point_right;
+
+				fixed_t intersect_left;
+				fixed_t intersect_right;
+				fixed_t intersect_scale;
+
+				x1 = intersect_left = rover->x1;
+				x2 = intersect_right = rover->x2;
+
+				if (x1 > r2->thickseg->x2 || x2 < r2->thickseg->x1)
 					continue;
 
-				scale = r2->thickseg->scale1 > r2->thickseg->scale2 ? r2->thickseg->scale1 : r2->thickseg->scale2;
-				if (scale <= rover->scale)
+				/// MPC 15-08-2018
+				thick_point_left = r2->thickseg->x1;
+				thick_point_right = r2->thickseg->x2;
+				if (r2->thickseg->scale1 > r2->thickseg->scale2) {
+					scale = thick_scale_left = r2->thickseg->scale1;
+					thick_scale_right = r2->thickseg->scale2;
+				}
+				else {
+					scale = thick_scale_right = r2->thickseg->scale2;
+					thick_scale_left = r2->thickseg->scale1;
+				}
+
+				/// MPC: Intentionally revert fix, if disabled.
+				if (!sortingfixes.value) {
+					thick_scale_left = r2->thickseg->scale2;
+					thick_point_left = r2->thickseg->x1;
+				}
+
+				if (scale <= rover->sortscale)
 					continue;
-				scale = r2->thickseg->scale1 + (r2->thickseg->scalestep * (sintersect - r2->thickseg->x1));
-				if (scale <= rover->scale)
+				scale = thick_scale_left+(r2->thickseg->scalestep*(sintersect-thick_point_left));
+
+				/// MPC 15-08-2018
+				intersect_scale = thick_scale_left+(r2->thickseg->scalestep*(intersect_right-thick_point_left));
+				if (sortingfixes.value && (intersect_right >= thick_point_right || rover->sortscale > intersect_scale))
 					continue;
 
 #ifdef ESLOPE
@@ -1891,9 +2000,10 @@ static void R_CreateDrawNodes(void)
 #endif
 					botplaneobjectz = botplanecameraz = *r2->ffloor->bottomheight;
 
-				if ((topplanecameraz > viewz && botplanecameraz < viewz) ||
+				if (((topplanecameraz > viewz && botplanecameraz < viewz) ||
 				    (topplanecameraz < viewz && rover->gzt < topplaneobjectz) ||
 				    (botplanecameraz > viewz && rover->gz > botplaneobjectz))
+				    && (rover->sortscale < scale))
 				{
 					entry = R_CreateDrawNode(NULL);
 					(entry->prev = r2->prev)->next = entry;
@@ -1904,6 +2014,17 @@ static void R_CreateDrawNodes(void)
 			}
 			else if (r2->seg)
 			{
+				/// MPC 15-08-2018
+				fixed_t thick_scale_left;
+				fixed_t thick_scale_right;
+
+				fixed_t thick_point_left;
+				fixed_t thick_point_right;
+
+				fixed_t intersect_left;
+				fixed_t intersect_right;
+				fixed_t intersect_scale;
+
 #if 0 //#ifdef POLYOBJECTS_PLANES
 				if (r2->seg->curline->polyseg && rover->mobj && P_MobjInsidePolyobj(r2->seg->curline->polyseg, rover->mobj)) {
 					// Determine if we need to sort in front of the polyobj, based on the planes. This fixes the issue where
@@ -1918,15 +2039,39 @@ static void R_CreateDrawNodes(void)
 						continue;
 				}
 #endif
-				if (rover->x1 > r2->seg->x2 || rover->x2 < r2->seg->x1)
+
+				x1 = intersect_left = rover->x1;
+				x2 = intersect_right = rover->x2;
+
+				if (x1 > r2->seg->x2 || x2 < r2->seg->x1)
 					continue;
 
-				scale = r2->seg->scale1 > r2->seg->scale2 ? r2->seg->scale1 : r2->seg->scale2;
-				if (scale <= rover->scale)
-					continue;
-				scale = r2->seg->scale1 + (r2->seg->scalestep * (sintersect - r2->seg->x1));
+				/// MPC 15-08-2018
+				thick_point_left = r2->seg->x1;
+				thick_point_right = r2->seg->x2;
+				if (r2->seg->scale1 > r2->seg->scale2) {
+					scale = thick_scale_left = r2->seg->scale1;
+					thick_scale_right = r2->thickseg->scale2;
+				}
+				else {
+					scale = thick_scale_right = r2->seg->scale2;
+					thick_scale_left = r2->seg->scale1;
+				}
 
-				if (rover->scale < scale)
+				/// MPC: Intentionally revert fix, if disabled.
+				if (!sortingfixes.value)
+					thick_scale_left = r2->seg->scale2;
+
+				if (scale <= rover->sortscale)
+					continue;
+				scale = thick_scale_left+(r2->seg->scalestep*(sintersect-thick_point_left));
+
+				/// MPC 15-08-2018
+				intersect_scale = thick_scale_left+(r2->seg->scalestep*(intersect_right-thick_point_left));
+				if (sortingfixes.value && (intersect_right >= thick_point_right || rover->sortscale > intersect_scale))
+					continue;
+
+				if (rover->sortscale < scale)
 				{
 					entry = R_CreateDrawNode(NULL);
 					(entry->prev = r2->prev)->next = entry;
