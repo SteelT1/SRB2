@@ -966,9 +966,11 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 	INT16 cutfrac;
 	sector_t *sector;
 	vissprite_t *newsprite;
+	vissprite_t *daddysprite;
 
-	sector = sprite->sector;
-
+	/// MPC 10-08-2018
+	daddysprite = sprite;
+	sector = daddysprite->sector;
 	for (i = 1; i < sector->numlights; i++)
 	{
 		fixed_t testheight = sector->lightlist[i].height;
@@ -997,9 +999,11 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 		// Found a split! Make a new sprite, copy the old sprite to it, and
 		// adjust the heights.
 		newsprite = M_Memcpy(R_NewVisSprite(), sprite, sizeof (vissprite_t));
+		newsprite->parent = (vissprite_t *)daddysprite;
 
 		sprite->cut |= SC_BOTTOM;
 		sprite->gz = testheight;
+		sprite->child = (vissprite_t *)newsprite;
 
 		newsprite->gzt = sprite->gz;
 
@@ -1015,8 +1019,8 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 		}
 
 		newsprite->szt -= 8;
-
 		newsprite->cut |= SC_TOP;
+
 		if (!(sector->lightlist[i].caster->flags & FF_NOSHADE))
 		{
 			lightnum = (*sector->lightlist[i].lightlevel >> LIGHTSEGSHIFT);
@@ -1710,7 +1714,7 @@ static void R_CreateDrawNodes(void)
 	drawseg_t *ds;
 	INT32 i, p, best, x1, x2;
 	fixed_t bestdelta, delta;
-	vissprite_t *rover;
+	vissprite_t *therover;
 	drawnode_t *r2;
 	visplane_t *plane;
 	INT32 sintersect;
@@ -1862,22 +1866,27 @@ static void R_CreateDrawNodes(void)
 		return;
 
 	R_SortVisSprites();
-	for (rover = vsprsortedhead.prev; rover != &vsprsortedhead; rover = rover->prev)
+	for (therover = vsprsortedhead.prev; therover != &vsprsortedhead; therover = therover->prev)
 	{
 		if (!sortingfixes.value) {
-			if (rover->szt > vid.height || rover->sz < 0)
+			if (therover->szt > vid.height || therover->sz < 0)
 				continue;
 		}
 
-		sintersect = (rover->x1 + rover->x2) / 2;
+		sintersect = (therover->x1+therover->x2)/2;
 
+		/// MPC 15-08-2018
+		vissprite_t *rover = therover;
 		for (r2 = nodehead.next; r2 != &nodehead; r2 = r2->next)
 		{
 			if (r2->plane)
 			{
 				fixed_t planeobjectz, planecameraz;
 
-				if (r2->plane->minx > rover->x2 || r2->plane->maxx < rover->x1)
+				x1 = rover->x1;
+				x2 = rover->x2;
+
+				if (r2->plane->minx > x2 || r2->plane->maxx < x1)
 					continue;
 				if (rover->szt > r2->plane->low || rover->sz < r2->plane->high)
 					continue;
@@ -1912,13 +1921,11 @@ static void R_CreateDrawNodes(void)
 				// not adequate. We must check the entire frontscale array for any
 				// part that is in front of the sprite.
 
-				x1 = rover->x1;
-				x2 = rover->x2;
-
 				if (x1 < r2->plane->minx) x1 = r2->plane->minx;
 				if (x2 > r2->plane->maxx) x2 = r2->plane->maxx;
 
-				if (r2->seg) {
+				if (r2->seg)
+				{
 					/// MPC: Plane gets drawn over.
 					for (i = x1; i <= x2; i++) {
 						if (r2->seg->frontscale[i] > rover->sortscale) {
@@ -1926,7 +1933,7 @@ static void R_CreateDrawNodes(void)
 						}
 					}
 					/// MPC: Plane draws over.
-					if (i >= x2)
+					if (i > x2)
 						continue;
 				}
 
@@ -1970,10 +1977,10 @@ static void R_CreateDrawNodes(void)
 				}
 
 				/// MPC: Intentionally revert fix, if disabled.
-				if (!sortingfixes.value) {
-					thick_scale_left = r2->thickseg->scale2;
-					thick_point_left = r2->thickseg->x1;
-				}
+				if (!sortingfixes.value)
+					scale = thick_scale_left = r2->thickseg->scale2;
+				else
+					intersect_right -= 1;		/// Don't ask me why, but this corrects some sorting.
 
 				if (scale <= rover->sortscale)
 					continue;
@@ -2000,11 +2007,13 @@ static void R_CreateDrawNodes(void)
 #endif
 					botplaneobjectz = botplanecameraz = *r2->ffloor->bottomheight;
 
-				if (((topplanecameraz > viewz && botplanecameraz < viewz) ||
+				if (!(
+					(topplanecameraz > viewz && botplanecameraz < viewz) ||
 				    (topplanecameraz < viewz && rover->gzt < topplaneobjectz) ||
-				    (botplanecameraz > viewz && rover->gz > botplaneobjectz))
-				    && (rover->sortscale < scale))
-				{
+				    (botplanecameraz > viewz && rover->gz > botplaneobjectz)))
+				    continue;
+
+				if (rover->sortscale < scale) {
 					entry = R_CreateDrawNode(NULL);
 					(entry->prev = r2->prev)->next = entry;
 					(entry->next = r2)->prev = entry;
@@ -2061,6 +2070,8 @@ static void R_CreateDrawNodes(void)
 				/// MPC: Intentionally revert fix, if disabled.
 				if (!sortingfixes.value)
 					thick_scale_left = r2->seg->scale2;
+				else
+					intersect_right -= 1;		/// Don't ask me why, but this corrects some sorting.
 
 				if (scale <= rover->sortscale)
 					continue;
@@ -2101,7 +2112,7 @@ static void R_CreateDrawNodes(void)
 		if (r2 == &nodehead)
 		{
 			entry = R_CreateDrawNode(&nodehead);
-			entry->sprite = rover;
+			entry->sprite = therover;
 		}
 	}
 }

@@ -164,6 +164,10 @@ typedef struct vissprite_s
 	boolean vflip; // Flip vertically
 	boolean isScaled;
 	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
+
+	/// MPC 15-08-2018
+	void *parent;
+	void *child;
 } vissprite_t;
 
 // A drawnode is something that points to a 3D floor, 3D side, or masked

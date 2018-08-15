@@ -167,7 +167,7 @@ consvar_t cv_maxportals = {"maxportals", "2", CV_SAVE, maxportals_cons_t, NULL, 
 /// MPC 14-08-2018
 consvar_t sortingfixes = {"software_sortingfixes", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t precisionfixes = {"software_precisionfixes", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t wigglefixes = {"software_wobblefixes", "No", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t wigglefixes = {"software_wobblefixes", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 void SplitScreen_OnChange(void)
 {
@@ -415,11 +415,10 @@ fixed_t R_ScaleFromGlobalAngle(angle_t visangle)
 	#define MIN 256		/// Not a fixed_t.
 
 	/// MPC 13-08-2018
-	/// Please, do NOT enable.
 	if (wigglefixes.value) {
 		num = FixedDiv(num,den);
 		/// Wall wobble fix.
-		#define MAX 512<<FRACBITS
+		#define MAX 256<<FRACBITS
 		if (num > MAX) return MAX;
 		if (num < MIN) return MIN;
 		return num;
