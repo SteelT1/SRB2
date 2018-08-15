@@ -373,11 +373,6 @@ static void R_AddLine(seg_t *line)
 {
 	INT32 x1, x2;
 	angle_t angle1, angle2, span, tspan;
-	/// MPC 14-08-2018
-	/*vector2_t t1, t2;
-	vector2_t w1, w2;
-	INT32 lclip, rclip;*/
-
 	static sector_t tempsec; // ceiling/water hack
 
 	if (line->polyseg && !(line->polyseg->flags & POF_RENDERSIDES))
@@ -386,7 +381,7 @@ static void R_AddLine(seg_t *line)
 	curline = line;
 	portalline = false;
 
-	/// MPC 13-08-2018
+	/// MPC 15-08-2018
 	if (precisionfixes.value) {
 		angle1 = R_JimboPointToAngle(viewx, viewy, line->v1->x, line->v1->y);
 		angle2 = R_JimboPointToAngle(viewx, viewy, line->v2->x, line->v2->y);
@@ -436,31 +431,6 @@ static void R_AddLine(seg_t *line)
 	angle2 = (angle2+ANGLE_90)>>ANGLETOFINESHIFT;
 	x1 = viewangletox[angle1];
 	x2 = viewangletox[angle2];
-
-	// Line isn't facing camera.
-	/*if (R_PointOnSegSide(viewx, viewy, line) != 0)
-		return;
-
-	// Translate the line seg endpoints from world-space to camera-space.
-	R_RotatePoint(line->v1->x-viewx,line->v1->y-viewy,ANGLE_90-viewangle,&t1.x,&t1.y);
-	R_RotatePoint(line->v2->x-viewx,line->v2->y-viewy,ANGLE_90-viewangle,&t2.x,&t2.y);
-
-	// Clip the line seg to the viewing window.
-	if (!R_ClipLineToFrustum(&t1,&t2,NEARCLIP,&lclip,&rclip))
-		return;
-
-	// Apply the view frustum clipping.
-	R_ClipLine(&t1,&t2,lclip,rclip,&t1,&t2);
-
-	// Project the line end points.
-	x1 = R_ProjectPointX(t1.x,t1.y);
-	x2 = R_ProjectPointX(t2.x,t2.y)-1;
-	if (!R_CheckProjectionX(&x1,&x2))
-		return;
-
-	// Clip the line end points in world-space.
-	R_ClipLine(&line->v1,&line->v2,lclip,rclip,&w1,&w2);
-	R_PrepWall(w1.x,w1.y,w2.x,w2.y,t1.y,t2.y,x1,x2);*/
 
 	// Does not cross a pixel?
 	if (x1 >= x2)       // killough 1/31/98 -- change == to >= for robustness

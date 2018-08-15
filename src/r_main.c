@@ -339,9 +339,10 @@ angle_t R_PointToAngle2(fixed_t pviewx, fixed_t pviewy, fixed_t x, fixed_t y)
 }
 
 /// MPC 13-08-2018: Floating-point precision.
+#define PI 3.141592653589793238f
 angle_t R_JimboPointToAngle(INT64 x2, INT64 y2, INT64 x1, INT64 y1)
 {
-	return (angle_t)(int)((float)atan2f(y1-y2,x1-x2)*ANGLE_180/PI);
+	return (angle_t)(INT64)((double)atan2f(y1-y2,x1-x2)*ANGLE_180/PI);
 }
 
 fixed_t R_PointToDist2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1)

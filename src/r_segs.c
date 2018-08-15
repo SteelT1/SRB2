@@ -1720,27 +1720,15 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	sineval = FINESINE(distangle>>ANGLETOFINESHIFT);
 
 	hyp = (fixed_t)R_PointToDist(curline->v1->x,curline->v1->y);
-	/// MPC: Fix for the long wall error.
-	/// "hyp" is the length of a line calculated from
-	/// the camera viewpoint and the current line being drawn.
-	if (precisionfixes.value) {
-		if (hyp == INT32_MAX)		/// Overflow.
-			hyp = R_JimboEuclidean(viewx,viewy,curline->v1->x,curline->v1->y);
-			/// The calculation returned by R_JimboEuclidean
-			/// corrects textures not scrolling after a
-			/// certain point due to integer limits.
-	}
-	/// MPC: I don't think it matters if INT64 is casted to fixed_t.
-	if (precisionfixes.value)
+	rw_distance = FixedMul(hyp,sineval);
+	/// MPC 15-08-2018
+	if (precisionfixes.value && hyp >= INT32_MAX) {		/// Overflow.
+		/// Some argue R_JimboEuclidean would
+		/// never disappoint Mrs. Software.
+		hyp = R_JimboEuclidean(viewx,viewy,curline->v1->x,curline->v1->y);
 		/// rw_distance is the intersection point between
 		/// the camera viewpoint and the current line being drawn.
 		rw_distance = (fixed_t)R_CalculateDistanceFromLine(curline,viewx,viewy);
-	else {
-		rw_distance = FixedMul(hyp,sineval);
-		/// MPC: Floating point alternative.
-		/*#define PRC .00000000146291808f
-		rw_distance = (int)(hyp*sin((distangle*PRC)));
-		#undef PRC*/
 	}
 
 	ds_p->x1 = rw_x = start;
