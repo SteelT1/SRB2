@@ -966,11 +966,8 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 	INT16 cutfrac;
 	sector_t *sector;
 	vissprite_t *newsprite;
-	vissprite_t *daddysprite;
 
-	/// MPC 10-08-2018
-	daddysprite = sprite;
-	sector = daddysprite->sector;
+	sector = sprite->sector;
 	for (i = 1; i < sector->numlights; i++)
 	{
 		fixed_t testheight = sector->lightlist[i].height;
@@ -989,6 +986,7 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 			return;
 
 		cutfrac = (INT16)((centeryfrac - FixedMul(testheight - viewz, sprite->scale))>>FRACBITS);
+		/// MPC 16-08-2018
 		if (!sortingfixes.value) {
 			if (cutfrac < 0)
 				continue;
@@ -999,11 +997,9 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 		// Found a split! Make a new sprite, copy the old sprite to it, and
 		// adjust the heights.
 		newsprite = M_Memcpy(R_NewVisSprite(), sprite, sizeof (vissprite_t));
-		newsprite->parent = (vissprite_t *)daddysprite;
 
 		sprite->cut |= SC_BOTTOM;
 		sprite->gz = testheight;
-		sprite->child = (vissprite_t *)newsprite;
 
 		newsprite->gzt = sprite->gz;
 
@@ -1714,7 +1710,7 @@ static void R_CreateDrawNodes(void)
 	drawseg_t *ds;
 	INT32 i, p, best, x1, x2;
 	fixed_t bestdelta, delta;
-	vissprite_t *therover;
+	vissprite_t *rover;
 	drawnode_t *r2;
 	visplane_t *plane;
 	INT32 sintersect;
@@ -1866,17 +1862,15 @@ static void R_CreateDrawNodes(void)
 		return;
 
 	R_SortVisSprites();
-	for (therover = vsprsortedhead.prev; therover != &vsprsortedhead; therover = therover->prev)
+	for (rover = vsprsortedhead.prev; rover != &vsprsortedhead; rover = rover->prev)
 	{
 		if (!sortingfixes.value) {
-			if (therover->szt > vid.height || therover->sz < 0)
+			if (rover->szt > vid.height || rover->sz < 0)
 				continue;
 		}
 
-		sintersect = (therover->x1+therover->x2)/2;
+		sintersect = (rover->x1+rover->x2)/2;
 
-		/// MPC 15-08-2018
-		vissprite_t *rover = therover;
 		for (r2 = nodehead.next; r2 != &nodehead; r2 = r2->next)
 		{
 			if (r2->plane)
@@ -1958,37 +1952,39 @@ static void R_CreateDrawNodes(void)
 				fixed_t intersect_right;
 				fixed_t intersect_scale;
 
+				/// MPC 15-08-2018
 				x1 = intersect_left = rover->x1;
 				x2 = intersect_right = rover->x2;
 
-				if (x1 > r2->thickseg->x2 || x2 < r2->thickseg->x1)
+				thick_point_left = r2->thickseg->x1;
+				thick_point_right = r2->thickseg->x2;
+
+				if (x1 > thick_point_right || x2 < thick_point_left)
 					continue;
 
 				/// MPC 15-08-2018
-				thick_point_left = r2->thickseg->x1;
-				thick_point_right = r2->thickseg->x2;
 				if (r2->thickseg->scale1 > r2->thickseg->scale2) {
 					scale = thick_scale_left = r2->thickseg->scale1;
 					thick_scale_right = r2->thickseg->scale2;
-				}
-				else {
+				} else {
 					scale = thick_scale_right = r2->thickseg->scale2;
 					thick_scale_left = r2->thickseg->scale1;
 				}
 
-				/// MPC: Intentionally revert fix, if disabled.
+				/// Intentionally revert fix.
 				if (!sortingfixes.value)
 					scale = thick_scale_left = r2->thickseg->scale2;
-				else
-					intersect_right -= 1;		/// Don't ask me why, but this corrects some sorting.
+				else {
+					intersect_left += 1;
+					intersect_right -= 1;
+				}
 
 				if (scale <= rover->sortscale)
 					continue;
-				scale = thick_scale_left+(r2->thickseg->scalestep*(sintersect-thick_point_left));
 
 				/// MPC 15-08-2018
-				intersect_scale = thick_scale_left+(r2->thickseg->scalestep*(intersect_right-thick_point_left));
-				if (sortingfixes.value && (intersect_right >= thick_point_right || rover->sortscale > intersect_scale))
+				intersect_scale = thick_scale_left + (r2->thickseg->scalestep * (intersect_right - thick_point_left));
+				if (sortingfixes.value && (rover->sortscale > intersect_scale))
 					continue;
 
 #ifdef ESLOPE
@@ -2013,6 +2009,7 @@ static void R_CreateDrawNodes(void)
 				    (botplanecameraz > viewz && rover->gz > botplaneobjectz)))
 				    continue;
 
+				scale = thick_scale_left+(r2->thickseg->scalestep*(sintersect-thick_point_left));
 				if (rover->sortscale < scale) {
 					entry = R_CreateDrawNode(NULL);
 					(entry->prev = r2->prev)->next = entry;
@@ -2024,11 +2021,11 @@ static void R_CreateDrawNodes(void)
 			else if (r2->seg)
 			{
 				/// MPC 15-08-2018
-				fixed_t thick_scale_left;
-				fixed_t thick_scale_right;
+				fixed_t seg_scale_left;
+				fixed_t seg_scale_right;
 
-				fixed_t thick_point_left;
-				fixed_t thick_point_right;
+				fixed_t seg_point_left;
+				fixed_t seg_point_right;
 
 				fixed_t intersect_left;
 				fixed_t intersect_right;
@@ -2049,41 +2046,43 @@ static void R_CreateDrawNodes(void)
 				}
 #endif
 
+				/// MPC 15-08-2018
 				x1 = intersect_left = rover->x1;
 				x2 = intersect_right = rover->x2;
 
-				if (x1 > r2->seg->x2 || x2 < r2->seg->x1)
+				seg_point_left = r2->seg->x1;
+				seg_point_right = r2->seg->x2;
+
+				if (x1 > seg_point_right || x2 < seg_point_left)
 					continue;
 
 				/// MPC 15-08-2018
-				thick_point_left = r2->seg->x1;
-				thick_point_right = r2->seg->x2;
 				if (r2->seg->scale1 > r2->seg->scale2) {
-					scale = thick_scale_left = r2->seg->scale1;
-					thick_scale_right = r2->thickseg->scale2;
-				}
-				else {
-					scale = thick_scale_right = r2->seg->scale2;
-					thick_scale_left = r2->seg->scale1;
+					scale = seg_scale_left = r2->seg->scale1;
+					seg_scale_right = r2->seg->scale2;
+				} else {
+					scale = seg_scale_right = r2->seg->scale2;
+					seg_scale_left = r2->seg->scale1;
 				}
 
-				/// MPC: Intentionally revert fix, if disabled.
+				/// Intentionally revert fix.
 				if (!sortingfixes.value)
-					thick_scale_left = r2->seg->scale2;
-				else
-					intersect_right -= 1;		/// Don't ask me why, but this corrects some sorting.
+					scale = seg_scale_left = r2->seg->scale2;
+				else {
+					intersect_left += 1;
+					intersect_right -= 1;
+				}
 
 				if (scale <= rover->sortscale)
 					continue;
-				scale = thick_scale_left+(r2->seg->scalestep*(sintersect-thick_point_left));
 
 				/// MPC 15-08-2018
-				intersect_scale = thick_scale_left+(r2->seg->scalestep*(intersect_right-thick_point_left));
-				if (sortingfixes.value && (intersect_right >= thick_point_right || rover->sortscale > intersect_scale))
+				intersect_scale = seg_scale_left + (r2->seg->scalestep * (intersect_right - seg_point_left));
+				if (sortingfixes.value && (rover->sortscale > intersect_scale))
 					continue;
 
-				if (rover->sortscale < scale)
-				{
+				scale = seg_scale_left + (r2->seg->scalestep * (sintersect - seg_point_left));
+				if (rover->sortscale < scale) {
 					entry = R_CreateDrawNode(NULL);
 					(entry->prev = r2->prev)->next = entry;
 					(entry->next = r2)->prev = entry;
@@ -2112,7 +2111,7 @@ static void R_CreateDrawNodes(void)
 		if (r2 == &nodehead)
 		{
 			entry = R_CreateDrawNode(&nodehead);
-			entry->sprite = therover;
+			entry->sprite = rover;
 		}
 	}
 }
