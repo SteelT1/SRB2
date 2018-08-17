@@ -1403,6 +1403,11 @@ void I_StartupGraphics(void)
 	if (graphics_started)
 		return;
 
+	if (M_CheckParm("-openglsw"))
+	{
+		SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengl");
+	}
+
 	COM_AddCommand ("vid_nummodes", VID_Command_NumModes_f);
 	COM_AddCommand ("vid_info", VID_Command_Info_f);
 	COM_AddCommand ("vid_modelist", VID_Command_ModeList_f);
