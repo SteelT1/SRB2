@@ -1642,7 +1642,7 @@ void R_CalculateLineSegsLength(void)
 {
 	for (int i=0;i<numsegs;i++) {
 		seg_t *line = segs+i;
-		line->length = (fixed_t)R_JimboEuclidean(line->v2->x,line->v2->y,line->v1->x,line->v1->y);
+		line->length = (fixed_t)R_MPCEuclidean(line->v2->x,line->v2->y,line->v1->x,line->v1->y);
 	}
 }
 
@@ -1724,9 +1724,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	rw_distance = FixedMul(hyp,sineval);
 	/// MPC 15-08-2018
 	if (precisionfixes.value && hyp >= INT32_MAX) {		/// Overflow.
-		/// Some argue R_JimboEuclidean would
-		/// never disappoint Mrs. Software.
-		hyp = R_JimboEuclidean(viewx,viewy,curline->v1->x,curline->v1->y);
+		hyp = R_MPCEuclidean(viewx,viewy,curline->v1->x,curline->v1->y);
 		/// rw_distance is the intersection point between
 		/// the camera viewpoint and the current line being drawn.
 		rw_distance = (fixed_t)R_CalculateDistanceFromLine(curline,viewx,viewy);

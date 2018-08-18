@@ -60,9 +60,8 @@ angle_t R_PointToAngle(fixed_t x, fixed_t y);
 angle_t R_PointToAngle2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1);
 fixed_t R_PointToDist(fixed_t x, fixed_t y);
 fixed_t R_PointToDist2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1);
-INT64 R_JimboEuclidean(INT64 x2, INT64 y2, INT64 x1, INT64 y1);						/// MPC 13-08-2018
-double R_JimboEuclideanDouble(double x2, double y2, double x1, double y1);			/// MPC 13-08-2018
-angle_t R_JimboPointToAngle(INT64 x2, INT64 y2, INT64 x1, INT64 y1);				/// MPC 13-08-2018
+INT64 R_MPCEuclidean(INT64 x2, INT64 y2, INT64 x1, INT64 y1);					/// MPC 13-08-2018
+angle_t R_MPCPointToAngle(INT64 x2, INT64 y2, INT64 x1, INT64 y1);				/// MPC 13-08-2018
 
 fixed_t R_ScaleFromGlobalAngle(angle_t visangle);
 subsector_t *R_PointInSubsector(fixed_t x, fixed_t y);

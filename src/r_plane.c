@@ -364,6 +364,8 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 //
 // NOTE: Uses con_clipviewtop, so that when console is on,
 //       we don't draw the part of the view hidden under the console.
+/// MPC: Except that con_clipviewtop is
+/// always -1 in SRB2, so this is unnecessary
 void R_ClearPlanes(void)
 {
 	INT32 i, p;
@@ -378,7 +380,7 @@ void R_ClearPlanes(void)
 		for (p = 0; p < MAXFFLOORS; p++)
 		{
 			ffloor[p].f_clip[i] = (INT16)viewheight;
-			ffloor[p].c_clip[i] = (INT16)con_clipviewtop;
+			ffloor[p].c_clip[i] = -1;
 		}
 	}
 

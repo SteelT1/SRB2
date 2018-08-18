@@ -2376,7 +2376,9 @@ void R_ClipSprites(void)
 
 			if (spr->cliptop[x] == -2)
 				//Fab : 26-04-98: was -1, now clips against console bottom
-				spr->cliptop[x] = (INT16)con_clipviewtop;
+				/// MPC: Except that con_clipviewtop is
+				/// always -1 in SRB2, so this is unnecessary
+				spr->cliptop[x] = -1;
 		}
 	}
 }

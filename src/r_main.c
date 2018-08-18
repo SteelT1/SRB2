@@ -339,7 +339,7 @@ angle_t R_PointToAngle2(fixed_t pviewx, fixed_t pviewy, fixed_t x, fixed_t y)
 }
 
 /// MPC 13-08-2018
-angle_t R_JimboPointToAngle(INT64 x2, INT64 y2, INT64 x1, INT64 y1)
+angle_t R_MPCPointToAngle(INT64 x2, INT64 y2, INT64 x1, INT64 y1)
 {
 	return (angle_t)(INT64)((float)atan2f(y1 - y2, x1 - x2) * ANGLE_180 / M_PI);
 }
@@ -374,19 +374,11 @@ fixed_t R_PointToDist2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1)
 /// MPC 13-08-2018
 /// The Euclidean distance formula,
 /// given by sqrt((x-a)^2+(y-b)^2).
-INT64 R_JimboEuclidean(INT64 x2, INT64 y2, INT64 x1, INT64 y1)
+INT64 R_MPCEuclidean(INT64 x2, INT64 y2, INT64 x1, INT64 y1)
 {
 	INT64 dx = x2-x1;
 	INT64 dy = y2-y1;
 	return (INT64)sqrt(dx*dx+dy*dy);
-}
-
-/// Unused.
-double R_JimboEuclideanDouble(double x2, double y2, double x1, double y1)
-{
-	INT64 dx = x2-x1;
-	INT64 dy = y2-y1;
-	return sqrt((double)dx*dx+(double)dy*dy);
 }
 
 // Little extra utility. Works in the same way as R_PointToAngle2
@@ -714,7 +706,7 @@ void R_ExecuteSetViewSize(void)
 		}
 	}
 
-	// continue to do the software setviewsize as long as we use the reference software view
+	// continue to do the hardware setviewsize as long as we use the reference software view
 #ifdef HWRENDER
 	if (rendermode != render_soft)
 		HWR_SetViewSize();

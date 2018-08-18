@@ -382,11 +382,13 @@ static void R_AddLine(seg_t *line)
 	portalline = false;
 
 	/// MPC 15-08-2018
-	if (precisionfixes.value) {
-		angle1 = R_JimboPointToAngle(viewx, viewy, line->v1->x, line->v1->y);
-		angle2 = R_JimboPointToAngle(viewx, viewy, line->v2->x, line->v2->y);
-	} else {
-		// OPTIMIZE: quickly reject orthogonal back sides.
+	if (precisionfixes.value)
+	{
+		angle1 = R_MPCPointToAngle(viewx, viewy, line->v1->x, line->v1->y);
+		angle2 = R_MPCPointToAngle(viewx, viewy, line->v2->x, line->v2->y);
+	}
+	else
+	{
 		angle1 = R_PointToAngle(line->v1->x, line->v1->y);
 		angle2 = R_PointToAngle(line->v2->x, line->v2->y);
 	}
@@ -628,10 +630,13 @@ static boolean R_CheckBBox(fixed_t *bspcoord)
 
 	// check clip list for an open space
 	/// MPC 15-08-2018
-	if (precisionfixes.value) {
-		angle1 = R_JimboPointToAngle(viewx>>1, viewy>>1, px1>>1, py1>>1) - viewangle;
-		angle2 = R_JimboPointToAngle(viewx>>1, viewy>>1, px2>>1, py2>>1) - viewangle;
-	} else {
+	if (precisionfixes.value)
+	{
+		angle1 = R_MPCPointToAngle(viewx>>1, viewy>>1, px1>>1, py1>>1) - viewangle;
+		angle2 = R_MPCPointToAngle(viewx>>1, viewy>>1, px2>>1, py2>>1) - viewangle;
+	}
+	else
+	{
 		angle1 = R_PointToAngle2(viewx>>1, viewy>>1, px1>>1, py1>>1) - viewangle;
 		angle2 = R_PointToAngle2(viewx>>1, viewy>>1, px2>>1, py2>>1) - viewangle;
 	}
@@ -737,10 +742,9 @@ void R_SortPolyObjects(subsector_t *sub)
 
 		while (po)
 		{
-			// fucking hell
 			if (precisionfixes.value)
 			{
-				po->zdist = (fixed_t)R_JimboEuclidean(viewx, viewy,
+				po->zdist = (fixed_t)R_MPCEuclidean(viewx, viewy,
 					po->centerPt.x, po->centerPt.y);
 			}
 			else
@@ -774,7 +778,7 @@ static int R_PolysegCompare(const void *p1, const void *p2)
 	const seg_t *seg2 = *(const seg_t * const *)p2;
 	fixed_t dist1v1, dist1v2, dist2v1, dist2v2;
 
-	#define pdist(x, y) (FixedMul(R_JimboEuclidean(viewx,viewy,x,y),FINECOSINE((R_JimboPointToAngle(viewx,viewy,x,y)-viewangle)>>ANGLETOFINESHIFT))+0xFFFFFFF)
+	#define pdist(x, y) (FixedMul(R_MPCEuclidean(viewx,viewy,x,y),FINECOSINE((R_MPCPointToAngle(viewx,viewy,x,y)-viewangle)>>ANGLETOFINESHIFT))+0xFFFFFFF)
 	#define vxdist(v) pdist(v->x, v->y)
 
 	dist1v1 = vxdist(seg1->v1);
@@ -790,10 +794,13 @@ static int R_PolysegCompare(const void *p1, const void *p2)
 		vertex_t *near1, *near2, *far1, *far2; // wherever you are~
 
 		/// MPC 13-08-2018
-		if (precisionfixes.value) {
-			delta1 = R_JimboEuclidean(seg1->v1->x, seg1->v1->y, seg1->v2->x, seg1->v2->y);
-			delta2 = R_JimboEuclidean(seg2->v1->x, seg2->v1->y, seg2->v2->x, seg2->v2->y);
-		} else {
+		if (precisionfixes.value)
+		{
+			delta1 = R_MPCEuclidean(seg1->v1->x, seg1->v1->y, seg1->v2->x, seg1->v2->y);
+			delta2 = R_MPCEuclidean(seg2->v1->x, seg2->v1->y, seg2->v2->x, seg2->v2->y);
+		}
+		else
+		{
 			delta1 = R_PointToDist2(seg1->v1->x, seg1->v1->y, seg1->v2->x, seg1->v2->y);
 			delta2 = R_PointToDist2(seg2->v1->x, seg2->v1->y, seg2->v2->x, seg2->v2->y);
 		}
