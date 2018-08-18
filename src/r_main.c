@@ -167,7 +167,7 @@ consvar_t cv_maxportals = {"maxportals", "2", CV_SAVE, maxportals_cons_t, NULL, 
 /// MPC 14-08-2018
 consvar_t sortingfixes = {"software_sortingfixes", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t precisionfixes = {"software_precisionfixes", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t wigglefixes = {"software_wobblefixes", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t wigglefixes = {"software_wobblefixes", "No", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 void SplitScreen_OnChange(void)
 {
@@ -339,10 +339,9 @@ angle_t R_PointToAngle2(fixed_t pviewx, fixed_t pviewy, fixed_t x, fixed_t y)
 }
 
 /// MPC 13-08-2018
-#define PI 3.14159265f
 angle_t R_JimboPointToAngle(INT64 x2, INT64 y2, INT64 x1, INT64 y1)
 {
-	return (angle_t)(INT64)((float)atan2f(y1 - y2, x1 - x2) * ANGLE_180 / PI);
+	return (angle_t)(INT64)((float)atan2f(y1 - y2, x1 - x2) * ANGLE_180 / M_PI);
 }
 
 fixed_t R_PointToDist2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1)
@@ -412,20 +411,24 @@ fixed_t R_ScaleFromGlobalAngle(angle_t visangle)
 	fixed_t den = FixedMul(rw_distance, FINESINE(anglea>>ANGLETOFINESHIFT));
 	fixed_t num = FixedMul(projectiony, FINESINE(angleb>>ANGLETOFINESHIFT));
 
-	#define MIN 256		/// Not a fixed_t.
+	/// MPC 16-08-2018
+	fixed_t MIN = 256;
+	fixed_t MAX = 64<<FRACBITS;
 
 	/// MPC 13-08-2018
 	if (wigglefixes.value) {
 		num = FixedDiv(num,den);
-		/// Wall wobble fix.
-		#define MAX 256<<FRACBITS
+		/// Eh. I tried porting WiggleHack
+		/// to see if it fixed the sky
+		/// being drawn over the map
+		/// and it didn't do anything.
+		/// I'll accept my failure.
+		MAX = 256<<FRACBITS;
 		if (num > MAX) return MAX;
 		if (num < MIN) return MIN;
 		return num;
 	} else {
 		/// Original behaviour.
-		#undef MAX
-		#define MAX 64<<FRACBITS
 		if (den > num>>16)
 		{
 			num = FixedDiv(num,den);
@@ -435,8 +438,6 @@ fixed_t R_ScaleFromGlobalAngle(angle_t visangle)
 		}
 		return MAX;
 	}
-	#undef MIN
-	#undef MAX
 }
 
 //

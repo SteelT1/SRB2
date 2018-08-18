@@ -1240,6 +1240,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 //
 #define HEIGHTBITS              12
 #define HEIGHTUNIT              (1<<HEIGHTBITS)
+#define INVHGTBITS              4
 
 
 //profile stuff ---------------------------------------------------------
@@ -2645,26 +2646,26 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	}
 
 	// calculate incremental stepping values for texture edges
-	worldtop >>= 4;
-	worldbottom >>= 4;
+	worldtop >>= INVHGTBITS;
+	worldbottom >>= INVHGTBITS;
 #ifdef ESLOPE
-	worldtopslope >>= 4;
-	worldbottomslope >>= 4;
+	worldtopslope >>= INVHGTBITS;
+	worldbottomslope >>= INVHGTBITS;
 #endif
 
 	topstep = -FixedMul (rw_scalestep, worldtop);
-	topfrac = (centeryfrac>>4) - FixedMul (worldtop, rw_scale);
+	topfrac = (centeryfrac>>INVHGTBITS) - FixedMul (worldtop, rw_scale);
 
 	bottomstep = -FixedMul (rw_scalestep,worldbottom);
-	bottomfrac = (centeryfrac>>4) - FixedMul (worldbottom, rw_scale);
+	bottomfrac = (centeryfrac>>INVHGTBITS) - FixedMul (worldbottom, rw_scale);
 
 #ifdef ESLOPE
 	if (frontsector->c_slope) {
-		fixed_t topfracend = (centeryfrac>>4) - FixedMul (worldtopslope, ds_p->scale2);
+		fixed_t topfracend = (centeryfrac>>INVHGTBITS) - FixedMul (worldtopslope, ds_p->scale2);
 		topstep = (topfracend-topfrac)/(range);
 	}
 	if (frontsector->f_slope) {
-		fixed_t bottomfracend = (centeryfrac>>4) - FixedMul (worldbottomslope, ds_p->scale2);
+		fixed_t bottomfracend = (centeryfrac>>INVHGTBITS) - FixedMul (worldbottomslope, ds_p->scale2);
 		bottomstep = (bottomfracend-bottomfrac)/(range);
 	}
 #endif
@@ -2702,8 +2703,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			leftheight -= viewz;
 			rightheight -= viewz;
 
-			leftheight >>= 4;
-			rightheight >>= 4;
+			leftheight >>= INVHGTBITS;
+			rightheight >>= INVHGTBITS;
 #endif
 
 			if (i != 0)
@@ -2724,12 +2725,12 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			}
 
 #ifdef ESLOPE
-			rlight->height = (centeryfrac>>4) - FixedMul(leftheight, rw_scale);
-			rlight->heightstep = (centeryfrac>>4) - FixedMul(rightheight, ds_p->scale2);
+			rlight->height = (centeryfrac>>INVHGTBITS) - FixedMul(leftheight, rw_scale);
+			rlight->heightstep = (centeryfrac>>INVHGTBITS) - FixedMul(rightheight, ds_p->scale2);
 			rlight->heightstep = (rlight->heightstep-rlight->height)/(range);
 #else
-			rlight->height = (centeryfrac>>4) - FixedMul((light->height - viewz) >> 4, rw_scale);
-			rlight->heightstep = -FixedMul (rw_scalestep, (light->height - viewz) >> 4);
+			rlight->height = (centeryfrac>>INVHGTBITS) - FixedMul((light->height - viewz) >> INVHGTBITS, rw_scale);
+			rlight->heightstep = -FixedMul (rw_scalestep, (light->height - viewz) >> INVHGTBITS);
 #endif
 			rlight->flags = light->flags;
 
@@ -2748,16 +2749,16 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				leftheight -= viewz;
 				rightheight -= viewz;
 
-				leftheight >>= 4;
-				rightheight >>= 4;
+				leftheight >>= INVHGTBITS;
+				rightheight >>= INVHGTBITS;
 
-				rlight->botheight = (centeryfrac>>4) - FixedMul(leftheight, rw_scale);
-				rlight->botheightstep = (centeryfrac>>4) - FixedMul(rightheight, ds_p->scale2);
+				rlight->botheight = (centeryfrac>>INVHGTBITS) - FixedMul(leftheight, rw_scale);
+				rlight->botheightstep = (centeryfrac>>INVHGTBITS) - FixedMul(rightheight, ds_p->scale2);
 				rlight->botheightstep = (rlight->botheightstep-rlight->botheight)/(range);
 
 #else
-				rlight->botheight = (centeryfrac >> 4) - FixedMul((*light->caster->bottomheight - viewz) >> 4, rw_scale);
-				rlight->botheightstep = -FixedMul (rw_scalestep, (*light->caster->bottomheight - viewz) >> 4);
+				rlight->botheight = (centeryfrac >> INVHGTBITS) - FixedMul((*light->caster->bottomheight - viewz) >> INVHGTBITS, rw_scale);
+				rlight->botheightstep = -FixedMul (rw_scalestep, (*light->caster->bottomheight - viewz) >> INVHGTBITS);
 #endif
 			}
 
@@ -2778,35 +2779,35 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				continue;
 #endif
 
-			ffloor[i].f_pos >>= 4;
+			ffloor[i].f_pos >>= INVHGTBITS;
 #ifdef ESLOPE
-			ffloor[i].f_pos_slope >>= 4;
-			ffloor[i].f_frac = (centeryfrac>>4) - FixedMul(ffloor[i].f_pos, rw_scale);
-			ffloor[i].f_step = ((centeryfrac>>4) - FixedMul(ffloor[i].f_pos_slope, ds_p->scale2) - ffloor[i].f_frac)/(range);
+			ffloor[i].f_pos_slope >>= INVHGTBITS;
+			ffloor[i].f_frac = (centeryfrac>>INVHGTBITS) - FixedMul(ffloor[i].f_pos, rw_scale);
+			ffloor[i].f_step = ((centeryfrac>>INVHGTBITS) - FixedMul(ffloor[i].f_pos_slope, ds_p->scale2) - ffloor[i].f_frac)/(range);
 #else
 			ffloor[i].f_step = FixedMul(-rw_scalestep, ffloor[i].f_pos);
-			ffloor[i].f_frac = (centeryfrac>>4) - FixedMul(ffloor[i].f_pos, rw_scale);
+			ffloor[i].f_frac = (centeryfrac>>INVHGTBITS) - FixedMul(ffloor[i].f_pos, rw_scale);
 #endif
 		}
 	}
 
 	if (backsector)
 	{
-		worldhigh >>= 4;
-		worldlow >>= 4;
+		worldhigh >>= INVHGTBITS;
+		worldlow >>= INVHGTBITS;
 #ifdef ESLOPE
-		worldhighslope >>= 4;
-		worldlowslope >>= 4;
+		worldhighslope >>= INVHGTBITS;
+		worldlowslope >>= INVHGTBITS;
 #endif
 
 		if (toptexture)
 		{
-			pixhigh = (centeryfrac>>4) - FixedMul (worldhigh, rw_scale);
+			pixhigh = (centeryfrac>>INVHGTBITS) - FixedMul (worldhigh, rw_scale);
 			pixhighstep = -FixedMul (rw_scalestep,worldhigh);
 
 #ifdef ESLOPE
 			if (backsector->c_slope) {
-				fixed_t topfracend = (centeryfrac>>4) - FixedMul (worldhighslope, ds_p->scale2);
+				fixed_t topfracend = (centeryfrac>>INVHGTBITS) - FixedMul (worldhighslope, ds_p->scale2);
 				pixhighstep = (topfracend-pixhigh)/(range);
 			}
 #endif
@@ -2814,11 +2815,11 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 		if (bottomtexture)
 		{
-			pixlow = (centeryfrac>>4) - FixedMul (worldlow, rw_scale);
+			pixlow = (centeryfrac>>INVHGTBITS) - FixedMul (worldlow, rw_scale);
 			pixlowstep = -FixedMul (rw_scalestep,worldlow);
 #ifdef ESLOPE
 			if (backsector->f_slope) {
-				fixed_t bottomfracend = (centeryfrac>>4) - FixedMul (worldlowslope, ds_p->scale2);
+				fixed_t bottomfracend = (centeryfrac>>INVHGTBITS) - FixedMul (worldlowslope, ds_p->scale2);
 				pixlowstep = (bottomfracend-pixlow)/(range);
 			}
 #endif
@@ -2850,18 +2851,18 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					roverright = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segright.x, segright.y) : *rover->bottomheight) - viewz;
 					planevistest = (*rover->b_slope ? P_GetZAt(*rover->b_slope, viewx, viewy) : *rover->bottomheight);
 
-					if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
-					    (roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
+					if ((roverleft>>INVHGTBITS <= worldhigh || roverright>>INVHGTBITS <= worldhighslope) &&
+					    (roverleft>>INVHGTBITS >= worldlow || roverright>>INVHGTBITS >= worldlowslope) &&
 					    ((viewz < planevistest && !(rover->flags & FF_INVERTPLANES)) ||
 					     (viewz > planevistest && (rover->flags & FF_BOTHPLANES))))
 					{
 						//ffloor[i].slope = *rover->b_slope;
 						ffloor[i].b_pos = roverleft;
 						ffloor[i].b_pos_slope = roverright;
-						ffloor[i].b_pos >>= 4;
-						ffloor[i].b_pos_slope >>= 4;
-						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
-						ffloor[i].b_step = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos_slope, ds_p->scale2);
+						ffloor[i].b_pos >>= INVHGTBITS;
+						ffloor[i].b_pos_slope >>= INVHGTBITS;
+						ffloor[i].b_frac = (centeryfrac >> INVHGTBITS) - FixedMul(ffloor[i].b_pos, rw_scale);
+						ffloor[i].b_step = (centeryfrac >> INVHGTBITS) - FixedMul(ffloor[i].b_pos_slope, ds_p->scale2);
 						ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(range);
 						i++;
 					}
@@ -2873,18 +2874,18 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					roverright = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segright.x, segright.y) : *rover->topheight) - viewz;
 					planevistest = (*rover->t_slope ? P_GetZAt(*rover->t_slope, viewx, viewy) : *rover->topheight);
 
-					if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
-					    (roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
+					if ((roverleft>>INVHGTBITS <= worldhigh || roverright>>INVHGTBITS <= worldhighslope) &&
+					    (roverleft>>INVHGTBITS >= worldlow || roverright>>INVHGTBITS >= worldlowslope) &&
 					    ((viewz > planevistest && !(rover->flags & FF_INVERTPLANES)) ||
 					     (viewz < planevistest && (rover->flags & FF_BOTHPLANES))))
 					{
 						//ffloor[i].slope = *rover->t_slope;
 						ffloor[i].b_pos = roverleft;
 						ffloor[i].b_pos_slope = roverright;
-						ffloor[i].b_pos >>= 4;
-						ffloor[i].b_pos_slope >>= 4;
-						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
-						ffloor[i].b_step = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos_slope, ds_p->scale2);
+						ffloor[i].b_pos >>= INVHGTBITS;
+						ffloor[i].b_pos_slope >>= INVHGTBITS;
+						ffloor[i].b_frac = (centeryfrac >> INVHGTBITS) - FixedMul(ffloor[i].b_pos, rw_scale);
+						ffloor[i].b_step = (centeryfrac >> INVHGTBITS) - FixedMul(ffloor[i].b_pos_slope, ds_p->scale2);
 						ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(range);
 						i++;
 					}
@@ -2895,9 +2896,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					     (viewz > *rover->bottomheight && (rover->flags & FF_BOTHPLANES))))
 					{
 						ffloor[i].b_pos = *rover->bottomheight;
-						ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
+						ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> INVHGTBITS;
 						ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
-						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
+						ffloor[i].b_frac = (centeryfrac >> INVHGTBITS) - FixedMul(ffloor[i].b_pos, rw_scale);
 						i++;
 					}
 
@@ -2910,9 +2911,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					     (viewz < *rover->topheight && (rover->flags & FF_BOTHPLANES))))
 					{
 						ffloor[i].b_pos = *rover->topheight;
-						ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
+						ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> INVHGTBITS;
 						ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
-						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
+						ffloor[i].b_frac = (centeryfrac >> INVHGTBITS) - FixedMul(ffloor[i].b_pos, rw_scale);
 						i++;
 					}
 #endif
@@ -2937,18 +2938,18 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					roverright = (*rover->b_slope ? P_GetZAt(*rover->b_slope, segright.x, segright.y) : *rover->bottomheight) - viewz;
 					planevistest = (*rover->b_slope ? P_GetZAt(*rover->b_slope, viewx, viewy) : *rover->bottomheight);
 
-					if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
-					    (roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
+					if ((roverleft>>INVHGTBITS <= worldhigh || roverright>>INVHGTBITS <= worldhighslope) &&
+					    (roverleft>>INVHGTBITS >= worldlow || roverright>>INVHGTBITS >= worldlowslope) &&
 					    ((viewz < planevistest && !(rover->flags & FF_INVERTPLANES)) ||
 					     (viewz > planevistest && (rover->flags & FF_BOTHPLANES))))
 					{
 						//ffloor[i].slope = *rover->b_slope;
 						ffloor[i].b_pos = roverleft;
 						ffloor[i].b_pos_slope = roverright;
-						ffloor[i].b_pos >>= 4;
-						ffloor[i].b_pos_slope >>= 4;
-						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
-						ffloor[i].b_step = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos_slope, ds_p->scale2);
+						ffloor[i].b_pos >>= INVHGTBITS;
+						ffloor[i].b_pos_slope >>= INVHGTBITS;
+						ffloor[i].b_frac = (centeryfrac >> INVHGTBITS) - FixedMul(ffloor[i].b_pos, rw_scale);
+						ffloor[i].b_step = (centeryfrac >> INVHGTBITS) - FixedMul(ffloor[i].b_pos_slope, ds_p->scale2);
 						ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(range);
 						i++;
 					}
@@ -2960,18 +2961,18 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					roverright = (*rover->t_slope ? P_GetZAt(*rover->t_slope, segright.x, segright.y) : *rover->topheight) - viewz;
 					planevistest = (*rover->t_slope ? P_GetZAt(*rover->t_slope, viewx, viewy) : *rover->topheight);
 
-					if ((roverleft>>4 <= worldhigh || roverright>>4 <= worldhighslope) &&
-					    (roverleft>>4 >= worldlow || roverright>>4 >= worldlowslope) &&
+					if ((roverleft>>INVHGTBITS <= worldhigh || roverright>>INVHGTBITS <= worldhighslope) &&
+					    (roverleft>>INVHGTBITS >= worldlow || roverright>>INVHGTBITS >= worldlowslope) &&
 					    ((viewz > planevistest && !(rover->flags & FF_INVERTPLANES)) ||
 					     (viewz < planevistest && (rover->flags & FF_BOTHPLANES))))
 					{
 						//ffloor[i].slope = *rover->t_slope;
 						ffloor[i].b_pos = roverleft;
 						ffloor[i].b_pos_slope = roverright;
-						ffloor[i].b_pos >>= 4;
-						ffloor[i].b_pos_slope >>= 4;
-						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
-						ffloor[i].b_step = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos_slope, ds_p->scale2);
+						ffloor[i].b_pos >>= INVHGTBITS;
+						ffloor[i].b_pos_slope >>= INVHGTBITS;
+						ffloor[i].b_frac = (centeryfrac >> INVHGTBITS) - FixedMul(ffloor[i].b_pos, rw_scale);
+						ffloor[i].b_step = (centeryfrac >> INVHGTBITS) - FixedMul(ffloor[i].b_pos_slope, ds_p->scale2);
 						ffloor[i].b_step = (ffloor[i].b_step-ffloor[i].b_frac)/(range);
 						i++;
 					}
@@ -2982,9 +2983,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					     (viewz > *rover->bottomheight && (rover->flags & FF_BOTHPLANES))))
 					{
 						ffloor[i].b_pos = *rover->bottomheight;
-						ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
+						ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> INVHGTBITS;
 						ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
-						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
+						ffloor[i].b_frac = (centeryfrac >> INVHGTBITS) - FixedMul(ffloor[i].b_pos, rw_scale);
 						i++;
 					}
 					if (i >= MAXFFLOORS)
@@ -2995,9 +2996,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					     (viewz < *rover->topheight && (rover->flags & FF_BOTHPLANES))))
 					{
 						ffloor[i].b_pos = *rover->topheight;
-						ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
+						ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> INVHGTBITS;
 						ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
-						ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
+						ffloor[i].b_frac = (centeryfrac >> INVHGTBITS) - FixedMul(ffloor[i].b_pos, rw_scale);
 						i++;
 					}
 #endif
@@ -3021,9 +3022,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					ffloor[i].slope = NULL;
 #endif
 					ffloor[i].b_pos = backsector->floorheight;
-					ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
+					ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> INVHGTBITS;
 					ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
-					ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
+					ffloor[i].b_frac = (centeryfrac >> INVHGTBITS) - FixedMul(ffloor[i].b_pos, rw_scale);
 					i++;
 				}
 				if (i < numffloors && backsector->ceilingheight >= frontsector->floorheight &&
@@ -3040,9 +3041,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					ffloor[i].slope = NULL;
 #endif
 					ffloor[i].b_pos = backsector->ceilingheight;
-					ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
+					ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> INVHGTBITS;
 					ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
-					ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
+					ffloor[i].b_frac = (centeryfrac >> INVHGTBITS) - FixedMul(ffloor[i].b_pos, rw_scale);
 					i++;
 				}
 			}
