@@ -165,9 +165,9 @@ consvar_t cv_homremoval = {"homremoval", "No", CV_SAVE, homremoval_cons_t, NULL,
 consvar_t cv_maxportals = {"maxportals", "2", CV_SAVE, maxportals_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 /// MPC 14-08-2018
-consvar_t sortingfixes = {"software_sortingfixes", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t precisionfixes = {"software_precisionfixes", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t wigglefixes = {"software_wobblefixes", "No", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t sortingfixes = {"software_sortingfixes", "On", CV_CALL, CV_OnOff, R_ExecuteSetViewSize, 0, NULL, NULL, 0, 0, NULL};
+consvar_t precisionfixes = {"software_precisionfixes", "On", CV_CALL, CV_OnOff, R_ExecuteSetViewSize, 0, NULL, NULL, 0, 0, NULL};
+consvar_t wigglefixes = {"software_wobblefixes", "Off", CV_CALL, CV_OnOff, R_ExecuteSetViewSize, 0, NULL, NULL, 0, 0, NULL};
 
 void SplitScreen_OnChange(void)
 {
@@ -665,8 +665,21 @@ void R_ExecuteSetViewSize(void)
 
 	if (rendermode == render_soft)
 	{
-		// this is only used for planes rendering in software mode
+		/// MPC 17-08-2018
+		/// As far as I'm aware, this look-up table
+		/// is only used for calculating how tilted
+		/// (hence the name "yslopetab") a plane
+		/// will look on the screen.
+		int max = MAXVIDHEIGHT*8;
+		for (i = 0; i < max; i++)
+			yslopetab[i] = 0;
+
 		j = viewheight*4;
+		if (precisionfixes.value)
+			j = viewheight*8;
+		if (j > max)
+			j = max;
+
 		for (i = 0; i < j; i++)
 		{
 			dy = ((i - viewheight*2)<<FRACBITS) + FRACUNIT/2;
