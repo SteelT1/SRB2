@@ -80,6 +80,7 @@ extern patch_t *tallminus;
 } chatmsg_t;*/
 
 #define CHAT_BUFSIZE 64		// that's enough messages, right? We'll delete the older ones when that gets out of hand.
+#define OLDCHAT (cv_consolechat.value || dedicated || !netgame || vid.width < 640)
 
 // some functions
 void HU_AddChatText(const char *text);
@@ -112,8 +113,6 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer);
 void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, INT32 whiteplayer);
 void HU_DrawEmeralds(INT32 x, INT32 y, INT32 pemeralds);
-char *CHAT_WordWrap(INT32 x, INT32 w, INT32 option, const char *string);
-void HU_Draw32TabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, INT32 whiteplayer);
 
 INT32 HU_CreateTeamScoresTbl(playersort_t *tab, UINT32 dmtotals[]);
 

@@ -1048,7 +1048,12 @@ boolean CON_Responder(event_t *ev)
 		return true;
 	}	
 	
-	if (capslock ^ shiftdown)	// gets capslock to work because capslock is cool
+	if (key >= 'a' && key <= 'z')
+	{
+		if (capslock ^ shiftdown)
+			key = shiftxform[key];
+	}
+	else if (shiftdown)
 		key = shiftxform[key];
 
 	// enter a char into the command prompt
@@ -1443,7 +1448,7 @@ static void CON_DrawHudlines(void)
 	if (con_hudlines <= 0)
 		return;
 
-	if (chat_on && cv_consolechat.value)
+	if (chat_on && OLDCHAT)
 		y = charheight; // leave place for chat input in the first row of text (only do it if consolechat is on.)
 	else
 		y = 0;
