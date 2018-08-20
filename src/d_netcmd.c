@@ -659,8 +659,6 @@ void D_RegisterClientCommands(void)
 #endif
 
 	// register these so it is saved to config
-	if ((username = I_GetUserName()))
-		cv_playername.defaultvalue = username;
 	CV_RegisterVar(&cv_playername);
 	CV_RegisterVar(&cv_playercolor);
 	CV_RegisterVar(&cv_skin); // r_things.c (skin NAME)
