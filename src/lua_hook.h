@@ -44,6 +44,7 @@ enum hook {
 	hook_HurtMsg,
 	hook_PlayerSpawn,
 	hook_PlayerCmd,
+	hook_GameQuit,
 
 	hook_MAX // last hook
 };
@@ -51,6 +52,7 @@ extern const char *const hookNames[];
 
 void LUAh_MapChange(void); // Hook for map change (before load)
 void LUAh_MapLoad(void); // Hook for map load
+void LUAh_GameQuit(void); // Hook for when game quits
 void LUAh_PlayerJoin(int playernum); // Hook for Got_AddPlayer
 void LUAh_ThinkFrame(void); // Hook for frame (after mobj and player thinkers)
 boolean LUAh_MobjHook(mobj_t *mo, enum hook which);

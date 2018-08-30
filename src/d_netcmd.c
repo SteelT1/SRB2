@@ -599,7 +599,6 @@ void D_RegisterServerCommands(void)
   */
 void D_RegisterClientCommands(void)
 {
-	const char *username;
 	INT32 i;
 
 	for (i = 0; i < MAXSKINCOLORS; i++)
@@ -3105,7 +3104,7 @@ static void Command_Addfile(void)
 		WRITEMEM(buf_p, md5sum, 16);
 	}
 
-	if (adminplayer == consoleplayer) // Request to add file
+	if (adminplayer == consoleplayer && (!server)) // Request to add file
 		SendNetXCmd(XD_REQADDFILE, buf, buf_p - buf);
 	else
 		SendNetXCmd(XD_ADDFILE, buf, buf_p - buf);

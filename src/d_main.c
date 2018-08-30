@@ -99,6 +99,7 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 
 #ifdef HAVE_BLUA
 #include "lua_script.h"
+#include "lua_hook.h"
 #endif
 
 // platform independant focus loss
@@ -1401,6 +1402,10 @@ void D_SRB2Main(void)
 		if (!P_SetupLevel(false))
 			I_Quit(); // fail so reset game stuff
 	}
+
+#ifdef HAVE_BLUA
+	I_AddExitFunc(LUAh_GameQuit);
+#endif	
 }
 
 const char *D_Home(void)

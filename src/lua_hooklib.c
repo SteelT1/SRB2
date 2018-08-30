@@ -55,6 +55,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"HurtMsg",
 	"PlayerSpawn",
 	"PlayerCmd",
+	"GameQuit",
 	NULL
 };
 
@@ -348,6 +349,28 @@ void LUAh_MapLoad(void)
 
 	for (hookp = roothook; hookp; hookp = hookp->next)
 		if (hookp->type == hook_MapLoad)
+		{
+			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
+			lua_gettable(gL, LUA_REGISTRYINDEX);
+			lua_pushvalue(gL, -2);
+			LUA_Call(gL, 1);
+		}
+
+	lua_settop(gL, 0);
+}
+
+//Hook for when game is quitting
+void LUAh_GameQuit(void)
+{
+	hook_p hookp;
+	if (!gL || !(hooksAvailable[hook_GameQuit/8] & (1<<(hook_GameQuit%8))))
+		return;
+
+	lua_settop(gL, 0);
+	lua_pushinteger(gL, gamemap);
+
+	for (hookp = roothook; hookp; hookp = hookp->next)
+		if (hookp->type == hook_GameQuit)
 		{
 			lua_pushfstring(gL, FMT_HOOKID, hookp->id);
 			lua_gettable(gL, LUA_REGISTRYINDEX);
