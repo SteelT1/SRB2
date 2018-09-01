@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -36,6 +36,10 @@ extern INT32 msg_id;
 #include "d_main.h"
 #include "r_sky.h" // skyflatnum
 #include "p_local.h" // camera info
+
+#ifdef HAVE_OPENMPT
+#include "libopenmpt/libopenmpt.h"
+#endif
 
 #ifdef HW3SOUND
 // 3D Sound Interface
@@ -243,6 +247,12 @@ void S_RegisterSoundStuff(void)
 #endif
 	CV_RegisterVar(&surround);
 	CV_RegisterVar(&cv_samplerate);
+
+#ifdef HAVE_OPENMPT
+	CV_RegisterVar(&cv_modfilter);
+	CONS_Printf("libopenmpt version: %s\n", openmpt_get_string("library_version"));
+	CONS_Printf("libopenmpt build date: %s\n", openmpt_get_string("build"));
+#endif	
 
 #if defined (macintosh) && !defined (HAVE_SDL) // mp3 playlist stuff
 	{
