@@ -599,6 +599,9 @@ boolean I_SetSongSpeed(float speed)
 	char modspd[16];
 	if (mod)
 	{
+		if (speed > 4.0f)
+			speed = 4.0f; // OpenMPT limits at 4, so we must too, to prevent a invalid value warning from OpenMPT.
+
 		sprintf(modspd, "%g", speed);
 		SDL_LockAudio();
 		openmpt_module_ctl_set(mod, "play.tempo_factor", modspd);
@@ -608,24 +611,12 @@ boolean I_SetSongSpeed(float speed)
 #else
 	(void)speed;
 #endif
+	return false;
 }
 
 /// ------------------------
 /// Music Playback
 /// ------------------------
-
-	I_Assert(!music);
-#ifdef HAVE_LIBGME
-	I_Assert(!gme);
-#endif
-
-#ifdef HAVE_OPENMPT
-	I_Assert(!mod);
-#endif		
-
-	if (lumpnum == LUMPERROR)
-		return false;
-	midimode = false;
 boolean I_LoadSong(char *data, size_t len)
 {
 	const char *key1 = "LOOP";
@@ -634,9 +625,9 @@ boolean I_LoadSong(char *data, size_t len)
 	const size_t key1len = strlen(key1);
 	const size_t key2len = strlen(key2);
 	const size_t key3len = strlen(key3);
-	char *p = data;up
+	char *p = data;
 
-	if (music || gme)
+	if (music || gme || mod)
 		I_UnloadSong();
 
 #ifdef HAVE_LIBGME
@@ -742,7 +733,7 @@ boolean I_LoadSong(char *data, size_t len)
 	}
 
 #ifdef HAVE_OPENMPT
-	switch(I_SongType)
+	switch(Mix_GetMusicType(music))
 	{
 		case MUS_MODPLUG_UNUSED:
 		case MUS_MOD:
@@ -753,12 +744,6 @@ boolean I_LoadSong(char *data, size_t len)
 				mod_err_str = openmpt_error_string(mod_err);
 				CONS_Alert(CONS_ERROR, "openmpt_module_create_from_memory2: %s\n", mod_err_str);
 				return true;
-			}
-			else
-			{
-				openmpt_module_select_subsong(mod, 0);
-				current_subsong = 0;
-				Mix_HookMusic(mix_openmpt, mod);
 			}	
 		break;
 		case MUS_WAV:
@@ -818,12 +803,13 @@ void I_UnloadSong(void)
 		music = NULL;
 	}
 
+#ifdef HAVE_OPENMPT
 	if (mod)
 	{
 		openmpt_module_destroy(mod);
 		mod = NULL;
 	}
-
+#endif
 }
 
 boolean I_PlaySong(boolean looping)
@@ -836,8 +822,18 @@ boolean I_PlaySong(boolean looping)
 		Mix_HookMusic(mix_gme, gme);
 		return true;
 	}
-	else
 #endif
+
+#ifdef HAVE_OPENMPT
+	if (mod)
+	{
+		openmpt_module_select_subsong(mod, 0);
+		current_subsong = 0;
+		Mix_HookMusic(mix_openmpt, mod);
+		return true;
+	}
+#endif	
+		
 	if (!music)
 		return false;
 
@@ -869,6 +865,7 @@ void I_StopSong(void)
 		Mix_HookMusic(NULL, NULL);
 		current_subsong = -1;
 	}
+#endif	
 
 	if (music)
 	{
@@ -904,7 +901,6 @@ void I_SetMusicVolume(UINT8 volume)
 		music_volume = volume;
 
 	Mix_VolumeMusic((UINT32)music_volume*128/31);
->>>>>>> STJRSRB2/public-music-cleanup
 }
 
 boolean I_SetSongTrack(int track)
@@ -952,7 +948,8 @@ boolean I_SetSongTrack(int track)
 		return false;	
 	}
 #endif
-return true;
+	(void)track;
+	return false;
 }
 
 #endif

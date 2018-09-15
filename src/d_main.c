@@ -141,17 +141,6 @@ SDL_Window *window;
 
 char setpal[9] = "PLAYPAL";
 
-// These variables are only true if
-// the respective sound system is initialized
-// and active, but no sounds/music should play.
-boolean music_disabled = false;
-=======
-boolean midi_disabled = false;
->>>>>>> STJRSRB2/public-music-cleanup
-boolean sound_disabled = false;
-boolean digital_disabled = false;
-#endif
-
 boolean advancedemo;
 #ifdef DEBUGFILE
 INT32 debugload = 0;
