@@ -87,7 +87,15 @@ static openmpt_module *mod = 0;
 int mod_err = OPENMPT_ERROR_OK;
 static const char *mod_err_str;
 static UINT16 current_subsong;
+void openmptlogwrapper(const char *message, void *user);
 #endif
+
+void openmptlogwrapper(const char *message, void *user)
+{
+	// helper function for OpenMPT to log warning and errors
+	CONS_Printf("%s\n", message);
+}
+
 
 void I_StartupSound(void)
 {
@@ -701,7 +709,7 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 	{
 		case MUS_MODPLUG_UNUSED:
 		case MUS_MOD:
-			mod = openmpt_module_create_from_memory2(data, len, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+			mod = openmpt_module_create_from_memory2(data, len, openmptlogwrapper, NULL, NULL, NULL, NULL, NULL, NULL);
 			if (!mod)
 			{
 				mod_err = openmpt_module_error_get_last(mod);
