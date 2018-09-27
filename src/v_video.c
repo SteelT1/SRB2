@@ -168,7 +168,8 @@ const UINT8 gammatable[5][256] =
 };
 
 // local copy of the palette for V_GetColor()
-RGBA_t *pLocalPalette = NULL;
+RGBA_t *pLocalPalette     = NULL;
+RGBA_t *pLocalPaletteReal = NULL;	/// JimitaMPC
 
 // keep a copy of the palette so that we can get the RGB value for a color index at any time.
 static void LoadPalette(const char *lumpname)
@@ -179,16 +180,27 @@ static void LoadPalette(const char *lumpname)
 	UINT8 *pal;
 
 	Z_Free(pLocalPalette);
+	Z_Free(pLocalPaletteReal);
 
-	pLocalPalette = Z_Malloc(sizeof (*pLocalPalette)*palsize, PU_STATIC, NULL);
+	pLocalPalette     = Z_Malloc(sizeof (*pLocalPalette)    *palsize, PU_STATIC, NULL);
+	pLocalPaletteReal = Z_Malloc(sizeof (*pLocalPaletteReal)*palsize, PU_STATIC, NULL);
 
 	pal = W_CacheLumpNum(lumpnum, PU_CACHE);
 	for (i = 0; i < palsize; i++)
 	{
-		pLocalPalette[i].s.red = usegamma[*pal++];
+		pLocalPalette[i].s.red   = usegamma[*pal++];
 		pLocalPalette[i].s.green = usegamma[*pal++];
-		pLocalPalette[i].s.blue = usegamma[*pal++];
+		pLocalPalette[i].s.blue  = usegamma[*pal++];
 		pLocalPalette[i].s.alpha = 0xFF;
+	}
+	/// JimitaMPC
+	pal = W_CacheLumpNum(lumpnum, PU_CACHE);
+	for (i = 0; i < palsize; i++)
+	{
+		pLocalPaletteReal[i].s.red   = *pal++;
+		pLocalPaletteReal[i].s.green = *pal++;
+		pLocalPaletteReal[i].s.blue  = *pal++;
+		pLocalPaletteReal[i].s.alpha = 0xFF;
 	}
 }
 

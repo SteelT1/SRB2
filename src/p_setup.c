@@ -383,7 +383,7 @@ static inline void P_LoadVertexes(lumpnum_t lumpnum)
 }
 
 //
-// Computes the line length in fracunits, the OpenGL render needs this
+// Computes the line length in fracunits
 //
 
 /** Computes the length of a seg in fracunits.
@@ -2679,6 +2679,13 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_LoadSegs(lastloadedmaplumpnum + ML_SEGS);
 	P_LoadReject(lastloadedmaplumpnum + ML_REJECT);
 	P_GroupLines();
+
+	/// JimitaMPC
+	for (int i=0;i<numsegs;i++)
+	{
+		seg_t *line = segs+i;
+		line->length = (fixed_t)FixedEuclidean(line->v2->x,line->v2->y,line->v1->x,line->v1->y);
+	}
 
 	numdmstarts = numredctfstarts = numbluectfstarts = 0;
 

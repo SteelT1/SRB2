@@ -42,9 +42,10 @@ const char *R_GetPalname(UINT16 num);
 const char *GetPalette(void);
 
 extern RGBA_t *pLocalPalette;
+extern RGBA_t *pLocalPaletteReal;	/// JimitaMPC
 
 // Retrieve the ARGB value from a palette color index
-#define V_GetColor(color) (pLocalPalette[color&0xFF])
+#define V_GetColor(color) (pLocalPaletteReal[color&0xFF])
 
 // Bottom 8 bits are used for parameter (screen or character)
 #define V_PARAMMASK          0x000000FF

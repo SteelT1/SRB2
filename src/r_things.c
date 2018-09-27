@@ -974,10 +974,6 @@ static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 			return;
 
 		cutfrac = (INT16)((centeryfrac - FixedMul(testheight - viewz, sprite->scale))>>FRACBITS);
-		if (cutfrac < 0)
-			continue;
-		if (cutfrac > viewheight)
-			return;
 
 		// Found a split! Make a new sprite, copy the old sprite to it, and
 		// adjust the heights.
@@ -1683,13 +1679,14 @@ static drawnode_t nodehead;
 
 static void R_CreateDrawNodes(void)
 {
-	drawnode_t *entry;
 	drawseg_t *ds;
-	INT32 i, p, best, x1, x2;
-	fixed_t bestdelta, delta;
-	vissprite_t *rover;
 	drawnode_t *r2;
+	drawnode_t *entry;
+
+	vissprite_t *therover;
 	visplane_t *plane;
+
+	INT32 i, p, x1, x2, delta;
 	INT32 sintersect;
 	fixed_t scale = 0;
 
@@ -1729,39 +1726,45 @@ static void R_CreateDrawNodes(void)
 		}
 		if (ds->numffloorplanes)
 		{
-			for (i = 0; i < ds->numffloorplanes; i++)
+			drawnode_t * firstdrawnode = nodehead.prev; // previous last drawnode
+			for (p = 0; p < ds->numffloorplanes; p++)
 			{
-				best = -1;
-				bestdelta = 0;
-				for (p = 0; p < ds->numffloorplanes; p++)
-				{
-					if (!ds->ffloorplanes[p])
-						continue;
-					plane = ds->ffloorplanes[p];
-					R_PlaneBounds(plane);
+				fixed_t planecameraz, planecameraz_r2;	/// JimitaMPC
+				if (!ds->ffloorplanes[p])
+					continue;
+				plane = ds->ffloorplanes[p];
+				R_PlaneBounds(plane);
 
-					if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low || plane->polyobj)
-					{
-						ds->ffloorplanes[p] = NULL;
-						continue;
-					}
-
-					delta = abs(plane->height - viewz);
-					if (delta > bestdelta)
-					{
-						best = p;
-						bestdelta = delta;
-					}
-				}
-				if (best != -1)
+				if (plane->low < 0 || plane->high > vid.height || plane->high > plane->low || plane->polyobj)
 				{
-					entry = R_CreateDrawNode(&nodehead);
-					entry->plane = ds->ffloorplanes[best];
-					entry->seg = ds;
-					ds->ffloorplanes[best] = NULL;
+					ds->ffloorplanes[p] = NULL;
+					continue;
 				}
-				else
-					break;
+
+				planecameraz = plane->height;
+				#ifdef ESLOPE
+				/// JimitaMPC
+				if (plane->slope)
+					planecameraz = P_GetZAt(plane->slope, viewx, viewy);
+				#endif
+
+				delta = abs(planecameraz-viewz);
+				r2 = firstdrawnode->next;
+				while (r2 != &nodehead)
+				{
+					planecameraz_r2 = r2->plane->height;
+					#ifdef ESLOPE
+					/// JimitaMPC
+					if (r2->plane->slope)
+						planecameraz_r2 = P_GetZAt(r2->plane->slope, viewx, viewy);
+					#endif
+					if (abs(planecameraz_r2-viewz) < delta)
+						break;
+					r2 = r2->next;
+				}
+				entry = R_CreateDrawNode(r2);
+				entry->plane = plane;
+				entry->seg = ds;
 			}
 		}
 	}
@@ -1793,18 +1796,18 @@ static void R_CreateDrawNodes(void)
 		return;
 
 	R_SortVisSprites();
-	for (rover = vsprsortedhead.prev; rover != &vsprsortedhead; rover = rover->prev)
+	for (therover = vsprsortedhead.prev; therover != &vsprsortedhead; therover = therover->prev)
 	{
-		if (rover->szt > vid.height || rover->sz < 0)
-			continue;
+		sintersect = (therover->x1+therover->x2)/2;
 
-		sintersect = (rover->x1 + rover->x2) / 2;
-
+		/// JimitaMPC
+		vissprite_t *rover = therover;
 		for (r2 = nodehead.next; r2 != &nodehead; r2 = r2->next)
 		{
 			if (r2->plane)
 			{
 				fixed_t planeobjectz, planecameraz;
+
 				if (r2->plane->minx > rover->x2 || r2->plane->maxx < rover->x1)
 					continue;
 				if (rover->szt > r2->plane->low || rover->sz < r2->plane->high)
@@ -1821,7 +1824,7 @@ static void R_CreateDrawNodes(void)
 
 				if (rover->mobjflags & MF_NOCLIPHEIGHT)
 				{
-					//Objects with NOCLIPHEIGHT can appear halfway in.
+					// Objects with NOCLIPHEIGHT can appear halfway in.
 					if (planecameraz < viewz && rover->pz+(rover->thingheight/2) >= planeobjectz)
 						continue;
 					if (planecameraz > viewz && rover->pzt-(rover->thingheight/2) <= planeobjectz)
@@ -1842,16 +1845,17 @@ static void R_CreateDrawNodes(void)
 
 				x1 = rover->x1;
 				x2 = rover->x2;
+
 				if (x1 < r2->plane->minx) x1 = r2->plane->minx;
 				if (x2 > r2->plane->maxx) x2 = r2->plane->maxx;
 
-				if (r2->seg) // if no seg set, assume the whole thing is in front or something stupid
+				if (r2->seg)
 				{
+					/// Plane gets drawn over.
 					for (i = x1; i <= x2; i++)
-					{
 						if (r2->seg->frontscale[i] > rover->scale)
 							break;
-					}
+					/// Plane draws over.
 					if (i > x2)
 						continue;
 				}
@@ -1865,14 +1869,46 @@ static void R_CreateDrawNodes(void)
 			else if (r2->thickseg)
 			{
 				fixed_t topplaneobjectz, topplanecameraz, botplaneobjectz, botplanecameraz;
-				if (rover->x1 > r2->thickseg->x2 || rover->x2 < r2->thickseg->x1)
+
+				/// JimitaMPC
+				fixed_t thick_scale_left;
+				fixed_t thick_scale_right;
+
+				fixed_t thick_point_left;
+				fixed_t thick_point_right;
+
+				fixed_t intersect_left;
+				fixed_t intersect_right;
+				fixed_t intersect_scale;
+
+				x1 = intersect_left = rover->x1;
+				x2 = intersect_right = rover->x2;
+
+				thick_point_left = r2->thickseg->x1;
+				thick_point_right = r2->thickseg->x2;
+
+				if (x1 > thick_point_right || x2 < thick_point_left)
 					continue;
 
-				scale = r2->thickseg->scale1 > r2->thickseg->scale2 ? r2->thickseg->scale1 : r2->thickseg->scale2;
+				if (r2->thickseg->scale1 > r2->thickseg->scale2)
+				{
+					scale = thick_scale_left = r2->thickseg->scale1;
+					thick_scale_right = r2->thickseg->scale2;
+				}
+				else
+				{
+					scale = thick_scale_right = r2->thickseg->scale2;
+					thick_scale_left = r2->thickseg->scale1;
+				}
+
+				intersect_left += 1;
+				intersect_right -= 1;
+
 				if (scale <= rover->scale)
 					continue;
-				scale = r2->thickseg->scale1 + (r2->thickseg->scalestep * (sintersect - r2->thickseg->x1));
-				if (scale <= rover->scale)
+
+				intersect_scale = thick_scale_left + (r2->thickseg->scalestep * (intersect_right - thick_point_left));
+				if (rover->scale > intersect_scale)
 					continue;
 
 #ifdef ESLOPE
@@ -1891,10 +1927,14 @@ static void R_CreateDrawNodes(void)
 #endif
 					botplaneobjectz = botplanecameraz = *r2->ffloor->bottomheight;
 
-				if ((topplanecameraz > viewz && botplanecameraz < viewz) ||
+				if (!(
+					(topplanecameraz > viewz && botplanecameraz < viewz) ||
 				    (topplanecameraz < viewz && rover->gzt < topplaneobjectz) ||
-				    (botplanecameraz > viewz && rover->gz > botplaneobjectz))
-				{
+				    (botplanecameraz > viewz && rover->gz > botplaneobjectz)))
+				    continue;
+
+				scale = thick_scale_left+(r2->thickseg->scalestep*(sintersect-thick_point_left));
+				if (rover->scale < scale) {
 					entry = R_CreateDrawNode(NULL);
 					(entry->prev = r2->prev)->next = entry;
 					(entry->next = r2)->prev = entry;
@@ -1904,6 +1944,17 @@ static void R_CreateDrawNodes(void)
 			}
 			else if (r2->seg)
 			{
+				/// JimitaMPC
+				fixed_t seg_scale_left;
+				fixed_t seg_scale_right;
+
+				fixed_t seg_point_left;
+				fixed_t seg_point_right;
+
+				fixed_t intersect_left;
+				fixed_t intersect_right;
+				fixed_t intersect_scale;
+
 #if 0 //#ifdef POLYOBJECTS_PLANES
 				if (r2->seg->curline->polyseg && rover->mobj && P_MobjInsidePolyobj(r2->seg->curline->polyseg, rover->mobj)) {
 					// Determine if we need to sort in front of the polyobj, based on the planes. This fixes the issue where
@@ -1918,16 +1969,39 @@ static void R_CreateDrawNodes(void)
 						continue;
 				}
 #endif
-				if (rover->x1 > r2->seg->x2 || rover->x2 < r2->seg->x1)
+
+				x1 = intersect_left = rover->x1;
+				x2 = intersect_right = rover->x2;
+
+				seg_point_left = r2->seg->x1;
+				seg_point_right = r2->seg->x2;
+
+				if (x1 > seg_point_right || x2 < seg_point_left)
 					continue;
 
-				scale = r2->seg->scale1 > r2->seg->scale2 ? r2->seg->scale1 : r2->seg->scale2;
+				if (r2->seg->scale1 > r2->seg->scale2)
+				{
+					scale = seg_scale_left = r2->seg->scale1;
+					seg_scale_right = r2->seg->scale2;
+				}
+				else
+				{
+					scale = seg_scale_right = r2->seg->scale2;
+					seg_scale_left = r2->seg->scale1;
+				}
+
+				intersect_left += 1;
+				intersect_right -= 1;
+
 				if (scale <= rover->scale)
 					continue;
-				scale = r2->seg->scale1 + (r2->seg->scalestep * (sintersect - r2->seg->x1));
 
-				if (rover->scale < scale)
-				{
+				intersect_scale = seg_scale_left + (r2->seg->scalestep * (intersect_right - seg_point_left));
+				if (rover->scale > intersect_scale)
+					continue;
+
+				scale = seg_scale_left + (r2->seg->scalestep * (sintersect - seg_point_left));
+				if (rover->scale < scale) {
 					entry = R_CreateDrawNode(NULL);
 					(entry->prev = r2->prev)->next = entry;
 					(entry->next = r2)->prev = entry;
@@ -1953,10 +2027,11 @@ static void R_CreateDrawNodes(void)
 				}
 			}
 		}
+		// end of list, draw in front of everything else
 		if (r2 == &nodehead)
 		{
 			entry = R_CreateDrawNode(&nodehead);
-			entry->sprite = rover;
+			entry->sprite = therover;
 		}
 	}
 }

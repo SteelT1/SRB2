@@ -89,7 +89,7 @@ static fixed_t planeheight;
 //                (this is to calculate yslopes only when really needed)
 //                (when mouselookin', yslope is moving into yslopetab)
 //                Check R_SetupFrame, R_SetViewSize for more...
-fixed_t yslopetab[MAXVIDHEIGHT*4];
+fixed_t yslopetab[MAXVIDHEIGHT*8];
 fixed_t *yslope;
 
 fixed_t distscale[MAXVIDWIDTH];
@@ -276,7 +276,7 @@ static void R_DrawTranslucentWaterSpan_8(void)
 void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 {
 	angle_t angle;
-	fixed_t distance, length;
+	fixed_t distance, spansteppy;
 	size_t pindex;
 
 #ifdef RANGECHECK
@@ -301,13 +301,17 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 		ds_ystep = cachedystep[y];
 	}
 
-	length = FixedMul (distance,distscale[x1]);
-	angle = (currentplane->viewangle + currentplane->plangle + xtoviewangle[x1])>>ANGLETOFINESHIFT;
-	/// \note Wouldn't it be faster just to add viewx and viewy
-	// to the plane's x/yoffs anyway??
+	/// JimitaMPC
+	angle = (currentplane->viewangle + currentplane->plangle)>>ANGLETOFINESHIFT;
+	spansteppy = abs(centery-y);
+	if (!spansteppy)
+		return;
 
-	ds_xfrac = FixedMul(FINECOSINE(angle), length) + xoffs;
-	ds_yfrac = yoffs - FixedMul(FINESINE(angle), length);
+	ds_xstep = FixedMul(viewsin, planeheight) / spansteppy;
+	ds_ystep = FixedMul(viewcos, planeheight) / spansteppy;
+
+	ds_xfrac = xoffs + FixedMul(FINECOSINE(angle), distance) + (x1 - centerx) * ds_xstep;
+	ds_yfrac = yoffs - FixedMul(FINESINE  (angle), distance) + (x1 - centerx) * ds_ystep;
 
 #ifndef NOWATER
 	if (itswater)
@@ -315,8 +319,9 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 		const INT32 yay = (wtofs + (distance>>9) ) & 8191;
 		// ripples da water texture
 		bgofs = FixedDiv(FINESINE(yay), (1<<12) + (distance>>11))>>FRACBITS;
+		angle = (currentplane->viewangle + currentplane->plangle + xtoviewangle[x1])>>ANGLETOFINESHIFT;
 
-		angle = (angle + 2048) & 8191;  //90�
+		angle = (angle + 2048) & 8191;  // 90 degrees
 		ds_xfrac += FixedMul(FINECOSINE(angle), (bgofs<<FRACBITS));
 		ds_yfrac += FixedMul(FINESINE(angle), (bgofs<<FRACBITS));
 
