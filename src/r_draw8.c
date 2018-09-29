@@ -473,6 +473,7 @@ void R_DrawColumnShadowed_8(void)
 			dc_colormap = dc_lightlist[i].rcolormap;
 			if (solid && dc_yl < bheight)
 				dc_yl = bheight;
+			dc_topstep = dc_yl<<FRACBITS;	/// JimitaMPC
 			continue;
 		}
 		// Found a break in the column!
@@ -481,17 +482,16 @@ void R_DrawColumnShadowed_8(void)
 		if (dc_yh > realyh)
 			dc_yh = realyh;
 		basecolfunc();		// R_DrawColumn_8 for the appropriate architecture
+
 		if (solid)
 			dc_yl = bheight;
 		else
 			dc_yl = dc_yh + 1;
+		dc_topstep = dc_yl<<FRACBITS;	/// JimitaMPC
 
 		dc_colormap = dc_lightlist[i].rcolormap;
 	}
 	dc_yh = realyh;
-
-	/// JimitaMPC
-	dc_topstep = dc_yl<<FRACBITS;
 
 	if (dc_yl <= realyh)
 		basewallcolfunc();		// R_DrawWallColumn_8 for the appropriate architecture
