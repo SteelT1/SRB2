@@ -148,7 +148,6 @@ void SCR_SetupDrawRoutines(void)
 			basewallcolfunc = R_DrawWallColumn_8_ASM;
 			twosmultipatchfunc = R_Draw2sMultiPatchColumn_8_ASM;
 		}
-		translucentcolfunc = R_DrawTranslucentColumn_8_ASM;
 	}
 #endif
 }

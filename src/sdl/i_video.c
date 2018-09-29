@@ -95,6 +95,12 @@ rendermode_t rendermode = render_soft;
 // synchronize page flipping with screen refresh
 consvar_t cv_vidwait = {"vid_wait", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
+/// JimitaMPC
+static INT32 resizedvidwidth = 320;
+static INT32 resizedvidheight = 200;
+
+static consvar_t cv_resizeview = {"resizeview", "Off", CV_SAVE|CV_NOSHOWHELP, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+
 UINT8 graphics_started = 0; // Is used in console.c and screen.c
 
 // To disable fullscreen at startup; is set in VID_PrepareModeList
@@ -186,6 +192,25 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 	realwidth = vid.width;
 	realheight = vid.height;
 
+	/// JimitaMPC
+	SDL_DisplayMode monitor;
+	int display_width, display_height;
+
+	SDL_GetCurrentDisplayMode(0, &monitor);
+	display_width = monitor.w;
+	display_height = monitor.h;
+
+	resizedvidwidth = vid.width;
+	resizedvidheight = vid.height;
+
+	if (cv_resizeview.value)
+	{
+		if (width > display_width)
+			realwidth = resizedvidwidth = display_width;
+		if (height > display_height)
+			realheight = resizedvidheight = display_height;
+	}
+
 	if (window)
 	{
 		if (fullscreen)
@@ -201,7 +226,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 				SDL_SetWindowFullscreen(window, 0);
 			}
 			// Reposition window only in windowed mode
-			SDL_SetWindowSize(window, width, height);
+			SDL_SetWindowSize(window, resizedvidwidth, resizedvidheight);
 			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 		}
 	}
@@ -210,24 +235,20 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 		Impl_CreateWindow(fullscreen);
 		Impl_SetWindowIcon();
 		wasfullscreen = fullscreen;
-		SDL_SetWindowSize(window, width, height);
+		SDL_SetWindowSize(window, resizedvidwidth, resizedvidheight);
 		if (fullscreen)
-		{
 			SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-		}
 	}
 
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
-	{
-		OglSdlSurface(vid.width, vid.height);
-	}
+		OglSdlSurface(resizedvidwidth, resizedvidheight);
 #endif
 
 	if (rendermode == render_soft)
 	{
 		SDL_RenderClear(renderer);
-		SDL_RenderSetLogicalSize(renderer, width, height);
+		SDL_RenderSetLogicalSize(renderer, resizedvidwidth, resizedvidheight);
 		// Set up Texture
 		realwidth = width;
 		realheight = height;
@@ -1369,6 +1390,7 @@ void I_StartupGraphics(void)
 	COM_AddCommand ("vid_modelist", VID_Command_ModeList_f);
 	COM_AddCommand ("vid_mode", VID_Command_Mode_f);
 	CV_RegisterVar (&cv_vidwait);
+	CV_RegisterVar (&cv_resizeview);
 	disable_mouse = M_CheckParm("-nomouse");
 	disable_fullscreen = M_CheckParm("-win") ? 1 : 0;
 

@@ -121,7 +121,6 @@ void R_Draw2sMultiPatchColumn_8(void);
 /// ASM
 void ASMCALL R_DrawColumn_8_ASM(void);
 #define R_DrawWallColumn_8_ASM	R_DrawColumn_8_ASM		/// Macro
-void ASMCALL R_DrawTranslucentColumn_8_ASM(void);
 void ASMCALL R_Draw2sMultiPatchColumn_8_ASM(void);
 
 /// MMX

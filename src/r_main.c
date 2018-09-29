@@ -39,20 +39,13 @@
 // Fineangles in the SCREENWIDTH wide window.
 #define FIELDOFVIEW 90
 
-// increment every time a check is made
+size_t framecount;
 size_t validcount = 1;
 
 INT32 centerx, centery;
-
 fixed_t centerxfrac, centeryfrac;
 fixed_t projection;
-fixed_t projectiony; // aspect ratio
-
-// just for profiling purposes
-size_t framecount;
-
-size_t sscount;
-size_t loopcount;
+fixed_t projectiony;
 
 fixed_t viewx, viewy, viewz;
 angle_t viewangle, aimingangle;
@@ -62,7 +55,7 @@ boolean skyVisible1, skyVisible2; // saved values of skyVisible for P1 and P2, f
 sector_t *viewsector;
 player_t *viewplayer;
 
-/// JimitaMPC 19-09-2018
+/// JimitaMPC
 fixed_t focallength;
 
 // PORTALS!
@@ -989,8 +982,6 @@ void R_SkyboxFrame(player_t *player)
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
 
-	sscount = 0;
-
 	// recalc necessary stuff for mouseaiming
 	// slopes are already calculated for the full possible view (which is 4*viewheight).
 
@@ -1113,8 +1104,6 @@ void R_SetupFrame(player_t *player, boolean skybox)
 
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
-
-	sscount = 0;
 
 	// recalc necessary stuff for mouseaiming
 	// slopes are already calculated for the full possible view (which is 4*viewheight).
