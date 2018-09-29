@@ -25,7 +25,7 @@
 // Screen 0 is the screen updated by I_Update screen.
 // Screen 1 is an extra buffer.
 
-extern UINT8 *screens[5];
+extern UINT8 *screens[NUMSCREENS];
 
 extern const UINT8 gammatable[5][256];
 extern consvar_t cv_ticrate, cv_usegamma, cv_allcaps, cv_constextsize;

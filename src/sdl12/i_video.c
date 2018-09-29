@@ -95,6 +95,7 @@
 #include "../m_argv.h"
 #include "../m_menu.h"
 #include "../d_main.h"
+#include "../r_local.h"
 #include "../s_sound.h"
 #include "../i_sound.h"  // midi pause/unpause
 #include "../i_joy.h"

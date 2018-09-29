@@ -116,10 +116,6 @@ lighttable_t *colormaps;
 // for debugging/info purposes
 static size_t flatmemory, spritememory, texturememory;
 
-// highcolor stuff
-INT16 color8to16[256]; // remap color index to highcolor rgb value
-INT16 *hicolormaps; // test a 32k colormap remaps high -> high
-
 // Painfully simple texture id cacheing to make maps load faster. :3
 static struct {
 	char name[9];
@@ -345,8 +341,6 @@ UINT8 *R_GetColumn(fixed_t tex, INT32 col)
 	return data + LONG(texturecolumnofs[tex][col]);
 }
 
-// convert flats to hicolor as they are requested
-//
 UINT8 *R_GetFlat(lumpnum_t flatlumpnum)
 {
 	return W_CacheLumpNum(flatlumpnum, PU_CACHE);
@@ -1331,41 +1325,6 @@ const char *R_ColormapNameForNum(INT32 num)
 	return W_CheckNameForNum(foundcolormaps[num]);
 }
 
-
-//
-// build a table for quick conversion from 8bpp to 15bpp
-//
-
-//
-// added "static inline" keywords, linking with the debug version
-// of allegro, it have a makecol15 function of it's own, now
-// with "static inline" keywords,it sloves this problem ;)
-//
-FUNCMATH static inline int makecol15(int r, int g, int b)
-{
-	return (((r >> 3) << 10) | ((g >> 3) << 5) | ((b >> 3)));
-}
-
-static void R_Init8to16(void)
-{
-	UINT8 *palette;
-	int i;
-
-	palette = W_CacheLumpName("PLAYPAL",PU_CACHE);
-
-	for (i = 0; i < 256; i++)
-	{
-		// PLAYPAL uses 8 bit values
-		color8to16[i] = (INT16)makecol15(palette[0], palette[1], palette[2]);
-		palette += 3;
-	}
-
-	// test a big colormap
-	hicolormaps = Z_Malloc(16384*sizeof(*hicolormaps), PU_STATIC, NULL);
-	for (i = 0; i < 16384; i++)
-		hicolormaps[i] = (INT16)(i<<1);
-}
-
 //
 // R_InitData
 //
@@ -1374,12 +1333,6 @@ static void R_Init8to16(void)
 //
 void R_InitData(void)
 {
-	if (highcolor)
-	{
-		CONS_Printf("InitHighColor...\n");
-		R_Init8to16();
-	}
-
 	CONS_Printf("R_LoadTextures()...\n");
 	R_LoadTextures();
 

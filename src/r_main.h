@@ -83,7 +83,7 @@ extern consvar_t cv_homremoval;
 extern consvar_t cv_chasecam, cv_chasecam2;
 extern consvar_t cv_flipcam, cv_flipcam2;
 extern consvar_t cv_shadow, cv_shadowoffs;
-extern consvar_t cv_translucency, cv_stretchview;
+extern consvar_t cv_useasm, cv_stretchview, cv_translucency;
 extern consvar_t cv_precipdensity, cv_drawdist, cv_drawdist_nights, cv_drawdist_precip;
 extern consvar_t cv_skybox;
 extern consvar_t cv_tailspickup;

@@ -627,30 +627,16 @@ void R_DrawMaskedColumn(column_t *column)
 		if (dc_yh >= vid.height)
 			dc_yh = vid.height - 1;
 
+		/// JimitaMPC
+		dc_topstep = dc_yl<<FRACBITS;
+
 		if (dc_yl <= dc_yh && dc_yl < vid.height && dc_yh > 0)
 		{
 			dc_source = (UINT8 *)column + 3;
 			dc_texturemid = basetexturemid - (topdelta<<FRACBITS);
 
-			// Drawn by R_DrawColumn.
-			// This stuff is a likely cause of the splitscreen water crash bug.
-			// FIXTHIS: Figure out what "something more proper" is and do it.
-			// quick fix... something more proper should be done!!!
 			if (ylookup[dc_yl])
 				colfunc();
-			else if (colfunc == R_DrawColumn_8
-#ifdef USEASM
-			|| colfunc == R_DrawColumn_8_ASM || colfunc == R_DrawColumn_8_MMX
-#endif
-			)
-			{
-				static INT32 first = 1;
-				if (first)
-				{
-					CONS_Debug(DBG_RENDER, "WARNING: avoiding a crash in %s %d\n", __FILE__, __LINE__);
-					first = 0;
-				}
-			}
 		}
 		column = (column_t *)((UINT8 *)column + column->length + 4);
 	}
@@ -699,6 +685,9 @@ static void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight)
 		if (dc_yh >= vid.height)
 			dc_yh = vid.height - 1;
 
+		/// JimitaMPC
+		dc_topstep = dc_yl<<FRACBITS;
+
 		if (dc_yl <= dc_yh && dc_yl < vid.height && dc_yh > 0)
 		{
 			dc_source = ZZ_Alloc(column->length);
@@ -706,22 +695,8 @@ static void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight)
 				*d++ = *s;
 			dc_texturemid = basetexturemid - (topdelta<<FRACBITS);
 
-			// Still drawn by R_DrawColumn.
 			if (ylookup[dc_yl])
 				colfunc();
-			else if (colfunc == R_DrawColumn_8
-#ifdef USEASM
-			|| colfunc == R_DrawColumn_8_ASM || colfunc == R_DrawColumn_8_MMX
-#endif
-			)
-			{
-				static INT32 first = 1;
-				if (first)
-				{
-					CONS_Debug(DBG_RENDER, "WARNING: avoiding a crash in %s %d\n", __FILE__, __LINE__);
-					first = 0;
-				}
-			}
 			Z_Free(dc_source);
 		}
 		column = (column_t *)((UINT8 *)column + column->length + 4);
@@ -759,7 +734,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	if ((vis->mobj->flags & MF_BOSS) && (vis->mobj->flags2 & MF2_FRET) && (leveltime & 1)) // Bosses "flash"
 	{
 		// translate green skin to another color
-		colfunc = transcolfunc;
+		colfunc = transmapcolfunc;
 		if (vis->mobj->type == MT_CYBRAKDEMON)
 			dc_translation = R_GetTranslationColormap(TC_ALLWHITE, 0, GTC_CACHE);
 		else if (vis->mobj->type == MT_METALSONIC_BATTLE)
@@ -781,13 +756,13 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	}
 	else if (vis->transmap)
 	{
-		colfunc = fuzzcolfunc;
+		colfunc = translucentcolfunc;
 		dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
 	}
 	else if (vis->mobj->color)
 	{
 		// translate green skin to another color
-		colfunc = transcolfunc;
+		colfunc = transmapcolfunc;
 
 		// New colormap stuff for skins Tails 06-07-2002
 		if (vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // This thing is a player!
@@ -800,7 +775,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	}
 	else if (vis->mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
 	{
-		colfunc = transcolfunc;
+		colfunc = transmapcolfunc;
 		dc_translation = R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_BLUE, GTC_CACHE);
 	}
 
@@ -839,14 +814,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		}
 		dc_texturemid = FixedDiv(dc_texturemid,this_scale);
 
-		//Oh lordy, mercy me. Don't freak out if sprites go offscreen!
-		/*if (vis->xiscale > 0)
-			frac = FixedDiv(frac, this_scale);
-		else if (vis->x1 <= 0)
-			frac = (vis->x1 - vis->x2) * vis->xiscale;*/
-
 		sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
-		//dc_hires = 1;
 	}
 
 	x1 = vis->x1;
@@ -876,7 +844,6 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	}
 
 	colfunc = basecolfunc;
-	dc_hires = 0;
 
 	vis->x1 = x1;
 	vis->x2 = x2;
@@ -905,7 +872,7 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 
 	if (vis->transmap)
 	{
-		colfunc = fuzzcolfunc;
+		colfunc = translucentcolfunc;
 		dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
 	}
 
@@ -1683,7 +1650,7 @@ static void R_CreateDrawNodes(void)
 	drawnode_t *r2;
 	drawnode_t *entry;
 
-	vissprite_t *therover;
+	vissprite_t *rover;
 	visplane_t *plane;
 
 	INT32 i, p, x1, x2, delta;
@@ -1708,7 +1675,7 @@ static void R_CreateDrawNodes(void)
 			plane = ds->curline->polyseg->visplane;
 			R_PlaneBounds(plane);
 
-			if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low)
+			if (plane->low < 0 || plane->high > vid.height || plane->high > plane->low)
 				;
 			else {
 				// Put it in!
@@ -1780,7 +1747,7 @@ static void R_CreateDrawNodes(void)
 		plane = PolyObjects[i].visplane;
 		R_PlaneBounds(plane);
 
-		if (plane->low < con_clipviewtop || plane->high > vid.height || plane->high > plane->low)
+		if (plane->low < 0 || plane->high > vid.height || plane->high > plane->low)
 		{
 			PolyObjects[i].visplane = NULL;
 			continue;
@@ -1796,12 +1763,9 @@ static void R_CreateDrawNodes(void)
 		return;
 
 	R_SortVisSprites();
-	for (therover = vsprsortedhead.prev; therover != &vsprsortedhead; therover = therover->prev)
+	for (rover = vsprsortedhead.prev; rover != &vsprsortedhead; rover = rover->prev)
 	{
-		sintersect = (therover->x1+therover->x2)/2;
-
-		/// JimitaMPC
-		vissprite_t *rover = therover;
+		sintersect = (rover->x1+rover->x2)/2;
 		for (r2 = nodehead.next; r2 != &nodehead; r2 = r2->next)
 		{
 			if (r2->plane)
@@ -2031,7 +1995,7 @@ static void R_CreateDrawNodes(void)
 		if (r2 == &nodehead)
 		{
 			entry = R_CreateDrawNode(&nodehead);
-			entry->sprite = therover;
+			entry->sprite = rover;
 		}
 	}
 }
@@ -2096,9 +2060,6 @@ void R_InitDrawNodes(void)
 //
 // R_DrawSprite
 //
-//Fab : 26-04-98:
-// NOTE : uses con_clipviewtop, so that when console is on,
-//        don't draw the part of sprites hidden under the console
 static void R_DrawSprite(vissprite_t *spr)
 {
 	mfloorclip = spr->clipbot;
@@ -2295,8 +2256,7 @@ void R_ClipSprites(void)
 				spr->clipbot[x] = (INT16)viewheight;
 
 			if (spr->cliptop[x] == -2)
-				//Fab : 26-04-98: was -1, now clips against console bottom
-				spr->cliptop[x] = (INT16)con_clipviewtop;
+				spr->cliptop[x] = -1;
 		}
 	}
 }

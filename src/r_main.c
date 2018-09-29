@@ -36,16 +36,6 @@
 #include "hardware/hw_main.h"
 #endif
 
-//profile stuff ---------------------------------------------------------
-//#define TIMING
-#ifdef TIMING
-#include "p5prof.h"
-INT64 mycount;
-INT64 mytotal = 0;
-//unsigned long  nombre = 100000;
-#endif
-//profile stuff ---------------------------------------------------------
-
 // Fineangles in the SCREENWIDTH wide window.
 #define FIELDOFVIEW 90
 
@@ -156,6 +146,7 @@ consvar_t cv_allowmlook = {"allowmlook", "Yes", CV_NETVAR, CV_YesNo, NULL, 0, NU
 consvar_t cv_showhud = {"showhud", "Yes", CV_CALL,  CV_YesNo, R_SetViewSize, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_translucenthud = {"translucenthud", "10", CV_SAVE, translucenthud_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
+consvar_t cv_useasm = {"useasm", "On", CV_SAVE|CV_CALL, CV_OnOff, SCR_SetupDrawRoutines, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_stretchview = {"stretchview", "Off", CV_SAVE|CV_CALL, CV_OnOff, R_ExecuteSetViewSize, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_translucency = {"translucency", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_drawdist = {"drawdist", "Infinite", CV_SAVE, drawdist_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -708,21 +699,19 @@ void R_ExecuteSetViewSize(void)
 void R_Init(void)
 {
 	// screensize independent
-	//I_OutputMsg("\nR_InitData");
+	CONS_Printf("R_InitData...\n");
 	R_InitData();
 
-	//I_OutputMsg("\nR_InitViewBorder");
-	R_InitViewBorder();
+	CONS_Printf("R_SetViewSize...\n");
 	R_SetViewSize(); // setsizeneeded is set true
 
-	//I_OutputMsg("\nR_InitPlanes");
+	CONS_Printf("R_InitPlanes...\n");
 	R_InitPlanes();
 
-	// this is now done by SCR_Recalc() at the first mode set
-	//I_OutputMsg("\nR_InitLightTables");
+	CONS_Printf("R_InitLightTables...\n");
 	R_InitLightTables();
 
-	//I_OutputMsg("\nR_InitTranslationTables\n");
+	CONS_Printf("R_InitTranslationTables...\n");
 	R_InitTranslationTables();
 
 	R_InitDrawNodes();
@@ -1324,21 +1313,8 @@ void R_RenderPlayerView(player_t *player)
 	NetUpdate();
 
 	// The head node is the last node output.
-
-//profile stuff ---------------------------------------------------------
-#ifdef TIMING
-	mytotal = 0;
-	ProfZeroTimer();
-#endif
 	R_RenderBSPNode((INT32)numnodes - 1);
 	R_ClipSprites();
-#ifdef TIMING
-	RDMSR(0x10, &mycount);
-	mytotal += mycount; // 64bit add
-
-	CONS_Debug(DBG_RENDER, "RenderBSPNode: 0x%d %d\n", *((INT32 *)&mytotal + 1), (INT32)mytotal);
-#endif
-//profile stuff ---------------------------------------------------------
 
 	// PORTAL RENDERING
 	for(portal = portal_base; portal; portal = portal_base)
@@ -1407,6 +1383,7 @@ void R_RegisterEngineStuff(void)
 	if (dedicated)
 		return;
 
+	CV_RegisterVar(&cv_useasm);
 	CV_RegisterVar(&cv_stretchview);
 	CV_RegisterVar(&cv_translucency);
 	CV_RegisterVar(&cv_precipdensity);

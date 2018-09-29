@@ -60,7 +60,6 @@ cextern dc_source
 cextern dc_texturemid
 cextern dc_texheight
 cextern dc_iscale
-cextern dc_hires
 cextern centery
 cextern centeryfrac
 cextern dc_colormap
@@ -140,17 +139,10 @@ R_DrawColumn_8_ASM:
         mov     ebx,[dc_colormap]
 
         mov     esi,[dc_source]
-;;
-;; if (dc_hires) frac = 0;
-;;
-        test    byte [dc_hires],0x01
-        jz      .texheightcheck
-        xor     ebp,ebp
 
 ;;
 ;; Check for power of two
 ;;
-.texheightcheck:
         mov     edx,[dc_texheight]
         sub     edx,1                   ;; edx = heightmask
         test    edx,[dc_texheight]
@@ -287,17 +279,10 @@ R_Draw2sMultiPatchColumn_8_ASM:
         mov     ebx,[dc_colormap]
 
         mov     esi,[dc_source]
-;;
-;; if (dc_hires) frac = 0;
-;;
-        test    byte [dc_hires],0x01
-        jz      .texheightcheck
-        xor     ebp,ebp
 
 ;;
 ;; Check for power of two
 ;;
-.texheightcheck:
         mov     edx,[dc_texheight]
         sub     edx,1                   ;; edx = heightmask
         test    edx,[dc_texheight]
@@ -386,11 +371,9 @@ R_Draw2sMultiPatchColumn_8_ASM:
         ret
 
 ;;----------------------------------------------------------------------
-;; R_DrawTranslucentColumnA_8
+;; R_DrawTranslucentColumn_8
 ;;
-;; Vertical column texture drawer, with transparency. Replaces Doom2's
-;; 'fuzz' effect, which was not so beautiful.
-;; Transparency is always impressive in some way, don't know why...
+;; Vertical column texture drawer, with transparency.
 ;;----------------------------------------------------------------------
 
 cglobal R_DrawTranslucentColumn_8_ASM
@@ -563,185 +546,11 @@ vtdone:
         pop     ebp
         ret
 
-;;----------------------------------------------------------------------
-;; R_DrawShadeColumn
-;;
-;;   for smoke..etc.. test.
-;;----------------------------------------------------------------------
-cglobal R_DrawShadeColumn_8_ASM
-R_DrawShadeColumn_8_ASM:
-        push    ebp                     ;; preserve caller's stack frame pointer
-        push    esi                     ;; preserve register variables
-        push    edi
-        push    ebx
-
-;;
-;; dest = ylookup[dc_yl] + columnofs[dc_x];
-;;
-        mov     ebp,[dc_yl]
-        mov     ebx,ebp
-        mov     edi,[ylookup+ebx*4]
-        mov     ebx,[dc_x]
-        add     edi,[columnofs+ebx*4]  ;; edi = dest
-;;
-;; pixelcount = yh - yl + 1
-;;
-        mov     eax,[dc_yh]
-        inc     eax
-        sub     eax,ebp                 ;; pixel count
-        mov     [pixelcount],eax       ;; save for final pixel
-        jle near shdone                ;; nothing to scale
-;;
-;; frac = dc_texturemid - (centery-dc_yl)*fracstep;
-;;
-        mov     ecx,[dc_iscale]        ;; fracstep
-        mov     eax,[centery]
-        sub     eax,ebp
-        imul    eax,ecx
-        mov     edx,[dc_texturemid]
-        sub     edx,eax
-        mov     ebx,edx
-        shr     ebx,16                  ;; frac int.
-        and     ebx,byte +0x7f
-        shl     edx,16                  ;; y frac up
-
-        mov     ebp,ecx
-        shl     ebp,16                  ;; fracstep f. up
-        shr     ecx,16                  ;; fracstep i. ->cl
-        and     cl,0x7f
-
-        mov     esi,[dc_source]
-;;
-;; lets rock :) !
-;;
-        mov     eax,[pixelcount]
-        mov     dh,al
-        shr     eax,2
-        mov     ch,al                   ;; quad count
-        mov     eax,[colormaps]
-        test    dh,3
-        je      sh4quadloop
-;;
-;;  do un-even pixel
-;;
-        test    dh,0x1
-        je      shf2
-
-        mov     ah,[esi+ebx]            ;; fetch texel : colormap number
-        add     edx,ebp
-        adc     bl,cl
-        mov     al,[edi]                ;; fetch dest  : index into colormap
-        and     bl,0x7f
-        mov     dl,[eax]
-        mov     [edi],dl
-pl:     add     edi,0x12345678
-;;
-;;  do two non-quad-aligned pixels
-;;
-shf2:
-        test    dh,0x2
-        je      shf3
-
-        mov     ah,[esi+ebx]            ;; fetch texel : colormap number
-        add     edx,ebp
-        adc     bl,cl
-        mov     al,[edi]                ;; fetch dest  : index into colormap
-        and     bl,0x7f
-        mov     dl,[eax]
-        mov     [edi],dl
-pm:     add     edi,0x12345678
-
-        mov     ah,[esi+ebx]            ;; fetch texel : colormap number
-        add     edx,ebp
-        adc     bl,cl
-        mov     al,[edi]                ;; fetch dest  : index into colormap
-        and     bl,0x7f
-        mov     dl,[eax]
-        mov     [edi],dl
-pn:     add     edi,0x12345678
-;;
-;;  test if there was at least 4 pixels
-;;
-shf3:
-        test    ch,0xff                 ;; test quad count
-        je near shdone
-
-;;
-;; ebp : ystep frac. upper 24 bits
-;; edx : y     frac. upper 24 bits
-;; ebx : y     i.    lower 7 bits,  masked for index
-;; ecx : ch = counter, cl = y step i.
-;; eax : colormap aligned 256
-;; esi : source texture column
-;; edi : dest screen
-;;
-sh4quadloop:
-        mov     dh,0x7f                 ;; prep mask
-        mov     ah,[esi+ebx]            ;; fetch texel : colormap number
-        mov     [tystep],ebp
-po:     add     edi,0x12345678
-        mov     al,[edi]                ;; fetch dest  : index into colormap
-pp:     sub     edi,0x12345678
-        mov     ebp,edi
-pq:     sub     edi,0x12345678
-        jmp short shinloop
-
-align  4
-shquadloop:
-        add     edx,[tystep]
-        adc     bl,cl
-        and     bl,dh
-q5:     add     ebp,0x12345678
-        mov     dl,[eax]
-        mov     ah,[esi+ebx]            ;; fetch texel : colormap number
-        mov     [edi],dl
-        mov     al,[ebp]                ;; fetch dest : index into colormap
-shinloop:
-        add     edx,[tystep]
-        adc     bl,cl
-        and     bl,dh
-q6:     add     edi,0x12345678
-        mov     dl,[eax]
-        mov     ah,[esi+ebx]            ;; fetch texel : colormap number
-        mov     [ebp],dl
-        mov     al,[edi]                ;; fetch dest : index into colormap
-
-        add     edx,[tystep]
-        adc     bl,cl
-        and     bl,dh
-q7:     add     ebp,0x12345678
-        mov     dl,[eax]
-        mov     ah,[esi+ebx]            ;; fetch texel : colormap number
-        mov     [edi],dl
-        mov     al,[ebp]                ;; fetch dest : index into colormap
-
-        add     edx,[tystep]
-        adc     bl,cl
-        and     bl,dh
-q8:     add     edi,0x12345678
-        mov     dl,[eax]
-        mov     ah,[esi+ebx]            ;; fetch texel : colormap number
-        mov     [ebp],dl
-        mov     al,[edi]                ;; fetch dest : index into colormap
-
-        dec     ch
-        jne     shquadloop
-
-shdone:
-        pop     ebx                     ;; restore register variables
-        pop     edi
-        pop     esi
-        pop     ebp                     ;; restore caller's stack frame pointer
-        ret
-
-
 ;; ========================================================================
-;;  Rasterization of the segments of a LINEAR polygne textur of manire.
-;;  It is thus a question of interpolating coordinate them at the edges of texture in
-;;  the time that the X-coordinates minx/maxx for each line.
-;;  the argument ' dir' indicates which edges of texture are Interpol?:
-;;    0:  segments associs at edge TOP? and BOTTOM? (constant TY)
-;;    1:  segments associs at the LEFT and RIGHT edge (constant TX)
+;;  Rasterization of the segments of a linear polygon texture.
+;;  The 'dir' argument indicates which edges of texture will be rasterized.
+;;    0:  top and bottom edges
+;;    1:  left and right edges
 ;; ========================================================================
 ;;
 ;;  void   rasterize_segment_tex( LONG x1, LONG y1, LONG x2, LONG y2, LONG tv1, LONG tv2, LONG tc, LONG dir );

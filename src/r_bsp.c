@@ -676,8 +676,8 @@ static boolean R_CheckBBox(fixed_t *bspcoord)
 	py2 = bspcoord[checkcoord[boxpos][3]];
 
 	// check clip list for an open space
-	angle1 = R_PointToAngleEx(viewx>>1, viewy>>1, px1>>1, py1>>1) - viewangle;
-	angle2 = R_PointToAngleEx(viewx>>1, viewy>>1, px2>>1, py2>>1) - viewangle;
+	angle1 = R_PointToAngleEx(viewx, viewy, px1, py1) - viewangle;
+	angle2 = R_PointToAngleEx(viewx, viewy, px2, py2) - viewangle;
 
 	span = angle1 - angle2;
 
@@ -1477,11 +1477,11 @@ void R_RenderBSPNode(INT32 bspnum)
 
 		// Decide which side the view point is on.
 		side = R_PointOnSide(viewx, viewy, bsp);
+
 		// Recursively divide front space.
 		R_RenderBSPNode(bsp->children[side]);
 
 		// Possibly divide back space.
-
 		if (!R_CheckBBox(bsp->bbox[side^1]))
 			return;
 

@@ -23,7 +23,6 @@
 #include "m_misc.h"
 #include "p_local.h" // Camera...
 #include "p_slopes.h"
-#include "console.h" // con_clipviewtop
 
 // OPTIMIZE: closed two sided lines as single sided
 
@@ -99,6 +98,9 @@ static void R_DrawSplatColumn(column_t *column)
 			dc_yh = last_floorclip[dc_x] - 1;
 		if (dc_yl <= last_ceilingclip[dc_x])
 			dc_yl = last_ceilingclip[dc_x] + 1;
+
+		dc_topstep = topscreen;
+
 		if (dc_yl <= dc_yh && dl_yh < vid.height && yh > 0)
 		{
 			dc_source = (UINT8 *)column + 3;
@@ -173,26 +175,7 @@ static void R_DrawWallSplats(void)
 		sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
 
 		// set drawing mode
-		switch (splat->flags & SPLATDRAWMODE_MASK)
-		{
-			case SPLATDRAWMODE_OPAQUE:
-				colfunc = basecolfunc;
-				break;
-			case SPLATDRAWMODE_TRANS:
-				if (!cv_translucency.value)
-					colfunc = basecolfunc;
-				else
-				{
-					dc_transmap = transtables + ((tr_trans50 - 1)<<FF_TRANSSHIFT);
-					colfunc = fuzzcolfunc;
-				}
-
-				break;
-			case SPLATDRAWMODE_SHADE:
-				colfunc = shadecolfunc;
-				break;
-		}
-
+		colfunc = basecolfunc;
 		dc_texheight = 0;
 
 		// draw the columns
@@ -265,6 +248,13 @@ static void R_Render2sidedMultiPatchColumn(column_t *column)
 	if (dc_yl >= vid.height || dc_yh < 0)
 		return;
 
+	/// JimitaMPC
+	dc_topstep = sprtopscreen;
+	if (windowtop != INT32_MAX && windowbottom != INT32_MAX)
+		dc_topstep = windowtop;
+	if (dc_topstep>>FRACBITS <= mceilingclip[dc_x])
+		dc_topstep = mceilingclip[dc_x]<<FRACBITS;
+
 	if (dc_yl <= dc_yh && dc_yh < vid.height && dc_yh > 0)
 	{
 		dc_source = (UINT8 *)column + 3;
@@ -293,10 +283,6 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	INT32 range;
 #endif
 
-	// Calculate light table.
-	// Use different light tables
-	//   for horizontal / vertical / diagonal. Diagonal?
-	// OPTIMIZE: get rid of LIGHTSEGSHIFT globally
 	curline = ds->curline;
 	frontsector = curline->frontsector;
 	backsector = curline->backsector;
@@ -304,6 +290,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	windowbottom = windowtop = sprbotscreen = INT32_MAX;
 
 	// hack translucent linedef types (900-909 for transtables 1-9)
+	colfunc = wallcolfunc;
 	ldef = curline->linedef;
 	switch (ldef->special)
 	{
@@ -317,25 +304,23 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		case 907:
 		case 908:
 			dc_transmap = transtables + ((ldef->special-900)<<FF_TRANSSHIFT);
-			colfunc = fuzzcolfunc;
+			if (cv_translucency.value)
+				colfunc = translucentcolfunc;
 			break;
 		case 909:
 			colfunc = R_DrawFogColumn_8;
 			windowtop = frontsector->ceilingheight;
 			windowbottom = frontsector->floorheight;
 			break;
-		default:
-			colfunc = wallcolfunc;
-			break;
 	}
 
-	if (curline->polyseg && curline->polyseg->translucency > 0)
+	if (curline->polyseg && curline->polyseg->translucency > 0 && cv_translucency.value)
 	{
 		if (curline->polyseg->translucency >= NUMTRANSMAPS)
 			return;
 
 		dc_transmap = transtables + ((curline->polyseg->translucency-1)<<FF_TRANSSHIFT);
-		colfunc = fuzzcolfunc;
+		colfunc = translucentcolfunc;
 	}
 
 #ifdef ESLOPE
@@ -401,7 +386,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 
 			if (rlight->flags & FF_FOG || (rlight->extra_colormap && rlight->extra_colormap->fog))
 				lightnum = (rlight->lightlevel >> LIGHTSEGSHIFT);
-			else if (colfunc == fuzzcolfunc)
+			else if (colfunc == translucentcolfunc)
 				lightnum = LIGHTLEVELS - 1;
 			else
 				lightnum = (rlight->lightlevel >> LIGHTSEGSHIFT);
@@ -418,7 +403,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	}
 	else
 	{
-		if (colfunc == fuzzcolfunc)
+		if (colfunc == translucentcolfunc)
 		{
 			if (frontsector->extra_colormap && frontsector->extra_colormap->fog)
 				lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
@@ -728,7 +713,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	INT32             templight;
 	INT32             i, p;
 	fixed_t         bottombounds = viewheight << FRACBITS;
-	fixed_t         topbounds = (con_clipviewtop - 1) << FRACBITS;
+	fixed_t         topbounds = 0;
 	fixed_t         offsetvalue = 0;
 	lightlist_t     *light;
 	r_lightlist_t   *rlight;
@@ -768,7 +753,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 	if (pfloor->flags & FF_TRANSLUCENT)
 	{
-		boolean fuzzy = true;
+		boolean trans = true;
 
 		// Hacked up support for alpha value in software mode Tails 09-24-2002
 		if (pfloor->alpha < 12)
@@ -792,10 +777,10 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		else if (pfloor->alpha < 243)
 			dc_transmap = transtables + ((tr_trans10-1)<<FF_TRANSSHIFT);
 		else
-			fuzzy = false; // Opaque
+			trans = false; // Opaque
 
-		if (fuzzy)
-			colfunc = fuzzcolfunc;
+		if (trans)
+			colfunc = translucentcolfunc;
 	}
 	else if (pfloor->flags & FF_FOG)
 		colfunc = R_DrawFogColumn_8;
@@ -940,7 +925,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
 		else if (pfloor->flags & FF_FOG)
 			lightnum = (pfloor->master->frontsector->lightlevel >> LIGHTSEGSHIFT);
-		else if (colfunc == fuzzcolfunc)
+		else if (colfunc == translucentcolfunc)
 			lightnum = LIGHTLEVELS-1;
 		else
 			lightnum = R_FakeFlat(frontsector, &tempsec, &templight, &templight, false)
@@ -1239,18 +1224,6 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 // CALLED: CORE LOOPING ROUTINE.
 //
 
-//profile stuff ---------------------------------------------------------
-//#define TIMING
-#ifdef TIMING
-#include "p5prof.h"
-INT64 mycount;
-INT64 mytotal = 0;
-UINT32 nombre = 100000;
-//static   char runtest[10][80];
-#endif
-//profile stuff ---------------------------------------------------------
-
-
 static void R_RenderSegLoop (void)
 {
 	angle_t angle;
@@ -1303,16 +1276,6 @@ static void R_RenderSegLoop (void)
 
 		if (markfloor)
 		{
-#if 0 // Old Doom Legacy code
-			bottom = floorclip[rw_x]-1;
-			if (top <= ceilingclip[rw_x])
-				top = ceilingclip[rw_x]+1;
-			if (top <= bottom && floorplane)
-			{
-				floorplane->top[rw_x] = (INT16)top;
-				floorplane->bottom[rw_x] = (INT16)bottom;
-			}
-#else // Spiffy new PRBoom code
 			top  = yh < ceilingclip[rw_x] ? ceilingclip[rw_x] : yh;
 
 			if (++top <= bottom && floorplane)
@@ -1320,14 +1283,13 @@ static void R_RenderSegLoop (void)
 				floorplane->top[rw_x] = (INT16)top;
 				floorplane->bottom[rw_x] = (INT16)bottom;
 			}
-#endif
 		}
 
 		if (numffloors)
 		{
 			firstseg->frontscale[rw_x] = frontscale[rw_x];
-			top = ceilingclip[rw_x]+1; // PRBoom
-			bottom = floorclip[rw_x]-1; // PRBoom
+			top = ceilingclip[rw_x]+1;
+			bottom = floorclip[rw_x]-1;
 
 			for (i = 0; i < numffloors; i++)
 			{
@@ -1461,7 +1423,7 @@ static void R_RenderSegLoop (void)
 				else
 					dc_lightlist[i].rcolormap = xwalllights[pindex];
 
-				colfunc = R_DrawColumnShadowed_8;
+				colfunc = shadowcolfunc;
 			}
 		}
 
@@ -1479,20 +1441,9 @@ static void R_RenderSegLoop (void)
 				dc_source = R_GetColumn(midtexture,texturecolumn);
 				dc_texheight = textureheight[midtexture]>>FRACBITS;
 
-				//profile stuff ---------------------------------------------------------
-#ifdef TIMING
-				ProfZeroTimer();
-#endif
+				/// JimitaMPC
+				dc_topstep = dc_yl<<FRACBITS;
 				colfunc();
-#ifdef TIMING
-				RDMSR(0x10,&mycount);
-				mytotal += mycount;      //64bit add
-
-				if (nombre--==0)
-					I_Error("R_DrawColumn CPU Spy reports: 0x%d %d\n", *((INT32 *)&mytotal+1),
-						(INT32)mytotal);
-#endif
-				//profile stuff ---------------------------------------------------------
 
 				// dont draw anything more for this column, since
 				// a midtexture blocks the view
@@ -1528,6 +1479,10 @@ static void R_RenderSegLoop (void)
 					{
 						dc_yl = yl;
 						dc_yh = mid;
+
+						/// JimitaMPC
+						dc_topstep = dc_yl<<FRACBITS;
+
 						dc_texturemid = rw_toptexturemid;
 						dc_source = R_GetColumn(toptexture,texturecolumn);
 						dc_texheight = textureheight[toptexture]>>FRACBITS;
@@ -1561,6 +1516,10 @@ static void R_RenderSegLoop (void)
 					{
 						dc_yl = mid;
 						dc_yh = yh;
+
+						/// JimitaMPC
+						dc_topstep = dc_yl<<FRACBITS;
+
 						dc_texturemid = rw_bottomtexturemid;
 						dc_source = R_GetColumn(bottomtexture,
 							texturecolumn);
