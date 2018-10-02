@@ -147,13 +147,7 @@ static const char *fallback_resolution_name = "Fallback";
 // windowed video modes from which to choose from.
 static INT32 windowedModes[MAXWINMODES][2] =
 {
-#ifdef ULTRAHD				/// JimitaMPC
-	{3840,2160},
-#elif defined TWOKAY		/// JimitaMPC
-	{2048,1080},
-#else
 	{1920,1200}, // 1.60,6.00
-#endif
 	{1920,1080}, // 1.66
 	{1680,1050}, // 1.60,5.25
 	{1600,1200}, // 1.33
@@ -189,12 +183,12 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 	int bpp = 16;
 	int sw_texture_format = SDL_PIXELFORMAT_ABGR8888;
 
-	realwidth = vid.width;
-	realheight = vid.height;
-
 	/// JimitaMPC
 	SDL_DisplayMode monitor;
 	int display_width, display_height;
+
+	realwidth = vid.width;
+	realheight = vid.height;
 
 	SDL_GetCurrentDisplayMode(0, &monitor);
 	display_width = monitor.w;

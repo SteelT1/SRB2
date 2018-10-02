@@ -54,10 +54,6 @@
 #define ST_HEIGHT 32
 #define ST_WIDTH 320
 
-/// JimitaMPC
-/*#define ULTRAHD
-#define TWOKAY*/
-
 // used now as a maximum video mode size for extra vesa modes.
 
 // we try to re-allocate a minimum of buffers for stability of the memory,
@@ -73,17 +69,8 @@
 #define MAXVIDWIDTH 640
 #define MAXVIDHEIGHT 480
 #else
-	/// JimitaMPC
-	#ifdef ULTRAHD
-		#define MAXVIDWIDTH 3840
-		#define MAXVIDHEIGHT 2160
-	#elif defined TWOKAY
-		#define MAXVIDWIDTH 2048
-		#define MAXVIDHEIGHT 1080
-	#else
-		#define MAXVIDWIDTH 1920
-		#define MAXVIDHEIGHT 1200
-	#endif
+#define MAXVIDWIDTH 1920
+#define MAXVIDHEIGHT 1200
 #endif
 #define BASEVIDWIDTH 320 // NEVER CHANGE THIS! This is the original
 #define BASEVIDHEIGHT 200 // resolution of the graphics.
