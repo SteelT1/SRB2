@@ -1428,7 +1428,7 @@ void R_RegisterEngineStuff(void)
 #endif
 
 #ifdef HWRENDER
-	if (rendermode != render_soft && rendermode != render_none)
+	if (rendermode == render_opengl)
 		HWR_AddCommands();
 #endif
 }

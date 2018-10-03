@@ -212,15 +212,7 @@ static boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef,
 			spritecachedinfo[numspritelumps].offset = SHORT(patch.leftoffset)<<FRACBITS;
 			spritecachedinfo[numspritelumps].topoffset = SHORT(patch.topoffset)<<FRACBITS;
 			spritecachedinfo[numspritelumps].height = SHORT(patch.height)<<FRACBITS;
-
-			//BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
-			if (rendermode != render_none) // not for psprite
-				spritecachedinfo[numspritelumps].topoffset += 4<<FRACBITS;
-			// Being selective with this causes bad things. :( Like the special stage tokens breaking apart.
-			/*if (rendermode != render_none // not for psprite
-			 && SHORT(patch.topoffset)>0 && SHORT(patch.topoffset)<SHORT(patch.height))
-				// perfect is patch.height but sometime it is too high
-				spritecachedinfo[numspritelumps].topoffset = min(SHORT(patch.topoffset)+4,SHORT(patch.height))<<FRACBITS;*/
+			spritecachedinfo[numspritelumps].topoffset += 4<<FRACBITS;
 
 			//----------------------------------------------------
 
@@ -911,9 +903,8 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 	colfunc = basecolfunc;
 }
 
-//
 // R_SplitSprite
-// runs through a sector's lightlist and
+// runs through a sector's lightlist
 static void R_SplitSprite(vissprite_t *sprite, mobj_t *thing)
 {
 	INT32 i, lightnum, lindex;

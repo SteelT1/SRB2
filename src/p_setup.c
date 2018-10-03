@@ -445,7 +445,7 @@ static void P_LoadSegs(lumpnum_t lumpnum)
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
 		// used for the hardware render
-		if (rendermode != render_soft && rendermode != render_none)
+		if (rendermode == render_opengl)
 		{
 			li->flength = P_SegLengthf(li);
 			//Hurdler: 04/12/2000: for now, only used in hardware mode
@@ -2722,7 +2722,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	globalweather = mapheaderinfo[gamemap-1]->weather;
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
-	if (rendermode != render_soft && rendermode != render_none)
+	if (rendermode == render_opengl)
 	{
 #ifdef ALAM_LIGHTING
 		// BP: reset light between levels (we draw preview frame lights on current frame)
@@ -2877,7 +2877,7 @@ boolean P_SetupLevel(boolean skipprecip)
 			CV_SetValue(&cv_analog2, 0);
 
 #ifdef HWRENDER
-		if (rendermode != render_soft && rendermode != render_none)
+		if (rendermode == render_opengl)
 			CV_Set(&cv_grfov, cv_grfov.defaultvalue);
 #endif
 
@@ -2906,10 +2906,8 @@ boolean P_SetupLevel(boolean skipprecip)
 
 	// preload graphics
 #ifdef HWRENDER // not win32 only 19990829 by Kin
-	if (rendermode != render_soft && rendermode != render_none)
-	{
+	if (rendermode == render_opengl)
 		HWR_PrepLevelCache(numtextures);
-	}
 #endif
 
 	P_MapEnd();

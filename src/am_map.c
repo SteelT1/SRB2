@@ -635,7 +635,7 @@ void AM_Ticker(void)
 static void AM_clearFB(INT32 color)
 {
 #ifdef HWRENDER
-	if (rendermode != render_soft && rendermode != render_none)
+	if (rendermode == render_opengl)
 	{
 		HWR_clearAutomap();
 		return;

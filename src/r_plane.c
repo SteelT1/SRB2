@@ -218,7 +218,6 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	}
 
 	/// JimitaMPC
-
 	ds_xfrac = xoffs + FixedMul(planecos, distance) + (x1 - centerx) * ds_xstep;
 	ds_yfrac = yoffs - FixedMul(planesin, distance) + (x1 - centerx) * ds_ystep;
 
@@ -766,7 +765,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 			INT32 top, bottom;
 
 			itswater = true;
-			if (spanfunc == translucentspanfunc)
+			if (spanfunc == translucentspanfunc && cv_translucency.value)
 			{
 				spanfunc = waterspanfunc;
 
