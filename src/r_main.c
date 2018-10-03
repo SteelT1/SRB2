@@ -57,6 +57,7 @@ player_t *viewplayer;
 
 /// JimitaMPC
 fixed_t focallength;
+float focallengthf;
 
 // PORTALS!
 // You can thank and/or curse JTE for these.
@@ -464,9 +465,7 @@ static void R_InitTextureMapping(void)
 	// Calc focallength
 	//  so FIELDOFVIEW angles covers SCREENWIDTH.
 	focallength = FixedDiv(centerxfrac,fovtan);
-#ifdef ESLOPE
 	focallengthf = FIXED_TO_FLOAT(focallength);
-#endif
 
 	// Use tangent table to generate viewangletox:
 	//  viewangletox will give the next greatest x

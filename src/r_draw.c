@@ -93,6 +93,9 @@ INT32 dc_numlights = 0, dc_maxlights, dc_texheight;
 //                      SPAN DRAWING CODE STUFF
 // =========================================================================
 
+UINT8 *ds_source;
+UINT8 *ds_transmap;
+
 INT32 ds_y, ds_x1, ds_x2;
 lighttable_t *ds_colormap;
 fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
@@ -103,22 +106,13 @@ INT32 ds_waterofs = 0;
 INT32 ds_bgofs = 0;
 #endif // NOWATER
 
-UINT8 *ds_source; // start of a 64*64 tile image
-UINT8 *ds_transmap; // one of the translucency tables
+///	Variable flat sizes
+UINT32 nflatxshift, nflatyshift, nflatshiftup, nflatmask;
 
 #ifdef ESLOPE
 floatv3_t ds_su, ds_sv, ds_sz; // Vectors for... stuff?
-float focallengthf, zeroheight;
+float zeroheight;
 #endif
-
-/**	\brief Variable flat sizes
-*/
-
-UINT32 nflatxshift, nflatyshift, nflatshiftup, nflatmask;
-
-// ==========================================================================
-//                        OLD DOOM FUZZY EFFECT
-// ==========================================================================
 
 // =========================================================================
 //                   TRANSLATION COLORMAP CODE

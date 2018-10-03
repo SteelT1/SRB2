@@ -179,7 +179,7 @@ static boolean itswater;
 
 void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 {
-	angle_t angle;
+	angle_t angle, planecos, planesin;
 	fixed_t distance, spansteppy;
 	size_t pindex;
 
@@ -191,12 +191,24 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	// from r_splats's R_RenderFloorSplat
 	if (x1 >= vid.width) x1 = vid.width - 1;
 
+	/// JimitaMPC
+	angle    = (currentplane->viewangle + currentplane->plangle)>>ANGLETOFINESHIFT;
+	planesin = FINESINE  (angle);
+	planecos = FINECOSINE(angle);
+
 	if (planeheight != cachedheight[y])
 	{
 		cachedheight[y] = planeheight;
 		distance = cacheddistance[y] = FixedMul(planeheight, yslope[y]);
 		ds_xstep = cachedxstep[y] = FixedMul(distance, basexscale);
 		ds_ystep = cachedystep[y] = FixedMul(distance, baseyscale);
+		/// JimitaMPC
+		spansteppy = abs(centery-y);
+		if (spansteppy)
+		{
+			ds_xstep = cachedxstep[y] = FixedMul(planesin, planeheight) / spansteppy;
+			ds_ystep = cachedystep[y] = FixedMul(planecos, planeheight) / spansteppy;
+		}
 	}
 	else
 	{
@@ -206,17 +218,9 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	}
 
 	/// JimitaMPC
-	angle = (currentplane->viewangle + currentplane->plangle)>>ANGLETOFINESHIFT;
-	spansteppy = abs(centery-y);
 
-	if (spansteppy)
-	{
-		ds_xstep = FixedMul(viewsin, planeheight) / spansteppy;
-		ds_ystep = FixedMul(viewcos, planeheight) / spansteppy;
-	}
-
-	ds_xfrac = xoffs + FixedMul(FINECOSINE(angle), distance) + (x1 - centerx) * ds_xstep;
-	ds_yfrac = yoffs - FixedMul(FINESINE  (angle), distance) + (x1 - centerx) * ds_ystep;
+	ds_xfrac = xoffs + FixedMul(planecos, distance) + (x1 - centerx) * ds_xstep;
+	ds_yfrac = yoffs - FixedMul(planesin, distance) + (x1 - centerx) * ds_ystep;
 
 #ifndef NOWATER
 	if (itswater)
@@ -299,8 +303,8 @@ void R_ClearPlanes(void)
 	angle = (viewangle-ANGLE_90)>>ANGLETOFINESHIFT;
 
 	// scale will be unit scale at SCREENWIDTH/2 distance
-	basexscale = FixedDiv (FINECOSINE(angle),centerxfrac);
-	baseyscale = -FixedDiv (FINESINE(angle),centerxfrac);
+	basexscale =  FixedDiv(FINECOSINE(angle),centerxfrac);
+	baseyscale = -FixedDiv(FINESINE  (angle),centerxfrac);
 }
 
 static visplane_t *new_visplane(unsigned hash)
@@ -309,7 +313,8 @@ static visplane_t *new_visplane(unsigned hash)
 	if (!check)
 	{
 		check = calloc(2, sizeof (*check));
-		if (check == NULL) I_Error("%s: Out of memory", "new_visplane"); // FIXME: ugly
+		if (check == NULL)
+			I_Error("new_visplane: Out of memory");
 	}
 	else
 	{
@@ -746,7 +751,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		}
 		else if (pl->ffloor->flags & FF_FOG)
 		{
-			spanfunc = R_DrawFogSpan_8;
+			spanfunc = fogspanfunc;
 			light = (pl->lightlevel >> LIGHTSEGSHIFT);
 		}
 		else light = (pl->lightlevel >> LIGHTSEGSHIFT);

@@ -72,7 +72,7 @@ typedef struct {
 } floatv3_t;
 
 extern floatv3_t ds_su, ds_sv, ds_sz; // Vectors for... stuff?
-extern float focallengthf, zeroheight;
+extern float zeroheight;
 #endif
 
 // Variable flat sizes

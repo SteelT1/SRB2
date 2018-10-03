@@ -89,10 +89,6 @@ static const UINT8 NOCLIMBYELLOWS     = (11*16);
 #define AM_GOBIGKEY     '0'
 #define AM_FOLLOWKEY    'f'
 #define AM_GRIDKEY      'g'
-#define AM_MARKKEY      'm'
-#define AM_CLEARMARKKEY 'c'
-
-#define AM_NUMMARKPOINTS 10
 
 // scale on entry
 #define INITSCALEMTOF (FRACUNIT/5)
@@ -231,11 +227,6 @@ static fixed_t scale_mtof = (fixed_t)INITSCALEMTOF;
 static fixed_t scale_ftom;
 
 static player_t *plr; // the player represented by an arrow
-
-static patch_t *marknums[10];                   // numbers used for marking by the automap
-static mpoint_t markpoints[AM_NUMMARKPOINTS];   // where the points are
-static INT32 markpointnum = 0;                    // next point to be assigned
-
 static INT32 followplayer = 1; // specifies whether to follow the player around
 
 static boolean stopped = true;
@@ -286,15 +277,6 @@ static inline void AM_restoreScaleAndLoc(void)
 	// Change the scaling multipliers
 	scale_mtof = FixedDiv(f_w<<FRACBITS, m_w);
 	scale_ftom = FixedDiv(FRACUNIT, scale_mtof);
-}
-
-/** Adds a marker at the current location.
-  */
-static inline void AM_addMark(void)
-{
-	markpoints[markpointnum].x = m_x + m_w/2;
-	markpoints[markpointnum].y = m_y + m_h/2;
-	markpointnum = (markpointnum + 1) % AM_NUMMARKPOINTS;
 }
 
 /** Determines the bounding box around all vertices.
@@ -398,17 +380,6 @@ static void AM_initVariables(void)
 
 static const UINT8 *maplump; // pointer to the raw data for the automap background.
 
-/** Clears all map markers.
-  */
-static void AM_clearMarks(void)
-{
-	INT32 i;
-
-	for (i = 0; i < AM_NUMMARKPOINTS; i++)
-		markpoints[i].x = -1; // means empty
-	markpointnum = 0;
-}
-
 //
 // should be called at the start of every level
 // right now, i figure it out myself
@@ -429,8 +400,6 @@ static void AM_LevelInit(void)
 #endif
 	else
 		I_Error("Automap can't run without a render system");
-
-	AM_clearMarks();
 
 	AM_findMinMaxBoundaries();
 	scale_mtof = FixedDiv(min_scale_mtof*10, 7*FRACUNIT);
@@ -573,12 +542,6 @@ boolean AM_Responder(event_t *ev)
 					break;
 				case AM_GRIDKEY:
 					grid = !grid;
-					break;
-				case AM_MARKKEY:
-					AM_addMark();
-					break;
-				case AM_CLEARMARKKEY:
-					AM_clearMarks();
 					break;
 				default:
 					rc = false;
@@ -1228,26 +1191,6 @@ static inline void AM_drawThings(INT32 colors, INT32 colorrange)
 	}
 }
 
-static inline void AM_drawMarks(void)
-{
-	INT32 i, fx, fy, w, h;
-
-	for (i = 0; i < AM_NUMMARKPOINTS; i++)
-	{
-		if (markpoints[i].x != -1 && marknums[i])
-		{
-			// w = SHORT(marknums[i]->width);
-			// h = SHORT(marknums[i]->height);
-			w = 5; // because something's wrong with the wad, i guess
-			h = 6; // because something's wrong with the wad, i guess
-			fx = CXMTOF(markpoints[i].x);
-			fy = CYMTOF(markpoints[i].y);
-			if (fx >= f_x && fx <= f_w - w && fy >= f_y && fy <= f_h - h)
-				V_DrawPatch(fx, fy, FB, marknums[i]);
-		}
-	}
-}
-
 /** Draws the crosshair, actually just a dot in software mode.
   *
   * \param color Color for the crosshair.
@@ -1257,10 +1200,7 @@ static inline void AM_drawCrosshair(INT32 color)
 	if (rendermode != render_soft)
 		return; // BP: should be putpixel here
 
-	if (scr_bpp == 1)
-		fb[(f_w*(f_h + 1))/2] = (UINT8)color; // single point for now
-	else
-		*((INT16 *)(void *)fb + (f_w*(f_h + 1))/2) = (INT16)color;
+	fb[(f_w*(f_h + 1))/2] = (UINT8)color; // single point for now
 }
 
 /** Draws the automap.
@@ -1278,6 +1218,4 @@ void AM_Drawer(void)
 	AM_drawThings(THINGCOLORS, THINGRANGE);
 
 	AM_drawCrosshair(XHAIRCOLORS);
-
-	AM_drawMarks();
 }

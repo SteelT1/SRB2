@@ -30,6 +30,7 @@ extern fixed_t projection, projectiony;
 extern size_t validcount, linecount, framecount;
 
 extern fixed_t focallength;
+extern float focallengthf;
 
 //
 // Lighting LUT.

@@ -390,9 +390,7 @@ void R_DrawTranslatedTranslucentColumn_8(void)
 	}
 }
 
-/**	\brief The R_DrawFogColumn_8 function
-	Fog wall.
-*/
+/**	\brief The R_DrawFogColumn_8 function */
 void R_DrawFogColumn_8(void)
 {
 	INT32 count;
@@ -1321,28 +1319,21 @@ void R_DrawTranslucentSpan_8 (void)
 	}
 }
 
-/**	\brief The R_DrawFogSpan_8 function
-	Draws the actual span with fogging.
-*/
+/**	\brief The R_DrawFogSpan_8 function */
 void R_DrawFogSpan_8(void)
 {
-	UINT8 *colormap;
 	UINT8 *dest;
-
 	size_t count;
 
-	colormap = ds_colormap;
-	//dest = ylookup[ds_y] + columnofs[ds_x1];
 	dest = &topleft[ds_y *vid.width + ds_x1];
-
 	count = ds_x2 - ds_x1 + 1;
 
 	while (count >= 4)
 	{
-		dest[0] = colormap[dest[0]];
-		dest[1] = colormap[dest[1]];
-		dest[2] = colormap[dest[2]];
-		dest[3] = colormap[dest[3]];
+		dest[0] = ds_colormap[dest[0]];
+		dest[1] = ds_colormap[dest[1]];
+		dest[2] = ds_colormap[dest[2]];
+		dest[3] = ds_colormap[dest[3]];
 
 		dest += 4;
 		count -= 4;
@@ -1350,7 +1341,7 @@ void R_DrawFogSpan_8(void)
 
 	while (count--)
 	{
-		*dest = colormap[*dest];
+		*dest = ds_colormap[*dest];
 		dest++;
 	}
 }

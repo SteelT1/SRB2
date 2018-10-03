@@ -308,7 +308,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 				colfunc = translucentcolfunc;
 			break;
 		case 909:
-			colfunc = R_DrawFogColumn_8;
+			colfunc = fogcolfunc;
 			windowtop = frontsector->ceilingheight;
 			windowbottom = frontsector->floorheight;
 			break;
@@ -413,7 +413,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		else
 			lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
 
-		if (colfunc == R_DrawFogColumn_8
+		if (colfunc == fogcolfunc
 			|| (frontsector->extra_colormap && frontsector->extra_colormap->fog))
 			;
 		else if (curline->v1->y == curline->v2->y)
@@ -783,7 +783,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			colfunc = translucentcolfunc;
 	}
 	else if (pfloor->flags & FF_FOG)
-		colfunc = R_DrawFogColumn_8;
+		colfunc = fogcolfunc;
 
 #ifdef ESLOPE
 	range = max(ds->x2-ds->x1, 1);

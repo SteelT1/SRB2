@@ -50,6 +50,7 @@ void (*transmapcolfunc)(void);
 void (*transtransfunc)(void);
 void (*wallcolfunc)(void);
 void (*shadowcolfunc)(void);
+void (*fogcolfunc)(void);
 void (*twosmultipatchfunc)(void);
 
 /** Spans **/
@@ -59,6 +60,7 @@ void (*translucentspanfunc)(void);
 #ifndef NOWATER
 void (*waterspanfunc)(void);
 #endif
+void (*fogspanfunc)(void);
 
 void (*tiltedspanfunc)(void);
 void (*tiltedtranslucentspanfunc)(void);
@@ -72,7 +74,9 @@ INT32 setmodeneeded; //video mode change needed if > 0 (the mode number to set +
 
 static CV_PossibleValue_t scr_depth_cons_t[] = {{8, "8 bits"}, {16, "16 bits"}, {24, "24 bits"}, {32, "32 bits"}, {0, NULL}};
 
-//added : 03-02-98: default screen mode, as loaded/saved in config
+// =========================================================================
+//                           SCREEN VARIABLES
+// =========================================================================
 #ifdef WII
 consvar_t cv_scr_width = {"scr_width", "640", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_scr_height = {"scr_height", "480", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -91,13 +95,6 @@ static void SCR_ChangeFullscreen (void);
 #endif
 
 consvar_t cv_fullscreen = {"fullscreen", "Yes", CV_SAVE|CV_CALL, CV_YesNo, SCR_ChangeFullscreen, 0, NULL, NULL, 0, 0, NULL};
-
-// =========================================================================
-//                           SCREEN VARIABLES
-// =========================================================================
-
-INT32 scr_bpp; // current video mode bytes per pixel
-UINT8 *scr_borderpatch; // flat used to fill the reduced view borders set at ST_Init()
 
 // =========================================================================
 
@@ -119,6 +116,7 @@ void SCR_SetupDrawRoutines(void)
 
 	basewallcolfunc = R_DrawWallColumn_8;
 	shadowcolfunc = R_DrawColumnShadowed_8;
+	fogcolfunc = R_DrawFogColumn_8;
 	twosmultipatchfunc = R_Draw2sMultiPatchColumn_8;
 
 	spanfunc = basespanfunc = R_DrawSpan_8;
@@ -127,6 +125,7 @@ void SCR_SetupDrawRoutines(void)
 	#ifndef NOWATER
 	waterspanfunc = R_DrawTranslucentWaterSpan_8;
 	#endif
+	fogspanfunc = R_DrawFogSpan_8;
 
 	tiltedspanfunc = R_DrawTiltedSpan_8;
 	tiltedtranslucentspanfunc = R_DrawTiltedTranslucentSpan_8;
@@ -167,8 +166,36 @@ void SCR_SetMode(void)
 	SCR_SetupDrawRoutines();
 }
 
+/// JimitaMPC
+static void SCR_CalcVid(void)
+{
+	vid.dupx = vid.width / BASEVIDWIDTH;
+	vid.dupy = vid.height / BASEVIDHEIGHT;
+	vid.dupx = vid.dupy = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
+	vid.fdupx = FixedDiv(vid.width*FRACUNIT, BASEVIDWIDTH*FRACUNIT);
+	vid.fdupy = FixedDiv(vid.height*FRACUNIT, BASEVIDHEIGHT*FRACUNIT);
+
+#ifdef HWRENDER
+	if (rendermode == render_soft) // This was just placing it incorrectly at non aspect correct resolutions in opengl
+#endif
+		vid.fdupx = vid.fdupy = (vid.fdupx < vid.fdupy ? vid.fdupx : vid.fdupy);
+
+	vid.meddupx = (UINT8)(vid.dupx >> 1) + 1;
+	vid.meddupy = (UINT8)(vid.dupy >> 1) + 1;
+#ifdef HWRENDER
+	vid.fmeddupx = vid.meddupx*FRACUNIT;
+	vid.fmeddupy = vid.meddupy*FRACUNIT;
+#endif
+
+	vid.smalldupx = (UINT8)(vid.dupx / 3) + 1;
+	vid.smalldupy = (UINT8)(vid.dupy / 3) + 1;
+#ifdef HWRENDER
+	vid.fsmalldupx = vid.smalldupx*FRACUNIT;
+	vid.fsmalldupy = vid.smalldupy*FRACUNIT;
+#endif
+}
+
 // do some initial settings for the game loading screen
-//
 void SCR_Startup(void)
 {
 	const CPUInfoFlags *RCpuInfo = I_CPUInfo();
@@ -222,34 +249,9 @@ void SCR_Startup(void)
 		return;
 	}
 
+	/// JimitaMPC
+	SCR_CalcVid();
 	vid.modenum = 0;
-
-	vid.dupx = vid.width / BASEVIDWIDTH;
-	vid.dupy = vid.height / BASEVIDHEIGHT;
-	vid.dupx = vid.dupy = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
-	vid.fdupx = FixedDiv(vid.width*FRACUNIT, BASEVIDWIDTH*FRACUNIT);
-	vid.fdupy = FixedDiv(vid.height*FRACUNIT, BASEVIDHEIGHT*FRACUNIT);
-
-#ifdef HWRENDER
-	if (rendermode != render_opengl && rendermode != render_none) // This was just placing it incorrectly at non aspect correct resolutions in opengl
-#endif
-		vid.fdupx = vid.fdupy = (vid.fdupx < vid.fdupy ? vid.fdupx : vid.fdupy);
-
-	vid.meddupx = (UINT8)(vid.dupx >> 1) + 1;
-	vid.meddupy = (UINT8)(vid.dupy >> 1) + 1;
-#ifdef HWRENDER
-	vid.fmeddupx = vid.meddupx*FRACUNIT;
-	vid.fmeddupy = vid.meddupy*FRACUNIT;
-#endif
-
-	vid.smalldupx = (UINT8)(vid.dupx / 3) + 1;
-	vid.smalldupy = (UINT8)(vid.dupy / 3) + 1;
-#ifdef HWRENDER
-	vid.fsmalldupx = vid.smalldupx*FRACUNIT;
-	vid.fsmalldupy = vid.smalldupy*FRACUNIT;
-#endif
-
-	vid.baseratio = FRACUNIT;
 
 	V_Init();
 	CV_RegisterVar(&cv_ticrate);
@@ -265,58 +267,16 @@ void SCR_Recalc(void)
 	if (dedicated)
 		return;
 
-	// bytes per pixel quick access
-	scr_bpp = vid.bpp;
-
-	// scale 1,2,3 times in x and y the patches for the menus and overlays...
-	// calculated once and for all, used by routines in v_video.c
-	vid.dupx = vid.width / BASEVIDWIDTH;
-	vid.dupy = vid.height / BASEVIDHEIGHT;
-	vid.dupx = vid.dupy = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
-	vid.fdupx = FixedDiv(vid.width*FRACUNIT, BASEVIDWIDTH*FRACUNIT);
-	vid.fdupy = FixedDiv(vid.height*FRACUNIT, BASEVIDHEIGHT*FRACUNIT);
-
-#ifdef HWRENDER
-	if (rendermode != render_opengl && rendermode != render_none) // This was just placing it incorrectly at non aspect correct resolutions in opengl
-#endif
-		vid.fdupx = vid.fdupy = (vid.fdupx < vid.fdupy ? vid.fdupx : vid.fdupy);
-
-	//vid.baseratio = FixedDiv(vid.height << FRACBITS, BASEVIDHEIGHT << FRACBITS);
-	vid.baseratio = FRACUNIT;
-
-	vid.meddupx = (UINT8)(vid.dupx >> 1) + 1;
-	vid.meddupy = (UINT8)(vid.dupy >> 1) + 1;
-#ifdef HWRENDER
-	vid.fmeddupx = vid.meddupx*FRACUNIT;
-	vid.fmeddupy = vid.meddupy*FRACUNIT;
-#endif
-
-	vid.smalldupx = (UINT8)(vid.dupx / 3) + 1;
-	vid.smalldupy = (UINT8)(vid.dupy / 3) + 1;
-#ifdef HWRENDER
-	vid.fsmalldupx = vid.smalldupx*FRACUNIT;
-	vid.fsmalldupy = vid.smalldupy*FRACUNIT;
-#endif
+	/// JimitaMPC
+	SCR_CalcVid();
 
 	// toggle off automap because some screensize-dependent values will
 	// be calculated next time the automap is activated.
 	if (automapactive)
 		AM_Stop();
 
-	// r_plane stuff: visplanes, openings, floorclip, ceilingclip, spanstart,
-	//                spanstop, yslope, distscale, cachedheight, cacheddistance,
-	//                cachedxstep, cachedystep
-	//             -> allocated at the maximum vidsize, static.
-
-	// r_main: xtoviewangle, allocated at the maximum size.
-	// r_things: negonearray, screenheightarray allocated max. size.
-
-	// set the screen[x] ptrs on the new vidbuffers
 	V_Init();
-
-	// scr_viewsize doesn't change, neither detailLevel, but the pixels
-	// per screenblock is different now, since we've changed resolution.
-	R_SetViewSize(); //just set setsizeneeded true now ..
+	R_SetViewSize();
 
 	// vid.recalc lasts only for the next refresh...
 	con_recalc = true;
