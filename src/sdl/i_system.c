@@ -2136,12 +2136,6 @@ void I_Quit(void)
 		ShowEndTxt();
 	}
 
-	// Discord rich presence
-	if (cv_discordrp.value == 1)
-	{
-		Discord_Shutdown();
-	}
-
 death:
 	W_Shutdown();
 	exit(0);
@@ -2271,11 +2265,6 @@ void I_Error(const char *error, ...)
 	*(INT32 *)2 = 4; //Alam: Debug!
 #endif
 
-	// Discord rich presence
-	if (cv_discordrp.value == 1)
-	{
-		Discord_Shutdown();
-	}
 	exit(-1);
 }
 

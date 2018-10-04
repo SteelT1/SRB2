@@ -3183,7 +3183,7 @@ void P_SetDiscordStatus(void)
 	strcpy(mapkey, G_BuildMapName(gamemap));
 	strcpy(realskinname, skins[players[consoleplayer].skin].realname);
 
-	if (!((strcasecmp(currentskin,"sonic")==0) || (strcasecmp(currentskin,"knuckles")==0) || (strcasecmp(currentskin,"tails")==0) || (strcasecmp(currentskin,"dirk")==0) || (strcasecmp(currentskin,"shadow")==0) || (strcasecmp(currentskin,"silver")==0) || (strcasecmp(currentskin,"fsonic")==0)))
+	if (!((strcasecmp(currentskin,"sonic")==0) || (strcasecmp(currentskin,"knuckles")==0) || (strcasecmp(currentskin,"tails")==0) || (strcasecmp(currentskin,"inazuma")==0) || (strcasecmp(currentskin,"dirk")==0) || (strcasecmp(currentskin,"shadow")==0) || (strcasecmp(currentskin,"silver")==0) || (strcasecmp(currentskin,"fsonic")==0)))
 	{
 		strcpy(currentskin, "unknown");
 		strcpy(realskinname, "Unknown");

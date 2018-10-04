@@ -1268,8 +1268,11 @@ void D_SRB2Main(void)
 
 	I_RegisterSysCommands();
 
-	// Register discord rich presence
+	// Register Discord Rich Presence
 	CV_RegisterVar(&cv_discordrp);
+
+	// Register Discord Rich Presence shutdown function
+	I_AddExitFunc(Discord_Shutdown);
 
 	//--------------------------------------------------------- CONFIG.CFG
 	M_FirstLoadConfig(); // WARNING : this do a "COM_BufExecute()"
