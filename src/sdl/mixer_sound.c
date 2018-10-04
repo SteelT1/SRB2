@@ -865,6 +865,8 @@ boolean I_StartDigSong(const char *musicname, boolean looping)
 					openmpt.module_select_subsong(mod, 0);
 					current_subsong = 0;
 					Mix_HookMusic(mix_openmpt, mod);
+					openmpt.module_ctl_set(mod, "play.tempo_factor", "1.0"); /* Doing this to preload function
+																			 as it can cause small shutter on certain setups. */
 				}
 				Mix_FreeMusic(music);
 				music = NULL;
