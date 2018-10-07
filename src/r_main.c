@@ -580,10 +580,11 @@ void R_ExecuteSetViewSize(void)
 	INT32 level;
 	INT32 startmapl;
 
-	setsizeneeded = false;
-
 	if (rendermode == render_none)
+	{
+		setsizeneeded = false;
 		return;
+	}
 
 	// status bar overlay
 	st_overlay = cv_showhud.value;
@@ -621,10 +622,11 @@ void R_ExecuteSetViewSize(void)
 	// setup sky scaling
 	R_SetSkyScale();
 
-	// planes
+	/// JimitaMPC
 	aspectx = centerx;
-	if (cv_stretchview.value)	/// JimitaMPC
+	if (cv_stretchview.value)
 		aspectx = (((vid.height*centerx*BASEVIDWIDTH)/BASEVIDHEIGHT)/vid.width);
+	R_SetupFreeLook();
 
 	for (i = 0; i < viewwidth; i++)
 	{
@@ -652,7 +654,9 @@ void R_ExecuteSetViewSize(void)
 		}
 	}
 
-	// continue to do the software setviewsize as long as we use the reference software view
+	setsizeneeded = false;
+
+	// continue to do the hardware setviewsize as long as we use the reference software view
 #ifdef HWRENDER
 	if (rendermode != render_soft)
 		HWR_SetViewSize();
@@ -734,7 +738,7 @@ subsector_t *R_IsPointInSubsector(fixed_t x, fixed_t y)
 }
 
 /** Builds the visplane texture mapping array.
-  * \sa R_SetupFrame, R_SkyboxFrame
+  * \sa R_SetupFrame, R_SkyboxFrame, R_ExecuteSetViewSize
   * \author JimitaMPC
   */
 void R_SetupFreeLook(void)
@@ -749,7 +753,7 @@ void R_SetupFreeLook(void)
 	centery = (viewheight/2) + (dy>>FRACBITS);
 	centeryfrac = centery<<FRACBITS;
 
-	if (rendermode == render_soft && lastaiming != aimingangle)		/// Of course, we only do that if the aiming angle actually changed.
+	if (rendermode == render_soft && ((lastaiming != aimingangle) || setsizeneeded))		/// Of course, we only do that if the aiming angle or the screen height changed.
 	{
 		for (i = 0; i < viewheight; i++)
 		{
