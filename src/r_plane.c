@@ -82,15 +82,8 @@ static INT32 spanstart[MAXVIDHEIGHT];
 lighttable_t **planezlight;
 static fixed_t planeheight;
 
-//added : 10-02-98: yslopetab is what yslope used to be,
-//                yslope points somewhere into yslopetab,
-//                now (viewheight/2) slopes are calculated above and
-//                below the original viewheight for mouselook
-//                (this is to calculate yslopes only when really needed)
-//                (when mouselookin', yslope is moving into yslopetab)
-//                Check R_SetupFrame, R_SetViewSize for more...
-fixed_t yslopetab[MAXVIDHEIGHT*8];
-fixed_t *yslope;
+/// JimitaMPC: Destroyed yslopetab
+fixed_t yslope[MAXVIDHEIGHT];
 
 fixed_t distscale[MAXVIDWIDTH];
 fixed_t basexscale, baseyscale;

@@ -29,7 +29,7 @@ extern fixed_t projection, projectiony;
 
 extern size_t validcount, linecount, framecount;
 
-extern fixed_t focallength;
+extern fixed_t focallength, aspectx;
 extern float focallengthf;
 
 //
@@ -49,7 +49,7 @@ extern float focallengthf;
 #define LIGHTZSHIFT 20
 
 /// JimitaMPC
-#define HEIGHTBITS				9			/// from 12
+#define HEIGHTBITS				9		/// from 12
 #define HEIGHTUNIT				(1<<HEIGHTBITS)
 #define INVHGTBITS				(16-HEIGHTBITS)
 
@@ -99,9 +99,10 @@ void R_SetViewSize(void);
 // do it (sometimes explicitly called)
 void R_ExecuteSetViewSize(void);
 
-void R_SkyboxFrame(player_t *player);
-
 void R_SetupFrame(player_t *player, boolean skybox);
+void R_SkyboxFrame(player_t *player);
+void R_RenderPlayerView(player_t *player);
+void R_SetupFreeLook(void);		/// JimitaMPC
 // Called by G_Drawer.
 void R_RenderPlayerView(player_t *player);
 

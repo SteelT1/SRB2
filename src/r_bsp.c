@@ -43,10 +43,20 @@ INT32 doorclosed;
 void R_ClearDrawSegs(void)
 {
 	ds_p = drawsegs;
+
+	/// JimitaMPC
+	rw.x1 = rw.x2 = rw.distance = 0;
+	rw.angle1 = rw.angle2 = rw.normalangle = rw.centerangle = 0;
+	rw.offset = rw.offset2 = 0;
+	rw.scale = rw.scalestep = 0;
+	rw.midtexturemid = rw.toptexturemid = rw.bottomtexturemid = 0;
+	#ifdef ESLOPE
+	rw.toptextureslide = rw.midtextureslide = rw.bottomtextureslide = 0;
+	rw.midtextureback = rw.midtexturebackslide = 0;
+	#endif
 }
 
-// Fix from boom.
-#define MAXSEGS (MAXVIDWIDTH/2+1)
+#define MAXSEGS 32768	/// JimitaMPC: Only takes 256kb! Cool, right?
 
 // newend is one past the last valid seg
 static cliprange_t *newend;
@@ -393,7 +403,7 @@ static void R_AddLine(seg_t *line)
 		return;
 
 	// Global angle needed by segcalc.
-	rw_angle1 = angle1;
+	rw.angle1 = angle1;
 	angle1 -= viewangle;
 	angle2 -= viewangle;
 
@@ -588,7 +598,7 @@ static void R_AddPolyObjectLine(seg_t *line)
 		return;
 
 	// Global angle needed by segcalc.
-	rw_angle1 = angle1;
+	rw.angle1 = angle1;
 	angle1 -= viewangle;
 	angle2 -= viewangle;
 
@@ -715,7 +725,6 @@ static boolean R_CheckBBox(fixed_t *bspcoord)
 	sx1 = viewangletox[angle1];
 	sx2 = viewangletox[angle2];
 
-	// Does not cross a pixel.
 	if (sx1 > 0) sx1--;
 	if (sx2 < viewwidth - 1) sx2++;
 

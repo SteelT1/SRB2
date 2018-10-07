@@ -19,7 +19,30 @@
 #endif
 
 void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2);
-void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pffloor);
+void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor);
 void R_StoreWallRange(INT32 start, INT32 stop);
+
+/// JimitaMPC
+typedef struct
+{
+	INT32 x1, x2;
+	fixed_t distance;
+
+	angle_t angle1, angle2;
+	angle_t normalangle, centerangle;
+	angle_t offset;
+	angle_t offset2;		/// Unused
+
+	fixed_t scale;
+	fixed_t scalestep;
+
+	fixed_t midtexturemid, toptexturemid, bottomtexturemid;
+
+	#ifdef ESLOPE
+	fixed_t toptextureslide, midtextureslide, bottomtextureslide;
+	fixed_t midtextureback, midtexturebackslide;
+	#endif
+} viswall_t;
+extern viswall_t rw;
 
 #endif

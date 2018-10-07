@@ -2688,7 +2688,6 @@ static void HWR_AddLine(seg_t * line)
 		return;
 
 	// Global angle needed by segcalc.
-	//rw_angle1 = angle1;
 	angle1 -= dup_viewangle;
 	angle2 -= dup_viewangle;
 
