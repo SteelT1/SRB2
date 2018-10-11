@@ -215,6 +215,8 @@ void D_MapChange(INT32 pmapnum, INT32 pgametype, boolean pultmode, boolean prese
 void ObjectPlace_OnChange(void);
 void ItemFinder_OnChange(void);
 void D_SetPassword(const char *pw);
+void SendNameAndColor(void);
+void SendNameAndColor2(void);
 
 // used for the player setup menu
 UINT8 CanChangeSkin(INT32 playernum);

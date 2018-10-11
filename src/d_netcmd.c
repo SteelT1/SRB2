@@ -984,7 +984,7 @@ static void SetPlayerName(INT32 playernum, char *newname)
 	{
 		if (strcasecmp(newname, player_names[playernum]) != 0)
 		{
-			if (netgame)
+			if (netgame && players[playernum].jointime > 0)
 				CONS_Printf(M_GetText("%s renamed to %s\n"),
 					player_names[playernum], newname);
 			strcpy(player_names[playernum], newname);
@@ -1073,7 +1073,7 @@ static INT32 snacpending = 0, snac2pending = 0, chmappending = 0;
 
 // name, color, or skin has changed
 //
-static void SendNameAndColor(void)
+void SendNameAndColor(void)
 {
 	XBOXSTATIC char buf[MAXPLAYERNAME+2];
 	char *p;
@@ -1188,7 +1188,7 @@ static void SendNameAndColor(void)
 }
 
 // splitscreen
-static void SendNameAndColor2(void)
+void SendNameAndColor2(void)
 {
 	INT32 secondplaya;
 

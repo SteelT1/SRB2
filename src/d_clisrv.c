@@ -3053,6 +3053,7 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 {
 	INT16 node, newplayernum;
 	boolean splitscreenplayer;
+	char name[MAXPLAYERNAME+1];
 
 	if (playernum != serverplayer && playernum != adminplayer)
 	{
@@ -3083,8 +3084,12 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 	if (newplayernum+1 > doomcom->numslots)
 		doomcom->numslots = (INT16)(newplayernum+1);
 
+	SendNameAndColor();
+	if (splitscreen || botingame)
+		SendNameAndColor2();
+
 	if (netgame)
-		CONS_Printf(M_GetText("Player %d has joined the game (node %d)\n"), newplayernum+1, node);
+		CONS_Printf(M_GetText("%s has joined the game (Player %d) (node %d)\n"), player_names[newplayernum], newplayernum+1, node);
 
 	// the server is creating my player
 	if (node == mynode)
