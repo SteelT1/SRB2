@@ -1694,7 +1694,7 @@ void CL_UpdateServerList(boolean internetsearch, INT32 room)
 }
 #endif // ifndef NONET
 
-void D_SendAskInfo(INT32 server, INT32 room)
+void D_SendAskInfo(void)
 {
 #ifndef NONET
 	boolean found_server = false;
@@ -3554,7 +3554,7 @@ static void HandleServerInfo(SINT8 node)
   * \author JimitaMPC
   *
   */
-static void HandlePlayerInfo(SINT8 node)
+static void HandlePlayerInfo(void)
 {
 	int i;
 	if (!display_server_info)
@@ -4281,7 +4281,7 @@ FILESTAMP
 		/// JimitaMPC
 		if (netbuffer->packettype == PT_PLAYERINFO)
 		{
-			HandlePlayerInfo(node);
+			HandlePlayerInfo();
 			continue;
 		}
 #endif

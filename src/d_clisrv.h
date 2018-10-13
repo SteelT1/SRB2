@@ -551,5 +551,5 @@ typedef struct
 } serverplayerinfo_t;
 extern serverplayerinfo_t serverplayerinfo[MAXPLAYERS];
 
-void D_SendAskInfo(INT32 server, INT32 room);
+void D_SendAskInfo(void);
 #endif

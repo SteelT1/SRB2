@@ -5894,7 +5894,7 @@ static void M_ShowServerInfo(INT32 choice)
 	if (rendermode == render_soft)
 		I_FinishUpdate(); // page flip or blit buffer
 
-	D_SendAskInfo(server_to_connect, ms_RoomId);
+	D_SendAskInfo();
 	S_ChangeMusicInternal("racent", true);
 	M_SetupNextMenu(&MP_ServerInfoDef);
 }
