@@ -69,7 +69,6 @@
 
 #define PREDICTIONQUEUE BACKUPTICS
 #define PREDICTIONMASK (PREDICTIONQUEUE-1)
-#define MAX_REASONLENGTH 30
 
 boolean server = true; // true or false but !server == client
 #define client (!server)
@@ -2802,6 +2801,10 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			if (netgame) // not splitscreen/bots
 				CONS_Printf(M_GetText("left the game\n"));
 			break;
+		case KICK_MSG_CUSTOM_QUIT:
+			if (netgame) // not splitscreen/bots
+				CONS_Printf(M_GetText("left the game (%s)\n"), reason);
+			break;
 		case KICK_MSG_BANNED:
 			CONS_Printf(M_GetText("has been banned (Don't come back)\n"));
 			break;
@@ -3904,12 +3907,21 @@ FILESTAMP
 			nodewaiting[node] = 0;
 			if (netconsole != -1 && playeringame[netconsole])
 			{
-				XBOXSTATIC UINT8 buf[2];
+				XBOXSTATIC UINT8 buf[3];
 				buf[0] = (UINT8)netconsole;
 				if (netbuffer->packettype == PT_NODETIMEOUT)
+				{
 					buf[1] = KICK_MSG_TIMEOUT;
+				}
+				else if (netbuffer->packettype == PT_CLIENTQUIT_CUSTOM)
+				{
+					buf[1] = KICK_MSG_CUSTOM_QUIT;
+					buf[2] = atoi(netbuffer->leavereason);
+				}
 				else
+				{
 					buf[1] = KICK_MSG_PLAYER_QUIT;
+				}
 				SendNetXCmd(XD_KICK, &buf, 2);
 				nodetoplayer[node] = -1;
 				if (nodetoplayer2[node] != -1 && nodetoplayer2[node] >= 0

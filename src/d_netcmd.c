@@ -31,6 +31,7 @@
 #include "am_map.h"
 #include "byteptr.h"
 #include "d_netfil.h"
+#include "d_net.h"
 #include "p_spec.h"
 #include "m_cheat.h"
 #include "d_clisrv.h"
@@ -3994,6 +3995,24 @@ void Command_ExitGame_f(void)
 {
 	INT32 i;
 
+	if (COM_Argc() == 2)
+	{
+		size_t i, j = COM_Argc();
+		char message[MAX_REASONLENGTH];
+
+		//Steal from the motd code so you don't have to put the reason in quotes.
+		strlcpy(message, COM_Argv(1), sizeof message);
+
+		for (i = 3; i < j; i++)
+		{
+			strlcat(message, " ", sizeof message);
+			strlcat(message, COM_Argv(i), sizeof message);
+		}
+
+		strcpy(netbuffer->leavereason, message);
+		netbuffer->packettype = PT_CLIENTQUIT_CUSTOM;
+		HSendPacket(servernode, true, 0, 0);
+	}
 	D_QuitNetGame();
 	CL_Reset();
 	CV_ClearChangedFlags();

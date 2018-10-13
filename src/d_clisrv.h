@@ -46,6 +46,7 @@ typedef enum
 	PT_SERVERREFUSE,  // Server refuses joiner (reason inside).
 	PT_SERVERSHUTDOWN,
 	PT_CLIENTQUIT,    // Client closes the connection.
+	PT_CLIENTQUIT_CUSTOM, // Same as above, but with reason.
 
 	PT_ASKINFO,       // Anyone can ask info of the server.
 	PT_SERVERINFO,    // Send game & server info (gamespy).
@@ -384,6 +385,7 @@ typedef struct
 	UINT8 ackreturn; // The return of the ack number
 
 	UINT8 packettype;
+	char leavereason[60];
 	UINT8 reserved; // Padding
 	union
 	{
@@ -443,6 +445,9 @@ extern consvar_t cv_playbackspeed;
 #endif
 #define KICK_MSG_CUSTOM_KICK 7
 #define KICK_MSG_CUSTOM_BAN  8
+#define KICK_MSG_CUSTOM_QUIT 9
+
+#define MAX_REASONLENGTH 30
 
 extern boolean server;
 #define client (!server)
@@ -459,6 +464,8 @@ extern UINT16 pingmeasurecount;
 extern UINT32 realpingtable[MAXPLAYERS];
 extern UINT32 playerpingtable[MAXPLAYERS];
 #endif
+
+char quitreason[MAX_REASONLENGTH];
 
 extern consvar_t cv_joinnextround, cv_allownewplayer, cv_maxplayers, cv_resynchattempts, cv_blamecfail, cv_maxsend, cv_noticedownload, cv_downloadspeed;
 
