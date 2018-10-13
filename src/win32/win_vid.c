@@ -324,9 +324,6 @@ static inline boolean I_SkipFrame(void)
 				return false;
 			/* FALLTHRU */
 		case GS_TIMEATTACK:
-#ifndef CLIENT_LOADINGSCREEN
-		case GS_WAITINGPLAYERS:
-#endif
 			return skip; // Skip odd frames
 		default:
 			return false;

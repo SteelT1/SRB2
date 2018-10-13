@@ -20,6 +20,7 @@
 
 #include "doomdef.h"
 #include "d_main.h"
+#include "d_clisrv.h"
 #include "d_netcmd.h"
 #include "console.h"
 #include "r_local.h"
@@ -255,6 +256,7 @@ static menu_t SP_NightsAttackDef, SP_NightsReplayDef, SP_NightsGuestReplayDef, S
 static void M_StartServerMenu(INT32 choice);
 static void M_ConnectMenu(INT32 choice);
 static void M_ConnectIPMenu(INT32 choice);
+static void M_ShowServerInfo(INT32 choice);
 #endif
 static void M_StartSplitServerMenu(INT32 choice);
 static void M_StartServer(INT32 choice);
@@ -326,6 +328,7 @@ static void M_OGL_DrawColorMenu(void);
 static void M_DrawConnectMenu(void);
 static void M_DrawConnectIPMenu(void);
 static void M_DrawRoomMenu(void);
+static void M_DrawServerInfoMenu(void);
 #endif
 static void M_DrawJoystick(void);
 static void M_DrawSetupMultiPlayerMenu(void);
@@ -333,6 +336,7 @@ static void M_DrawSetupMultiPlayerMenu(void);
 // Handling functions
 #ifndef NONET
 static boolean M_CancelConnect(void);
+static boolean M_QuitServerInfo(void);		/// JimitaMPC
 #endif
 static boolean M_ExitPandorasBox(void);
 static boolean M_QuitMultiPlayerMenu(void);
@@ -907,17 +911,23 @@ static menuitem_t MP_ConnectMenu[] =
 	{IT_STRING | IT_KEYHANDLER, NULL, "Page",     M_HandleServerPage, 20},
 	{IT_STRING | IT_CALL,       NULL, "Refresh",  M_Refresh,          28},
 
-	{IT_STRING | IT_SPACE, NULL, "",              M_Connect,          48-4},
-	{IT_STRING | IT_SPACE, NULL, "",              M_Connect,          60-4},
-	{IT_STRING | IT_SPACE, NULL, "",              M_Connect,          72-4},
-	{IT_STRING | IT_SPACE, NULL, "",              M_Connect,          84-4},
-	{IT_STRING | IT_SPACE, NULL, "",              M_Connect,          96-4},
-	{IT_STRING | IT_SPACE, NULL, "",              M_Connect,         108-4},
-	{IT_STRING | IT_SPACE, NULL, "",              M_Connect,         120-4},
-	{IT_STRING | IT_SPACE, NULL, "",              M_Connect,         132-4},
-	{IT_STRING | IT_SPACE, NULL, "",              M_Connect,         144-4},
-	{IT_STRING | IT_SPACE, NULL, "",              M_Connect,         156-4},
-	{IT_STRING | IT_SPACE, NULL, "",              M_Connect,         168-4},
+	{IT_STRING | IT_SPACE, NULL, "",              M_ShowServerInfo,   48-4},
+	{IT_STRING | IT_SPACE, NULL, "",              M_ShowServerInfo,   60-4},
+	{IT_STRING | IT_SPACE, NULL, "",              M_ShowServerInfo,   72-4},
+	{IT_STRING | IT_SPACE, NULL, "",              M_ShowServerInfo,   84-4},
+	{IT_STRING | IT_SPACE, NULL, "",              M_ShowServerInfo,   96-4},
+	{IT_STRING | IT_SPACE, NULL, "",              M_ShowServerInfo,   108-4},
+	{IT_STRING | IT_SPACE, NULL, "",              M_ShowServerInfo,   120-4},
+	{IT_STRING | IT_SPACE, NULL, "",              M_ShowServerInfo,   132-4},
+	{IT_STRING | IT_SPACE, NULL, "",              M_ShowServerInfo,   144-4},
+	{IT_STRING | IT_SPACE, NULL, "",              M_ShowServerInfo,   156-4},
+	{IT_STRING | IT_SPACE, NULL, "",              M_ShowServerInfo,   168-4},
+};
+
+/// JimitaMPC
+static menuitem_t MP_ServerInfoOptions[] =
+{
+	{IT_STRING | IT_CALL, NULL, "Connect", M_Connect, 146},
 };
 
 enum
@@ -1638,6 +1648,18 @@ menu_t MP_RoomDef =
 	27, 32,
 	0,
 	NULL
+};
+/// JimitaMPC
+menu_t MP_ServerInfoDef =
+{
+	"M_MULTI",
+	sizeof (MP_ServerInfoOptions)/sizeof (menuitem_t),
+	&MP_ConnectDef,
+	MP_ServerInfoOptions,
+	M_DrawServerInfoMenu,
+	27, 32,
+	0,
+	M_QuitServerInfo
 };
 #endif
 menu_t MP_SplitServerDef = MAPICONMENUSTYLE("M_MULTI", MP_SplitServerMenu, &MP_MainDef);
@@ -2393,15 +2415,16 @@ boolean M_Responder(event_t *ev)
 			currentMenu->lastOn = itemOn;
 			if (currentMenu->prevMenu)
 			{
-				//If we entered the game search menu, but didn't enter a game,
-				//make sure the game doesn't still think we're in a netgame.
-				if (!Playing() && netgame && multiplayer)
+				// If we entered the game search menu, but didn't enter a game,
+				// make sure the game doesn't still think we're in a netgame.
+				if (!Playing() && netgame && multiplayer && !serverconnlist)
 				{
 					MSCloseUDPSocket();		// Clean up so we can re-open the connection later.
 					netgame = false;
 					multiplayer = false;
 				}
-
+				serverconnlist = false;
+				quittingserverconnlist = true;
 				if (currentMenu == &SP_TimeAttackDef || currentMenu == &SP_NightsAttackDef)
 				{
 					// D_StartTitle does its own wipe, since GS_TIMEATTACK is now a complete gamestate.
@@ -5851,12 +5874,37 @@ static void M_HandleServerPage(INT32 choice)
 	}
 }
 
+/// JimitaMPC
+static void M_ShowServerInfo(INT32 choice)
+{
+	int i;
+	for (i = 0; i < MAXPLAYERS; i++)
+		serverplayerinfo[i].exists = false;
+
+	display_server_info = true;
+	server_to_connect = choice;
+	strcpy(serverconnname, serverlist[server_to_connect-FIRSTSERVERLINE + serverlistpage * SERVERS_PER_PAGE].info.servername);
+
+	// Display a little "please wait" message.
+	M_DrawTextBox(52, BASEVIDHEIGHT/2-10, 25, 3);
+	V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, 0, "Contacting the server...");
+	V_DrawCenteredString(BASEVIDWIDTH/2, (BASEVIDHEIGHT/2)+12, 0, "Please wait.");
+	I_OsPolling();
+	I_UpdateNoBlit();
+	if (rendermode == render_soft)
+		I_FinishUpdate(); // page flip or blit buffer
+
+	D_SendAskInfo(server_to_connect, ms_RoomId);
+	S_ChangeMusicInternal("racent", true);
+	M_SetupNextMenu(&MP_ServerInfoDef);
+}
+
 static void M_Connect(INT32 choice)
 {
 	// do not call menuexitfunc
 	M_ClearMenus(false);
-
-	COM_BufAddText(va("connect node %d\n", serverlist[choice-FIRSTSERVERLINE + serverlistpage * SERVERS_PER_PAGE].node));
+	(void)choice;
+	COM_BufAddText(va("connect node %d\n", serverlist[server_to_connect-FIRSTSERVERLINE + serverlistpage * SERVERS_PER_PAGE].node));
 }
 
 static void M_Refresh(INT32 choice)
@@ -5871,6 +5919,10 @@ static void M_Refresh(INT32 choice)
 	I_UpdateNoBlit();
 	if (rendermode == render_soft)
 		I_FinishUpdate(); // page flip or blit buffer
+
+	/// JimitaMPC
+	serverconnlist = true;
+	quittingserverconnlist = false;
 
 	// note: this is the one case where 0 is a valid room number
 	// because it corresponds to "All"
@@ -5900,6 +5952,80 @@ static void M_DrawRoomMenu(void)
 
 	rmotd = V_WordWrap(0, 20*8, 0, rmotd);
 	V_DrawString(144+8, 32, V_ALLOWLOWERCASE|V_RETURN8, rmotd);
+}
+
+/// JimitaMPC
+static void M_DrawServerInfoMenu(void)
+{
+	INT32 i, j;
+	INT32 x = 20, y = 20;
+	char maptitle[2048];
+	const char *gametypestr = NULL;
+
+	V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_CACHE));
+	V_DrawCenteredString(BASEVIDWIDTH/2, y+10, V_ALLOWLOWERCASE, serverconnname);
+
+	if (strcmp(serverconnectioninfo.maptitle, ""))
+	{
+		strcpy(maptitle, serverconnectioninfo.maptitle);
+		if (serverconnectioninfo.iszone)
+			strcat(maptitle, " ZONE");
+		if (serverconnectioninfo.actnum)
+			strcat(maptitle, va(" %d", serverconnectioninfo.actnum));
+	}
+	else
+		strcpy(maptitle, "UNKNOWN MAP");
+
+	V_DrawCenteredString(BASEVIDWIDTH/2, y+20, V_ALLOWLOWERCASE, maptitle);
+
+	for (j = 0; gametype_cons_t[j].strvalue; j++)
+	{
+		if (gametype_cons_t[j].value == serverconnectioninfo.gametype)
+		{
+			gametypestr = gametype_cons_t[j].strvalue;
+			break;
+		}
+	}
+	if (gametypestr)
+		V_DrawCenteredString(BASEVIDWIDTH/2, y+30, V_ALLOWLOWERCASE, gametypestr);
+	else
+		y -= 10;
+
+	y += 40;
+
+	for (i = 0; i < 7; i++)		/// Limit how many you can see at once, please
+	{
+		UINT8 *colormap;
+		if (!serverplayerinfo[i].exists)
+			continue;
+
+		/// Player name
+		V_DrawString(x + 20, y, V_ALLOWLOWERCASE, serverplayerinfo[i].name);
+
+		/// Skin face
+		V_DrawSmallScaledPatch(x, y-4, 0, livesback);
+		colormap = R_GetTranslationColormap(serverplayerinfo[i].skin, serverplayerinfo[i].color, 0);
+		if (!serverplayerinfo[i].unknownskin)
+			V_DrawSmallMappedPatch(x, y-4, 0, faceprefix[serverplayerinfo[i].skin], colormap);
+		else
+			V_DrawSmallMappedPatch(x, y-4, 0, W_CachePatchNum(W_GetNumForName("MISSING"), PU_CACHE), NULL);
+
+		/// Score
+		V_DrawRightAlignedString(x+240, y, 0, va("%d", serverplayerinfo[i].score));
+
+		/// Tag, CTF
+		if (serverplayerinfo[i].tagit)
+			V_DrawSmallScaledPatch(x-32, y-4, 0, tagico);
+		if (serverplayerinfo[i].gotflag && serverplayerinfo[i].team == 2)
+			V_DrawSmallScaledPatch(x-28, y-4, 0, rflagico);
+		else if (serverplayerinfo[i].gotflag && serverplayerinfo[i].team == 1)
+			V_DrawSmallScaledPatch(x-28, y-4, 0, bflagico);
+
+		y += 16;
+	}
+
+	// draw generic drawer for cursor, items and title
+	M_DrawGenericMenu();
 }
 
 static void M_DrawConnectMenu(void)
@@ -5971,7 +6097,21 @@ static void M_DrawConnectMenu(void)
 
 static boolean M_CancelConnect(void)
 {
-	D_CloseConnection();
+	if (quittingserverconnlist)
+		D_CloseConnection();
+	return true;
+}
+
+/// JimitaMPC
+static boolean M_QuitServerInfo(void)
+{
+	serverconnlist = false;
+	quittingserverconnlist = false;
+
+	M_ClearMenus(false);
+	D_QuitNetGame();
+	CL_Reset();
+	D_StartTitle();
 	return true;
 }
 
