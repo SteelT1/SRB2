@@ -5957,6 +5957,12 @@ static void M_DrawServerInfoMenu(void)
 	const char *gametypestr = NULL;
 
 	V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_CACHE));
+
+	/// Don't draw anything if it didn't load yet.
+	if (display_server_info)
+		return;
+
+	y -= 4;
 	V_DrawCenteredString(BASEVIDWIDTH/2, y+10, V_ALLOWLOWERCASE, serverconnname);
 
 	if (strcmp(serverconnectioninfo.maptitle, ""))
@@ -5985,7 +5991,7 @@ static void M_DrawServerInfoMenu(void)
 	else
 		y -= 10;
 
-	y += 40;
+	y += 44;
 
 	for (i = 0; i < 7; i++)		/// Limit how many you can see at once, please
 	{
