@@ -5893,12 +5893,35 @@ static void M_ShowServerInfo(INT32 choice)
 	M_SetupNextMenu(&MP_ServerInfoDef);
 }
 
+/// JimitaMPC
 static void M_Connect(INT32 choice)
 {
-	// do not call menuexitfunc
-	M_ClearMenus(false);
+	serverelem_t *thisserver;
+	INT32 i;
+	boolean found_server = false;
+
 	(void)choice;
-	COM_BufAddText(va("connect node %d\n", serverlist[server_to_connect-FIRSTSERVERLINE + serverlistpage * SERVERS_PER_PAGE].node));
+	M_ClearMenus(false);
+
+	for (i = 0; i < MAXSERVERLIST; i++)
+	{
+		thisserver = &serverlist[i];
+		if (!strcmp(thisserver->info.servername, serverconnname))
+		{
+			found_server = true;
+			break;
+		}
+	}
+
+	if (found_server)
+		COM_BufAddText(va("connect node %d\n", thisserver->node));
+	else
+	{
+		D_QuitNetGame();
+		CL_Reset();
+		D_StartTitle();
+		M_StartMessage(M_GetText("Could not contact server\n\nPress ESC\n"), NULL, MM_NOTHING);
+	}
 }
 
 static void M_Refresh(INT32 choice)

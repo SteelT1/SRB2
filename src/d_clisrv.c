@@ -1729,9 +1729,10 @@ void CL_SendAskInfo(void)
 	}
 	if (!found_server)
 	{
-		M_ClearMenus(false);
-		M_StartMessage(M_GetText("Could not contact server\n\nPress ESC\n"), NULL, MM_NOTHING);
+		D_QuitNetGame();
+		CL_Reset();
 		D_StartTitle();
+		M_StartMessage(M_GetText("Could not contact server\n\nPress ESC\n"), NULL, MM_NOTHING);
 	}
 #endif // NONET
 }
