@@ -1780,8 +1780,7 @@ static boolean CL_ServerConnectionSearchTicker(boolean viams, tic_t *asksent)
 
 		if (client)
 		{
-			D_ParseFileneeded(serverlist[i].info.fileneedednum,
-				serverlist[i].info.fileneeded);
+			D_ParseFileneeded(serverlist[i].info.fileneedednum, serverlist[i].info.fileneeded);
 			CONS_Printf(M_GetText("Checking files...\n"));
 			i = CL_CheckFiles();
 			if (i == 3) // too many files

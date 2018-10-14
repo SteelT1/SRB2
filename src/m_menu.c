@@ -21,6 +21,7 @@
 #include "doomdef.h"
 #include "d_main.h"
 #include "d_clisrv.h"
+#include "d_netfil.h"
 #include "d_netcmd.h"
 #include "console.h"
 #include "r_local.h"
@@ -328,7 +329,12 @@ static void M_OGL_DrawColorMenu(void);
 static void M_DrawConnectMenu(void);
 static void M_DrawConnectIPMenu(void);
 static void M_DrawRoomMenu(void);
+
+/// JimitaMPC
 static void M_DrawServerInfoMenu(void);
+static UINT8 ServerInfoPage = 0;
+#define MAXSERVERINFOPAGES 2
+
 #endif
 static void M_DrawJoystick(void);
 static void M_DrawSetupMultiPlayerMenu(void);
@@ -2364,6 +2370,14 @@ boolean M_Responder(event_t *ev)
 					S_StartSound(NULL, sfx_menu1);
 				routine(0);
 			}
+			/// JimitaMPC
+			#ifndef NONET
+			else if (currentMenu == &MP_ServerInfoDef)
+			{
+				ServerInfoPage = ServerInfoPage > 0 ? ServerInfoPage-1 : 0;
+				S_StartSound(NULL, sfx_menu1);
+			}
+			#endif
 			return true;
 
 		case KEY_RIGHTARROW:
@@ -2374,6 +2388,14 @@ boolean M_Responder(event_t *ev)
 					S_StartSound(NULL, sfx_menu1);
 				routine(1);
 			}
+			/// JimitaMPC
+			#ifndef NONET
+			else if (currentMenu == &MP_ServerInfoDef)
+			{
+				ServerInfoPage = ServerInfoPage < MAXSERVERINFOPAGES-1 ? ServerInfoPage+1 : MAXSERVERINFOPAGES-1;
+				S_StartSound(NULL, sfx_menu1);
+			}
+			#endif
 			return true;
 
 		case KEY_ENTER:
@@ -5883,10 +5905,13 @@ static void M_ShowServerInfo(INT32 choice)
 
 	display_server_info = true;
 	server_to_connect = choice;
-	strcpy(serverconnname, serverlist[server_to_connect-FIRSTSERVERLINE + serverlistpage * SERVERS_PER_PAGE].info.servername);
+	choice = server_to_connect-FIRSTSERVERLINE + serverlistpage * SERVERS_PER_PAGE;
+	strcpy(serverconnname, serverlist[choice].info.servername);
 
 	/// Needs serverconnname set, like as above.
 	CL_SendAskInfo();
+	D_ParseFileneeded(serverlist[choice].info.fileneedednum, serverlist[choice].info.fileneeded);
+	ServerInfoPage = 0;
 
 	wipegamestate = -1;
 	S_ChangeMusicInternal("racent", true);
@@ -5901,6 +5926,11 @@ static void M_Connect(INT32 choice)
 	boolean found_server = false;
 
 	(void)choice;
+
+	/// Don't do anything if we didn't receive any data (yet.)
+	if (display_server_info)
+		return;
+
 	M_ClearMenus(false);
 
 	for (i = 0; i < MAXSERVERLIST; i++)
@@ -5917,10 +5947,14 @@ static void M_Connect(INT32 choice)
 		COM_BufAddText(va("connect node %d\n", thisserver->node));
 	else
 	{
+		serverconnlist = false;
+		quittingserverconnlist = false;
+		display_server_info = false;
+
 		D_QuitNetGame();
 		CL_Reset();
 		D_StartTitle();
-		M_StartMessage(M_GetText("Could not contact server\n\nPress ESC\n"), NULL, MM_NOTHING);
+		M_StartMessage(M_GetText("Could not contact the server\n\nPress ESC\n"), NULL, MM_NOTHING);
 	}
 }
 
@@ -5972,6 +6006,7 @@ static void M_DrawRoomMenu(void)
 }
 
 /// JimitaMPC
+static int serverinfotimeout = 0;
 static void M_DrawServerInfoMenu(void)
 {
 	INT32 i, j;
@@ -5981,9 +6016,36 @@ static void M_DrawServerInfoMenu(void)
 
 	V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_CACHE));
 
-	/// Don't draw anything if it didn't load yet.
+	/// Don't draw anything if we didn't receive any data (yet.)
+	/// If we don't anyway, give up.
 	if (display_server_info)
+	{
+		char conntext[32];
+		UINT32 i;
+
+		// Animate the dots
+		strcpy(conntext, "Contacting the server");
+		for (i = 0; i < ((serverinfotimeout+48) / 16) % 4; i++)
+			strcat(conntext, ".");
+
+		M_DrawTextBox(52, BASEVIDHEIGHT/2-10, 25, 3);
+		V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, 0, conntext);
+		V_DrawCenteredString(BASEVIDWIDTH/2, (BASEVIDHEIGHT/2)+12, 0, "Please wait.");
+		if (serverinfotimeout++ > 10*TICRATE)
+		{
+			serverconnlist = false;
+			quittingserverconnlist = false;
+			display_server_info = false;
+
+			M_ClearMenus(false);
+			D_QuitNetGame();
+			CL_Reset();
+			D_StartTitle();
+			M_StartMessage(M_GetText("Could not contact the server\n\nPress ESC\n"), NULL, MM_NOTHING);
+			serverinfotimeout = 0;
+		}
 		return;
+	}
 
 	y -= 4;
 	V_DrawCenteredString(BASEVIDWIDTH/2, y+10, V_ALLOWLOWERCASE, serverconnname);
@@ -6016,38 +6078,173 @@ static void M_DrawServerInfoMenu(void)
 
 	y += 44;
 
-	for (i = 0; i < 7; i++)		/// Limit how many you can see at once, please
+	if (ServerInfoPage == 0)
 	{
-		UINT8 *colormap;
-		if (!serverplayerinfo[i].exists)
-			continue;
+		boolean hasplayers = false;
+		for (i = 0; i < 7; i++)		/// Limit how many you can see at once, please
+		{
+			UINT8 *colormap;
+			if (!serverplayerinfo[i].exists)
+				continue;
 
-		/// Player name
-		V_DrawString(x + 20, y, V_ALLOWLOWERCASE, serverplayerinfo[i].name);
+			hasplayers = true;
 
-		/// Skin face
-		V_DrawSmallScaledPatch(x, y-4, 0, livesback);
-		colormap = R_GetTranslationColormap(serverplayerinfo[i].skin, serverplayerinfo[i].color, 0);
-		if (!serverplayerinfo[i].unknownskin)
-			V_DrawSmallMappedPatch(x, y-4, 0, faceprefix[serverplayerinfo[i].skin], colormap);
+			/// Player name
+			V_DrawString(x + 20, y, V_ALLOWLOWERCASE, serverplayerinfo[i].name);
+
+			/// Skin face
+			V_DrawSmallScaledPatch(x, y-4, 0, livesback);
+			colormap = R_GetTranslationColormap(serverplayerinfo[i].skin, serverplayerinfo[i].color, 0);
+			if (!serverplayerinfo[i].unknownskin)
+				V_DrawSmallMappedPatch(x, y-4, 0, faceprefix[serverplayerinfo[i].skin], colormap);
+			else
+				V_DrawSmallMappedPatch(x, y-4, 0, W_CachePatchNum(W_GetNumForName("MISSING"), PU_CACHE), NULL);
+
+			/// Score
+			V_DrawRightAlignedString(x+240, y, 0, va("%d", serverplayerinfo[i].score));
+
+			/// Tag, CTF
+			if (serverplayerinfo[i].tagit)
+				V_DrawSmallScaledPatch(x+240+16, y-4, 0, tagico);
+			if (serverplayerinfo[i].gotflag && serverplayerinfo[i].team == 2)
+				V_DrawSmallScaledPatch(x+240+16, y-4, 0, rflagico);
+			else if (serverplayerinfo[i].gotflag && serverplayerinfo[i].team == 1)
+				V_DrawSmallScaledPatch(x+240+16, y-4, 0, bflagico);
+
+			y += 16;
+		}
+
+		if (!hasplayers)
+		{
+			V_DrawString(x, y, V_ALLOWLOWERCASE, "No players on yet.");
+			V_DrawString(x, y+10, V_ALLOWLOWERCASE|V_YELLOWMAP, "You could be the first!");
+		}
+
+		V_DrawRightAlignedString(BASEVIDWIDTH-20, 146+30, V_YELLOWMAP|V_MONOSPACE, "   PLAYER LIST =>");
+	}
+	else if (ServerInfoPage == 1)
+	{
+		if (fileneedednum <= mainwads)
+			V_DrawString(x, y, V_ALLOWLOWERCASE, "\x83No files needed to download.");
 		else
-			V_DrawSmallMappedPatch(x, y-4, 0, W_CachePatchNum(W_GetNumForName("MISSING"), PU_CACHE), NULL);
+		{
+			boolean downloadson = true;
+			boolean cantsend = false;
+			int j;
 
-		/// Score
-		V_DrawRightAlignedString(x+240, y, 0, va("%d", serverplayerinfo[i].score));
+			/// Detect files that won't be sent, or if downloads are disabled
+			for (j = 5; j < fileneedednum; j++)
+			{
+				if (fileneeded[j].status != FS_DOWNLOADING && fileneeded[j].important)
+				{
+					/// Downloading disabled
+					if (fileneeded[j].willsend == 2)
+						downloadson = false;
+					/// Won't send
+					else if (fileneeded[j].willsend == 0)
+						cantsend = true;
+				}
+			}
 
-		/// Tag, CTF
-		if (serverplayerinfo[i].tagit)
-			V_DrawSmallScaledPatch(x-32, y-4, 0, tagico);
-		if (serverplayerinfo[i].gotflag && serverplayerinfo[i].team == 2)
-			V_DrawSmallScaledPatch(x-28, y-4, 0, rflagico);
-		else if (serverplayerinfo[i].gotflag && serverplayerinfo[i].team == 1)
-			V_DrawSmallScaledPatch(x-28, y-4, 0, bflagico);
+			for (i = 5; i < fileneedednum; i++)
+			{
+				if (i-5 > 6)
+				{
+					char str[512];
+					str[0] = 0;
 
-		y += 16;
+					strcat(str,va("... and %d more", fileneedednum-i));
+
+					if (M_CheckParm("-nodownload"))
+					{
+						strcat(str," - \x87");
+						strcat(str,"You disabled downloads");
+					}
+					else if (!downloadson)
+					{
+						strcat(str," - \x85");
+						strcat(str,"Server disabled downloads");
+					}
+					else if (cantsend)
+					{
+						strcat(str," - \x85");
+						strcat(str,"Some files too large");
+					}
+
+					strcat(str,"\0");
+
+					V_DrawString(x, y, V_ALLOWLOWERCASE, str);
+					break;
+				}
+				else
+				{
+					if (fileneeded[i].status != FS_DOWNLOADING && fileneeded[i].important)
+					{
+						char filestring[2048];
+						filestring[0] = 0;
+
+						/// Color coding
+						if (fileneeded[i].status == FS_FOUND)
+							strcat(filestring,"\x83");		/// Green (found)
+						else if (fileneeded[i].status == FS_MD5SUMBAD)
+							strcat(filestring,"\x87");		/// Orange (different MD5 hash)
+						else if (fileneeded[i].status == FS_NOTFOUND)
+							strcat(filestring,"\x85");		/// Red (not found)
+
+						/// File name
+						strcat(filestring,va("%s",fileneeded[i].filename));
+
+						/// Color coding (filesize)
+						if (fileneeded[i].willsend == 1)
+							strcat(filestring,"\x83");		/// Green (will send)
+						else
+							strcat(filestring,"\x85");		/// Red (will not send)
+
+						strcat(filestring,"(");
+						strcat(filestring,va("%d",fileneeded[i].totalsize >> 10));
+						strcat(filestring,"K)");
+
+						strcat(filestring,"\0");
+
+						V_DrawString(x, y, V_ALLOWLOWERCASE, filestring);
+						y += 16;
+
+						if (i-5 <= 6 && fileneedednum-5 <= 6 && i == fileneedednum-1)
+						{
+							char str[512];
+							str[0] = 0;
+
+							if (M_CheckParm("-nodownload"))
+							{
+								strcat(str,"* \x87");
+								strcat(str,"You disabled downloads");
+								strcat(str,"\x80 *");
+							}
+							else if (!downloadson)
+							{
+								strcat(str,"* \x85");
+								strcat(str,"Server disabled downloads");
+								strcat(str,"\x80 *");
+							}
+							else if (cantsend)
+							{
+								strcat(str,"* \x85");
+								strcat(str,"Some files are too large");
+								strcat(str,"\x80 *");
+							}
+
+							strcat(str,"\0");
+
+							V_DrawCenteredString(BASEVIDWIDTH/2, y, V_ALLOWLOWERCASE, str);
+							break;
+						}
+					}
+				}
+			}
+		}
+		V_DrawRightAlignedString(BASEVIDWIDTH-20, 146+30, V_YELLOWMAP|V_MONOSPACE, "<= FILE LIST     ");
 	}
 
-	// draw generic drawer for cursor, items and title
 	M_DrawGenericMenu();
 }
 
