@@ -5885,16 +5885,10 @@ static void M_ShowServerInfo(INT32 choice)
 	server_to_connect = choice;
 	strcpy(serverconnname, serverlist[server_to_connect-FIRSTSERVERLINE + serverlistpage * SERVERS_PER_PAGE].info.servername);
 
-	// Display a little "please wait" message.
-	M_DrawTextBox(52, BASEVIDHEIGHT/2-10, 25, 3);
-	V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, 0, "Contacting the server...");
-	V_DrawCenteredString(BASEVIDWIDTH/2, (BASEVIDHEIGHT/2)+12, 0, "Please wait.");
-	I_OsPolling();
-	I_UpdateNoBlit();
-	if (rendermode == render_soft)
-		I_FinishUpdate(); // page flip or blit buffer
+	/// Needs serverconnname set, like as above.
+	CL_SendAskInfo();
 
-	D_SendAskInfo();
+	wipegamestate = -1;
 	S_ChangeMusicInternal("racent", true);
 	M_SetupNextMenu(&MP_ServerInfoDef);
 }

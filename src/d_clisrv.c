@@ -1694,7 +1694,7 @@ void CL_UpdateServerList(boolean internetsearch, INT32 room)
 }
 #endif // ifndef NONET
 
-void D_SendAskInfo(void)
+void CL_SendAskInfo(void)
 {
 #ifndef NONET
 	boolean found_server = false;

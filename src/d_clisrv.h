@@ -485,6 +485,7 @@ void CL_RemoveSplitscreenPlayer(void);
 void CL_Reset(void);
 void CL_ClearPlayer(INT32 playernum);
 void CL_UpdateServerList(boolean internetsearch, INT32 room);
+void CL_SendAskInfo(void);		/// JimitaMPC
 // Is there a game running?
 boolean Playing(void);
 
@@ -550,6 +551,4 @@ typedef struct
 	boolean unknownskin;
 } serverplayerinfo_t;
 extern serverplayerinfo_t serverplayerinfo[MAXPLAYERS];
-
-void D_SendAskInfo(void);
 #endif
