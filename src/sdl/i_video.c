@@ -92,6 +92,7 @@ static char vidModeName[33][32]; // allow 33 different modes
 rendermode_t rendermode=render_soft;
 
 boolean highcolor = false;
+static void ShowBorder_OnChange(void);
 
 // synchronize page flipping with screen refresh
 consvar_t cv_vidwait = {"vid_wait", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -1284,7 +1285,7 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 
   if (!dedicated)
   {
-      SDL_SetWindowBordered(window, cv_showborder.value)
+      SDL_SetWindowBordered(window, cv_showborder.value);
   }
 
 	// Renderer-specific stuff
@@ -1342,9 +1343,9 @@ static void Impl_SetWindowIcon(void)
 	SDL_SetWindowIcon(window, icoSurface);
 }
 
-static void ShowBorder_OnChange(void
+static void ShowBorder_OnChange(void)
 {
-  SDL_SetWindowBorder(window, cv_showborder.value)
+  SDL_SetWindowBorder(window, cv_showborder.value);
 }
 
 
