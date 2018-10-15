@@ -6014,23 +6014,23 @@ static void M_DrawRoomMenu(void)
 	V_DrawString(144+8, 32, V_ALLOWLOWERCASE|V_RETURN8, rmotd);
 }
 
-static int serverinfotimeout = 0;
 static void M_DrawServerInfoMenu(void)
 {
 	INT32 i, j;
 	INT32 x = 20, y = 20;
 	char maptitle[2048];
 	const char *gametypestr = NULL;
+	static INT32 serverinfotimeout = 0;
 
 	V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_CACHE));
 
 	if (display_server_info)
 	{
 		char conntext[32];
-		UINT32 i;
+		UINT32 k;
 
 		strcpy(conntext, "Contacting the server");
-		for (i = 0; i < ((serverinfotimeout+48) / 16) % 4; i++)
+		for (k = 0; k < ((serverinfotimeout+48) / 16) % 4; k++)
 			strcat(conntext, ".");
 
 		M_DrawTextBox(52, BASEVIDHEIGHT/2-10, 25, 3);
