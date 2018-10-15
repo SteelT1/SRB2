@@ -850,7 +850,7 @@ void HWR_InitMD2(void)
 			}
 		}
 		// no sprite/player skin name found?!?
-		CONS_Printf("Unknown sprite/player skin %s detected in md2.dat\n", name);
+		//CONS_Printf("Unknown sprite/player skin %s detected in md2.dat\n", name);
 md2found:
 		// move on to next line...
 		continue;
@@ -867,7 +867,7 @@ void HWR_AddPlayerMD2(int skin) // For MD2's that were added after startup
 	if (nomd2s)
 		return;
 
-	CONS_Printf("AddPlayerMD2()...\n");
+	CONS_Printf("HWR_AddPlayerMD2()...\n");
 
 	// read the md2.dat file
 	//Filename checking fixed ~Monster Iestyn and Golden

@@ -955,7 +955,7 @@ void V_DrawFadeScreen(void)
 #ifdef HWRENDER
 	if (rendermode != render_soft && rendermode != render_none)
 	{
-		HWR_FadeScreenMenuBack(0x01010160, 0); // hack, 0 means full height
+		HWR_FadeScreenMenuBack(0x01010160);
 		return;
 	}
 #endif

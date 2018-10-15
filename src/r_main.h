@@ -60,7 +60,7 @@ angle_t R_PointToAngle(fixed_t x, fixed_t y);
 angle_t R_PointToAngle2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1);
 fixed_t R_PointToDist(fixed_t x, fixed_t y);
 fixed_t R_PointToDist2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1);
-angle_t R_PointToAngleEx(INT64 px2, INT64 py2, INT64 px1, INT64 py1);		/// JimitaMPC
+angle_t R_PointToAngleEx(INT64 px2, INT64 py2, INT64 px1, INT64 py1);
 
 fixed_t R_ScaleFromGlobalAngle(angle_t visangle);
 subsector_t *R_PointInSubsector(fixed_t x, fixed_t y);

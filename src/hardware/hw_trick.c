@@ -761,9 +761,6 @@ void HWR_CorrectSWTricks(void)
 	sector_t **sectorList;
 	sector_t *outSector;
 
-	if ((0 == cv_grcorrecttricks.value))
-		return;
-
 	// determine lines for sectors
 	for (i = 0; i < numlines; i++)
 	{

@@ -44,10 +44,6 @@
 #endif
 #include "hw_md2.h"
 
-#define HWPRECIP
-#define SORTING
-//#define POLYSKY
-
 // ==========================================================================
 // the hardware driver object
 // ==========================================================================
@@ -60,23 +56,12 @@ struct hwdriver_s hwdriver;
 
 static void HWR_AddSprites(sector_t *sec);
 static void HWR_ProjectSprite(mobj_t *thing);
-#ifdef HWPRECIP
 static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing);
-#endif
 
-#ifdef SORTING
 void HWR_AddTransparentFloor(lumpnum_t lumpnum, extrasubsector_t *xsub, boolean isceiling, fixed_t fixedheight,
                              INT32 lightlevel, INT32 alpha, sector_t *FOFSector, FBITFIELD blend, boolean fogplane, extracolormap_t *planecolormap);
 void HWR_AddTransparentPolyobjectFloor(lumpnum_t lumpnum, polyobj_t *polysector, boolean isceiling, fixed_t fixedheight,
                              INT32 lightlevel, INT32 alpha, sector_t *FOFSector, FBITFIELD blend, extracolormap_t *planecolormap);
-#else
-static void HWR_Add3DWater(lumpnum_t lumpnum, extrasubsector_t *xsub, fixed_t fixedheight,
-                           INT32 lightlevel, INT32 alpha, sector_t *FOFSector);
-static void HWR_Render3DWater(void);
-static void HWR_RenderTransparentWalls(void);
-#endif
-static void HWR_FoggingOn(void);
-static UINT32 atohex(const char *s);
 
 static void CV_filtermode_ONChange(void);
 static void CV_anisotropic_ONChange(void);
@@ -111,8 +96,6 @@ consvar_t cv_granisotropicmode = {"gr_anisotropicmode", "1", CV_CALL, granisotro
 //static consvar_t cv_grzbuffer = {"gr_zbuffer", "On", 0, CV_OnOff};
 consvar_t cv_grcorrecttricks = {"gr_correcttricks", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grsolvetjoin = {"gr_solvetjoin", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-
-/// JimitaMPC
 consvar_t cv_grcullbackfaces = {"gr_cullbackfaces", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static void CV_FogDensity_ONChange(void)
@@ -306,10 +289,6 @@ static angle_t gr_xtoviewangle[MAXVIDWIDTH+1];
 // ==========================================================================
 //                                                                    GLOBALS
 // ==========================================================================
-
-// test of drawing sky by polygons like in software with visplane, unfortunately
-// this doesn't work since we must have z for pixel and z for texture (not like now with z = oow)
-//#define POLYSKY
 
 // base values set at SetViewSize
 static float gr_basecentery;
@@ -767,51 +746,6 @@ static void HWR_RenderPlane(extrasubsector_t *xsub, boolean isceiling, fixed_t f
 	HWR_PlaneLighting(planeVerts, nrPlaneVerts);
 #endif
 }
-
-#ifdef POLYSKY
-// this don't draw anything it only update the z-buffer so there isn't problem with
-// wall/things upper that sky (map12)
-static void HWR_RenderSkyPlane(extrasubsector_t *xsub, fixed_t fixedheight)
-{
-	polyvertex_t *pv;
-	float height; //constant y for all points on the convex flat polygon
-	FOutVector *v3d;
-	INT32 nrPlaneVerts;   //verts original define of convex flat polygon
-	INT32 i;
-
-	// no convex poly were generated for this subsector
-	if (!xsub->planepoly)
-		return;
-
-	height = FIXED_TO_FLOAT(fixedheight);
-
-	pv  = xsub->planepoly->pts;
-	nrPlaneVerts = xsub->planepoly->numpts;
-
-	if (nrPlaneVerts < 3) // not even a triangle?
-		return;
-
-	if (nrPlaneVerts > MAXPLANEVERTICES) // FIXME: exceeds plVerts size
-	{
-		CONS_Debug(DBG_RENDER, "polygon size of %d exceeds max value of %d vertices\n", nrPlaneVerts, MAXPLANEVERTICES);
-		return;
-	}
-
-	// transform
-	v3d = planeVerts;
-	for (i = 0; i < nrPlaneVerts; i++,v3d++,pv++)
-	{
-		v3d->sow = 0.0f;
-		v3d->tow = 0.0f;
-		v3d->x = pv->x;
-		v3d->y = height;
-		v3d->z = pv->y;
-	}
-
-	HWD.pfnDrawPolygon(NULL, planeVerts, nrPlaneVerts,
-	 PF_Clip|PF_Invisible|PF_NoTexture|PF_Occlude);
-}
-#endif //polysky
 
 /*
    wallVerts order is :
@@ -1374,7 +1308,7 @@ static void HWR_RenderLineSeg(void)
 	// x offset the texture
 	texturehpeg = gr_sidedef->textureoffset + gr_curline->offset;
 
-	// clip texture s start/end coords with solidsegs
+	// texture start/end coords
 	cliplow = (float)texturehpeg;
 	cliphigh = (float)(texturehpeg + (gr_curline->flength*FRACUNIT));
 
@@ -2305,15 +2239,10 @@ static void HWR_AddLine(seg_t * line)
 
 	gr_backsector = (gr_curline = line)->backsector;
 
-	/// JimitaMPC
 	if (cv_grcullbackfaces.value)
 	{
-		angle_t angle1, angle2;
-
-		// OPTIMIZE: quickly reject orthogonal back sides.
-		angle1 = R_PointToAngleEx(viewx, viewy,FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v1)->x),FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v1)->y));
-		angle2 = R_PointToAngleEx(viewx, viewy,FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v2)->x),FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v2)->y));
-
+		angle_t angle1 = R_PointToAngleEx(viewx, viewy, FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v1)->x),FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v1)->y));
+		angle_t angle2 = R_PointToAngleEx(viewx, viewy, FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v2)->x),FLOAT_TO_FIXED(((polyvertex_t *)gr_curline->v2)->y));
 		if (angle1-angle2 >= ANGLE_180)
 			return;
 	}
@@ -2732,12 +2661,6 @@ static void HWR_Subsector(size_t num)
 					PF_Occlude, floorlightlevel, levelflats[gr_frontsector->floorpic].lumpnum, NULL, 255, false, floorcolormap);
 			}
 		}
-		else
-		{
-#ifdef POLYSKY
-			HWR_RenderSkyPlane(&extrasubsectors[num], locFloorHeight);
-#endif
-		}
 	}
 
 	if (cullCeilingHeight > dup_viewz)
@@ -2754,21 +2677,11 @@ static void HWR_Subsector(size_t num)
 					PF_Occlude, ceilinglightlevel, levelflats[gr_frontsector->ceilingpic].lumpnum,NULL, 255, false, ceilingcolormap);
 			}
 		}
-		else
-		{
-#ifdef POLYSKY
-			HWR_RenderSkyPlane(&extrasubsectors[num], locCeilingHeight);
-#endif
-		}
 	}
 
-#ifndef POLYSKY
 	// Moved here because before, when above the ceiling and the floor does not have the sky flat, it doesn't draw the sky
 	if (gr_frontsector->ceilingpic == skyflatnum || gr_frontsector->floorpic == skyflatnum)
-	{
 		drawsky = true;
-	}
-#endif
 
 	if (gr_frontsector->ffloors)
 	{
@@ -2822,13 +2735,6 @@ static void HWR_Subsector(size_t num)
 				else if (rover->flags & FF_TRANSLUCENT && rover->alpha < 256) // SoM: Flags are more efficient
 				{
 					light = R_GetPlaneLight(gr_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
-#ifndef SORTING
-					HWR_Add3DWater(levelflats[*rover->bottompic].lumpnum,
-					               &extrasubsectors[num],
-					               *rover->bottomheight,
-					               *gr_frontsector->lightlist[light].lightlevel,
-					               rover->alpha-1, rover->master->frontsector);
-#else
 					HWR_AddTransparentFloor(levelflats[*rover->bottompic].lumpnum,
 					                       &extrasubsectors[num],
 										   false,
@@ -2836,7 +2742,6 @@ static void HWR_Subsector(size_t num)
 					                       *gr_frontsector->lightlist[light].lightlevel,
 					                       rover->alpha-1 > 255 ? 255 : rover->alpha-1, rover->master->frontsector, PF_Translucent,
 					                       false, gr_frontsector->lightlist[light].extra_colormap);
-#endif
 				}
 				else
 				{
@@ -2885,13 +2790,6 @@ static void HWR_Subsector(size_t num)
 				else if (rover->flags & FF_TRANSLUCENT && rover->alpha < 256)
 				{
 					light = R_GetPlaneLight(gr_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
-#ifndef SORTING
-					HWR_Add3DWater(levelflats[*rover->toppic].lumpnum,
-					                          &extrasubsectors[num],
-					                          *rover->topheight,
-					                          *gr_frontsector->lightlist[light].lightlevel,
-					                          rover->alpha-1, rover->master->frontsector);
-#else
 					HWR_AddTransparentFloor(levelflats[*rover->toppic].lumpnum,
 					                        &extrasubsectors[num],
 											true,
@@ -2899,7 +2797,6 @@ static void HWR_Subsector(size_t num)
 					                        *gr_frontsector->lightlist[light].lightlevel,
 					                        rover->alpha-1 > 255 ? 255 : rover->alpha-1, rover->master->frontsector, PF_Translucent,
 					                        false, gr_frontsector->lightlist[light].extra_colormap);
-#endif
 
 				}
 				else
@@ -2979,31 +2876,7 @@ static void HWR_Subsector(size_t num)
 // Renders all subsectors below a given node,
 //  traversing subtree recursively.
 // Just call with BSP root.
-
-#ifdef coolhack
-//t;b;l;r
-static fixed_t hackbbox[4];
-//BOXTOP,
-//BOXBOTTOM,
-//BOXLEFT,
-//BOXRIGHT
-static boolean HWR_CheckHackBBox(fixed_t *bb)
-{
-	if (bb[BOXTOP] < hackbbox[BOXBOTTOM]) //y up
-		return false;
-	if (bb[BOXBOTTOM] > hackbbox[BOXTOP])
-		return false;
-	if (bb[BOXLEFT] > hackbbox[BOXRIGHT])
-		return false;
-	if (bb[BOXRIGHT] < hackbbox[BOXLEFT])
-		return false;
-	return true;
-}
-#endif
-
-// BP: big hack for a test in lighning ref : 1249753487AB
 fixed_t *hwbbox;
-
 static void HWR_RenderBSPNode(INT32 bspnum)
 {
 	// Decide which side the view point is on
@@ -3827,7 +3700,6 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 	}
 }
 
-#ifdef HWPRECIP
 // Sprite drawer for precipitation
 static inline void HWR_DrawPrecipitationSprite(gr_vissprite_t *spr)
 {
@@ -3870,7 +3742,7 @@ static inline void HWR_DrawPrecipitationSprite(gr_vissprite_t *spr)
 	// cache the patch in the graphics card memory
 	//12/12/99: Hurdler: same comment as above (for md2)
 	//Hurdler: 25/04/2000: now support colormap in hardware mode
-	HWR_GetMappedPatch(gpatch, spr->colormap);
+	HWR_GetPatch(gpatch);
 
 	// colormap test
 	{
@@ -3924,7 +3796,6 @@ static inline void HWR_DrawPrecipitationSprite(gr_vissprite_t *spr)
 
 	HWD.pfnDrawPolygon(&Surf, wallVerts, 4, blend|PF_Modulated|PF_Clip);
 }
-#endif
 
 // --------------------------------------------------------------------------
 // Sort vissprites by distance
@@ -4021,6 +3892,8 @@ static void HWR_SortVisSprites(void)
 	}
 }
 
+static INT32 drawcount = 0;
+
 // A drawnode is something that points to a 3D floor, 3D side, or masked
 // middle texture. This is used for sorting with sprites.
 typedef struct
@@ -4030,9 +3903,6 @@ typedef struct
 	INT32         texnum;
 	FBITFIELD     blend;
 	INT32         drawcount;
-#ifndef SORTING
-	fixed_t       fixedheight;
-#endif
 	boolean fogwall;
 	INT32 lightlevel;
 	extracolormap_t *wallcolormap; // Doing the lighting in HWR_RenderWall now for correct fog after sorting
@@ -4080,24 +3950,13 @@ typedef struct
 static size_t numpolyplanes = 0; // a list of transparent poyobject floors to be drawn
 static polyplaneinfo_t *polyplaneinfo = NULL;
 
-#ifndef SORTING
-size_t numfloors = 0;
-#else
-//static floorinfo_t *floorinfo = NULL;
-//static size_t numfloors = 0;
-//Hurdler: 3D water sutffs
 typedef struct gr_drawnode_s
 {
 	planeinfo_t *plane;
 	polyplaneinfo_t *polyplane;
 	wallinfo_t *wall;
 	gr_vissprite_t *sprite;
-
-//	struct gr_drawnode_s *next;
-//	struct gr_drawnode_s *prev;
 } gr_drawnode_t;
-
-static INT32 drawcount = 0;
 
 #define MAX_TRANSPARENTFLOOR 512
 
@@ -4346,12 +4205,9 @@ static void HWR_CreateDrawNodes(void)
 	Z_Free(sortindex);
 }
 
-#endif
-
 // --------------------------------------------------------------------------
 //  Draw all vissprites
 // --------------------------------------------------------------------------
-#ifdef SORTING
 // added the stransform so they can be switched as drawing happenes so MD2s and sprites are sorted correctly with each other
 static void HWR_DrawSprites(void)
 {
@@ -4364,29 +4220,27 @@ static void HWR_DrawSprites(void)
 		     spr != &gr_vsprsortedhead;
 		     spr = spr->next)
 		{
-#ifdef HWPRECIP
 			if (spr->precip)
 				HWR_DrawPrecipitationSprite(spr);
 			else
-#endif
-				if (spr->mobj && spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
-				{
-					if (!cv_grmd2.value || md2_playermodels[(skin_t*)spr->mobj->skin-skins].notfound || md2_playermodels[(skin_t*)spr->mobj->skin-skins].scale < 0.0f)
-						HWR_DrawSprite(spr);
-					else
-						HWR_DrawMD2(spr);
-				}
+			{
+				if (!cv_grmd2.value)
+					HWR_DrawSprite(spr);
 				else
 				{
-					if (!cv_grmd2.value || md2_models[spr->mobj->sprite].notfound || md2_models[spr->mobj->sprite].scale < 0.0f)
-						HWR_DrawSprite(spr);
-					else
+					if (spr->mobj && spr->mobj->skin && spr->mobj->sprite == SPR_PLAY
+						&& !md2_playermodels[(skin_t*)spr->mobj->skin-skins].notfound
+						&& md2_playermodels[(skin_t*)spr->mobj->skin-skins].scale >= 0.0f)
 						HWR_DrawMD2(spr);
+					else if (!md2_models[spr->mobj->sprite].notfound && md2_models[spr->mobj->sprite].scale >= 0.0f)
+						HWR_DrawMD2(spr);
+					else
+						HWR_DrawSprite(spr);
 				}
+			}
 		}
 	}
 }
-#endif
 
 // --------------------------------------------------------------------------
 // HWR_AddSprites
@@ -4396,9 +4250,7 @@ static UINT8 sectorlight;
 static void HWR_AddSprites(sector_t *sec)
 {
 	mobj_t *thing;
-#ifdef HWPRECIP
 	precipmobj_t *precipthing;
-#endif
 	fixed_t approx_dist, limit_dist;
 
 	// BSP is traversed by subsector.
@@ -4439,7 +4291,6 @@ static void HWR_AddSprites(sector_t *sec)
 				HWR_ProjectSprite(thing);
 	}
 
-#ifdef HWPRECIP
 	// Someone seriously wants infinite draw distance for precipitation?
 	if ((limit_dist = (fixed_t)cv_drawdist_precip.value << FRACBITS))
 	{
@@ -4463,14 +4314,12 @@ static void HWR_AddSprites(sector_t *sec)
 			if (!(precipthing->precipflags & PCF_INVISIBLE))
 				HWR_ProjectPrecipitationSprite(precipthing);
 	}
-#endif
 }
 
 // --------------------------------------------------------------------------
 // HWR_ProjectSprite
 //  Generates a vissprite for a thing if it might be visible.
 // --------------------------------------------------------------------------
-// BP why not use xtoviexangle/viewangletox like in bsp ?....
 static void HWR_ProjectSprite(mobj_t *thing)
 {
 	gr_vissprite_t *vis;
@@ -4539,7 +4388,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 #ifdef PARANOIA
 	if (!sprframe)
-		I_Error("sprframes NULL for sprite %d\n", thing->sprite);
+		I_Error("HWR_ProjectSprite: sprframe NULL for sprite %d\n", thing->sprite);
 #endif
 
 	if (sprframe->rotate)
@@ -4665,7 +4514,6 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	vis->precip = false;
 }
 
-#ifdef HWPRECIP
 // Precipitation projector for hardware mode
 static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 {
@@ -4769,12 +4617,11 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 
 	vis->precip = true;
 }
-#endif
 
 // ==========================================================================
 //
 // ==========================================================================
-static void HWR_DrawSkyBackground(player_t *player)
+static void HWR_DrawSkyBackground(void)
 {
 	FOutVector v[4];
 	angle_t angle;
@@ -4787,7 +4634,6 @@ static void HWR_DrawSkyBackground(player_t *player)
 //  |/ |
 //  0--1
 
-	(void)player;
 	HWR_GetTexture(skytexture);
 
 	//Hurdler: the sky is the only texture who need 4.0f instead of 1.0
@@ -4823,6 +4669,10 @@ static void HWR_DrawSkyBackground(player_t *player)
 
 	// Middle of the sky should always be at angle 0
 	// need to keep correct aspect ratio with X
+	// MPC: Multiply the texture height to compensate for the lower view window on splitscreen.
+	if (splitscreen)
+		dimensionmultiply *= 2;
+
 	if (atransform.flip)
 	{
 		// During vertical flip the sky should be flipped and it's y movement should also be flipped obviously
@@ -4869,10 +4719,6 @@ static inline void HWR_ClearView(void)
 	                 (INT32)(gr_viewwindowy + gr_viewheight),
 	                 ZCLIP_PLANE);
 	HWD.pfnClearBuffer(false, true, 0);
-
-	//disable clip window - set to full size
-	// rem by Hurdler
-	// HWD.pfnGClipRect(0, 0, vid.width, vid.height);
 }
 
 
@@ -4988,36 +4834,16 @@ void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 	gr_fovlud = (float)(1.0l/tan((double)(fpov*M_PIl/360l)));
 
 	//------------------------------------------------------------------------
-	HWR_ClearView();
-
-if (0)
-{ // I don't think this is ever used.
-	if (cv_grfog.value)
-		HWR_FoggingOn(); // First of all, turn it on, set the default user settings too
-	else
-		HWD.pfnSetSpecialState(HWD_SET_FOG_MODE, 0); // Turn it off
-}
-
-#ifndef _NDS
-	if (drawsky)
-		HWR_DrawSkyBackground(player);
-#else
-	(void)HWR_DrawSkyBackground;
-#endif
-
-	//Hurdler: it doesn't work in splitscreen mode
-	drawsky = splitscreen;
-
+	HWR_ClearView(); // Clears the depth buffer and resets the view I believe
 	HWR_ClearSprites();
 
-#ifdef SORTING
-	drawcount = 0;
-#endif
+	if (drawsky)
+		HWR_DrawSkyBackground();
+	drawsky = splitscreen;
 
-	//04/01/2000: Hurdler: added for T&L
-	//                     Actually it only works on Walls and Planes
 	HWD.pfnSetTransform(&atransform);
 
+	drawcount = 0;
 	validcount++;
 
 	HWR_RenderBSPNode((INT32)numnodes-1);
@@ -5028,21 +4854,7 @@ if (0)
 	else if (splitscreen && player == &players[secondarydisplayplayer])
 		viewangle = localaiming2;
 
-	// Handle stuff when you are looking farther up or down.
-	if ((aimingangle || cv_grfov.value+player->fovadd > 90*FRACUNIT))
-	{
-		dup_viewangle += ANGLE_90;
-		HWR_RenderBSPNode((INT32)numnodes-1); //left
-
-		dup_viewangle += ANGLE_90;
-		if (((INT32)aimingangle > ANGLE_45 || (INT32)aimingangle<-ANGLE_45))
-			HWR_RenderBSPNode((INT32)numnodes-1); //back
-
-		dup_viewangle += ANGLE_90;
-		HWR_RenderBSPNode((INT32)numnodes-1); //right
-
-		dup_viewangle += ANGLE_90;
-	}
+	// MPC: It's not necessary to render the view three more times.
 
 	// Check for new console commands.
 	NetUpdate();
@@ -5054,33 +4866,16 @@ if (0)
 #endif
 
 	// Draw MD2 and sprites
-#ifdef SORTING
 	HWR_SortVisSprites();
-#endif
 
-#ifdef SORTING
 	HWR_DrawSprites();
-#endif
 #ifdef NEWCORONAS
 	//Hurdler: they must be drawn before translucent planes, what about gl fog?
 	HWR_DrawCoronas();
 #endif
 
-#ifdef SORTING
 	if (numplanes || numpolyplanes || numwalls) //Hurdler: render 3D water and transparent walls after everything
-	{
 		HWR_CreateDrawNodes();
-	}
-#else
-	if (numfloors || numwalls)
-	{
-		HWD.pfnSetTransform(&atransform);
-		if (numfloors)
-			HWR_Render3DWater();
-		if (numwalls)
-			HWR_RenderTransparentWalls();
-	}
-#endif
 
 	HWD.pfnSetTransform(NULL);
 
@@ -5190,35 +4985,15 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 
 	//------------------------------------------------------------------------
 	HWR_ClearView(); // Clears the depth buffer and resets the view I believe
-
-if (0)
-{ // I don't think this is ever used.
-	if (cv_grfog.value)
-		HWR_FoggingOn(); // First of all, turn it on, set the default user settings too
-	else
-		HWD.pfnSetSpecialState(HWD_SET_FOG_MODE, 0); // Turn it off
-}
-
-#ifndef _NDS
-	if (!skybox && drawsky) // Don't draw the regular sky if there's a skybox
-		HWR_DrawSkyBackground(player);
-#else
-	(void)HWR_DrawSkyBackground;
-#endif
-
-	//Hurdler: it doesn't work in splitscreen mode
-	drawsky = splitscreen;
-
 	HWR_ClearSprites();
 
-#ifdef SORTING
-	drawcount = 0;
-#endif
+	if (!skybox && drawsky) // Don't draw the regular sky if there's a skybox
+		HWR_DrawSkyBackground();
+	drawsky = splitscreen;
 
-	//04/01/2000: Hurdler: added for T&L
-	//                     Actually it only works on Walls and Planes
 	HWD.pfnSetTransform(&atransform);
 
+	drawcount = 0;
 	validcount++;
 
 	HWR_RenderBSPNode((INT32)numnodes-1);
@@ -5229,21 +5004,7 @@ if (0)
 	else if (splitscreen && player == &players[secondarydisplayplayer])
 		viewangle = localaiming2;
 
-	// Handle stuff when you are looking farther up or down.
-	if ((aimingangle || cv_grfov.value+player->fovadd > 90*FRACUNIT))
-	{
-		dup_viewangle += ANGLE_90;
-		HWR_RenderBSPNode((INT32)numnodes-1); //left
-
-		dup_viewangle += ANGLE_90;
-		if (((INT32)aimingangle > ANGLE_45 || (INT32)aimingangle<-ANGLE_45))
-			HWR_RenderBSPNode((INT32)numnodes-1); //back
-
-		dup_viewangle += ANGLE_90;
-		HWR_RenderBSPNode((INT32)numnodes-1); //right
-
-		dup_viewangle += ANGLE_90;
-	}
+	// MPC: It's not necessary to render the view three more times.
 
 	// Check for new console commands.
 	NetUpdate();
@@ -5255,33 +5016,16 @@ if (0)
 #endif
 
 	// Draw MD2 and sprites
-#ifdef SORTING
 	HWR_SortVisSprites();
-#endif
-
-#ifdef SORTING
 	HWR_DrawSprites();
-#endif
+
 #ifdef NEWCORONAS
 	//Hurdler: they must be drawn before translucent planes, what about gl fog?
 	HWR_DrawCoronas();
 #endif
 
-#ifdef SORTING
 	if (numplanes || numpolyplanes || numwalls) //Hurdler: render 3D water and transparent walls after everything
-	{
 		HWR_CreateDrawNodes();
-	}
-#else
-	if (numfloors || numpolyplanes || numwalls)
-	{
-		HWD.pfnSetTransform(&atransform);
-		if (numfloors)
-			HWR_Render3DWater();
-		if (numwalls)
-			HWR_RenderTransparentWalls();
-	}
-#endif
 
 	HWD.pfnSetTransform(NULL);
 
@@ -5297,49 +5041,6 @@ if (0)
 	// added by Hurdler for correct splitscreen
 	// moved here by hurdler so it works with the new near clipping plane
 	HWD.pfnGClipRect(0, 0, vid.width, vid.height, NZCLIP_PLANE);
-}
-
-// ==========================================================================
-//                                                                        FOG
-// ==========================================================================
-
-/// \author faB
-
-static UINT32 atohex(const char *s)
-{
-	INT32 iCol;
-	const char *sCol;
-	char cCol;
-	INT32 i;
-
-	if (strlen(s)<6)
-		return 0;
-
-	iCol = 0;
-	sCol = s;
-	for (i = 0; i < 6; i++, sCol++)
-	{
-		iCol <<= 4;
-		cCol = *sCol;
-		if (cCol >= '0' && cCol <= '9')
-			iCol |= cCol - '0';
-		else
-		{
-			if (cCol >= 'F')
-				cCol -= 'a' - 'A';
-			if (cCol >= 'A' && cCol <= 'F')
-				iCol = iCol | (cCol - 'A' + 10);
-		}
-	}
-	//CONS_Debug(DBG_RENDER, "col %x\n", iCol);
-	return iCol;
-}
-
-static void HWR_FoggingOn(void)
-{
-	HWD.pfnSetSpecialState(HWD_SET_FOG_COLOR, atohex(cv_grfogcolor.string));
-	HWD.pfnSetSpecialState(HWD_SET_FOG_DENSITY, cv_grfogdensity.value);
-	HWD.pfnSetSpecialState(HWD_SET_FOG_MODE, 1);
 }
 
 // ==========================================================================
@@ -5380,7 +5081,6 @@ void HWR_AddCommands(void)
 	CV_RegisterVar(&cv_granisotropicmode);
 	CV_RegisterVar(&cv_grcorrecttricks);
 	CV_RegisterVar(&cv_grsolvetjoin);
-	/// JimitaMPC
 	CV_RegisterVar(&cv_grcullbackfaces);
 }
 
@@ -5408,7 +5108,7 @@ void HWR_Startup(void)
 	// do this once
 	if (!startupdone)
 	{
-		CONS_Printf("HWR_Startup()\n");
+		CONS_Printf("HWR_Startup()...\n");
 		HWR_InitPolyPool();
 		// add console cmds & vars
 		HWR_AddEngineCommands();
@@ -5445,131 +5145,6 @@ void HWR_Shutdown(void)
 	HWD.pfnFlushScreenTextures();
 }
 
-void transform(float *cx, float *cy, float *cz)
-{
-	float tr_x,tr_y;
-	// translation
-	tr_x = *cx - gr_viewx;
-	tr_y = *cz - gr_viewy;
-//	*cy = *cy;
-
-	// rotation around vertical y axis
-	*cx = (tr_x * gr_viewsin) - (tr_y * gr_viewcos);
-	tr_x = (tr_x * gr_viewcos) + (tr_y * gr_viewsin);
-
-	//look up/down ----TOTAL SUCKS!!!--- do the 2 in one!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	tr_y = *cy - gr_viewz;
-
-	*cy = (tr_x * gr_viewludcos) + (tr_y * gr_viewludsin);
-	*cz = (tr_x * gr_viewludsin) - (tr_y * gr_viewludcos);
-
-	//scale y before frustum so that frustum can be scaled to screen height
-	*cy *= ORIGINAL_ASPECT * gr_fovlud;
-	*cx *= gr_fovlud;
-}
-
-
-//Hurdler: 3D Water stuff
-#define MAX_3DWATER 512
-
-#ifndef SORTING
-static void HWR_Add3DWater(lumpnum_t lumpnum, extrasubsector_t *xsub,
-	fixed_t fixedheight, INT32 lightlevel, INT32 alpha, sector_t *FOFSector)
-{
-	static size_t allocedplanes = 0;
-
-	// Force realloc if buffer has been freed
-	if (!planeinfo)
-		allocedplanes = 0;
-
-	if (allocedplanes < numfloors + 1)
-	{
-		allocedplanes += MAX_3DWATER;
-		Z_Realloc(planeinfo, allocedplanes * sizeof (*planeinfo), PU_LEVEL, &planeinfo);
-	}
-	planeinfo[numfloors].fixedheight = fixedheight;
-	planeinfo[numfloors].lightlevel = lightlevel;
-	planeinfo[numfloors].lumpnum = lumpnum;
-	planeinfo[numfloors].xsub = xsub;
-	planeinfo[numfloors].alpha = alpha;
-	planeinfo[numfloors].FOFSector = FOFSector;
-	numfloors++;
-}
-#endif
-
-#define DIST_PLANE(i) ABS(planeinfo[(i)].fixedheight-dup_viewz)
-
-#if 0
-static void HWR_QuickSortPlane(INT32 start, INT32 finish)
-{
-	INT32 left = start;
-	INT32 right = finish;
-	INT32 starterval = (INT32)((right+left)/2); //pick a starter
-
-	planeinfo_t temp;
-
-	//'sort of sort' the two halves of the data list about starterval
-	while (right > left);
-	{
-		while (DIST_PLANE(left) < DIST_PLANE(starterval)) left++; //attempt to find a bigger value on the left
-		while (DIST_PLANE(right) > DIST_PLANE(starterval)) right--; //attempt to find a smaller value on the right
-
-		if (left < right) //if we haven't gone too far
-		{
-			//switch them
-			M_Memcpy(&temp, &planeinfo[left], sizeof (planeinfo_t));
-			M_Memcpy(&planeinfo[left], &planeinfo[right], sizeof (planeinfo_t));
-			M_Memcpy(&planeinfo[right], &temp, sizeof (planeinfo_t));
-			//move the bounds
-			left++;
-			right--;
-		}
-	}
-
-	if (start < right) HWR_QuickSortPlane(start, right);
-	if (left < finish) HWR_QuickSortPlane(left, finish);
-}
-#endif
-
-#ifndef SORTING
-static void HWR_Render3DWater(void)
-{
-	size_t i;
-
-	//bubble sort 3D Water for correct alpha blending
-	{
-		boolean permut = true;
-		while (permut)
-		{
-			size_t j;
-			for (j = 0, permut= false; j < numfloors-1; j++)
-			{
-				if (ABS(planeinfo[j].fixedheight-dup_viewz) < ABS(planeinfo[j+1].fixedheight-dup_viewz))
-				{
-					planeinfo_t temp;
-					M_Memcpy(&temp, &planeinfo[j+1], sizeof (planeinfo_t));
-					M_Memcpy(&planeinfo[j+1], &planeinfo[j], sizeof (planeinfo_t));
-					M_Memcpy(&planeinfo[j], &temp, sizeof (planeinfo_t));
-					permut = true;
-				}
-			}
-		}
-	}
-#if 0 //thanks epat, but it's goes looping forever on CTF map Silver Cascade Zone
-	HWR_QuickSortPlane(0, numplanes-1);
-#endif
-
-	gr_frontsector = NULL; //Hurdler: gr_fronsector is no longer valid
-	for (i = 0; i < numfloors; i++)
-	{
-		HWR_GetFlat(planeinfo[i].lumpnum);
-		HWR_RenderPlane(planeinfo[i].xsub, planeinfo[i].isceiling, planeinfo[i].fixedheight, PF_Translucent, planeinfo[i].lightlevel, planeinfo[i].lumpnum,
-			planeinfo[i].FOFSector, planeinfo[i].alpha, planeinfo[i].fogplane, planeinfo[i].planecolormap);
-	}
-	numfloors = 0;
-}
-#endif
-
 static void HWR_AddTransparentWall(wallVert3D *wallVerts, FSurfaceInfo *pSurf, INT32 texnum, FBITFIELD blend, boolean fogwall, INT32 lightlevel, extracolormap_t *wallcolormap)
 {
 	static size_t allocedwalls = 0;
@@ -5588,46 +5163,13 @@ static void HWR_AddTransparentWall(wallVert3D *wallVerts, FSurfaceInfo *pSurf, I
 	M_Memcpy(&wallinfo[numwalls].Surf, pSurf, sizeof (FSurfaceInfo));
 	wallinfo[numwalls].texnum = texnum;
 	wallinfo[numwalls].blend = blend;
-#ifdef SORTING
 	wallinfo[numwalls].drawcount = drawcount++;
-#endif
 	wallinfo[numwalls].fogwall = fogwall;
 	wallinfo[numwalls].lightlevel = lightlevel;
 	wallinfo[numwalls].wallcolormap = wallcolormap;
 	numwalls++;
 }
-#ifndef SORTING
-static void HWR_RenderTransparentWalls(void)
-{
-	size_t i;
 
-	/*{ // sorting is disbale for now, do it!
-		INT32 permut = 1;
-		while (permut)
-		{
-			INT32 j;
-			for (j = 0, permut = 0; j < numwalls-1; j++)
-			{
-				if (ABS(wallinfo[j].fixedheight-dup_viewz) < ABS(wallinfo[j+1].fixedheight-dup_viewz))
-				{
-					wallinfo_t temp;
-					M_Memcpy(&temp, &wallinfo[j+1], sizeof (wallinfo_t));
-					M_Memcpy(&wallinfo[j+1], &wallinfo[j], sizeof (wallinfo_t));
-					M_Memcpy(&wallinfo[j], &temp, sizeof (wallinfo_t));
-					permut = 1;
-				}
-			}
-		}
-	}*/
-
-	for (i = 0; i < numwalls; i++)
-	{
-		HWR_GetTexture(wallinfo[i].texnum);
-		HWR_RenderWall(wallinfo[i].wallVerts, &wallinfo[i].Surf, wallinfo[i].blend, wallinfo[i].wall->fogwall, wallinfo[i].wall->lightlevel, wallinfo[i].wall->wallcolormap);
-	}
-	numwalls = 0;
-}
-#endif
 static void HWR_RenderWall(wallVert3D   *wallVerts, FSurfaceInfo *pSurf, FBITFIELD blend, boolean fogwall, INT32 lightlevel, extracolormap_t *wallcolormap)
 {
 	FOutVector  trVerts[4];

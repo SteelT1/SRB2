@@ -366,7 +366,6 @@ fixed_t R_PointToDist(fixed_t x, fixed_t y)
 	return R_PointToDist2(viewx, viewy, x, y);
 }
 
-/// JimitaMPC
 angle_t R_PointToAngleEx(INT64 x2, INT64 y2, INT64 x1, INT64 y1)
 {
 	INT64 dx = x1-x2;
@@ -625,11 +624,6 @@ void R_ExecuteSetViewSize(void)
 	R_InitViewBuffer(scaledviewwidth, viewheight);
 
 	R_InitTextureMapping();
-
-#ifdef HWRENDER
-	//if (rendermode != render_soft)
-	//	HWR_InitTextureMapping();
-#endif
 
 	// thing clipping
 	for (i = 0; i < viewwidth; i++)

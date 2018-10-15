@@ -33,7 +33,7 @@ void HWR_Shutdown(void);
 
 void HWR_clearAutomap(void);
 void HWR_drawAMline(const fline_t *fl, INT32 color);
-void HWR_FadeScreenMenuBack(UINT32 color, INT32 height);
+void HWR_FadeScreenMenuBack(UINT32 color);
 void HWR_DrawConsoleBack(UINT32 color, INT32 height);
 void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player);
 void HWR_RenderPlayerView(INT32 viewnumber, player_t *player);
@@ -97,12 +97,10 @@ extern consvar_t cv_grfovchange;
 extern consvar_t cv_grsolvetjoin;
 
 extern float gr_viewwidth, gr_viewheight, gr_baseviewwindowy;
-
 extern float gr_viewwindowx, gr_basewindowcentery;
 
-// BP: big hack for a test in lighting ref : 1249753487AB
-extern fixed_t *hwbbox;
 extern FTransform atransform;
+extern fixed_t *hwbbox;
 
 typedef struct
 {

@@ -37,7 +37,6 @@ unsigned SlopeDiv(unsigned num, unsigned den)
 	return ans <= SLOPERANGE ? ans : SLOPERANGE;
 }
 
-/// JimitaMPC
 UINT64 SlopeDivEx(unsigned int num, unsigned int den)
 {
 	UINT64 ans;
