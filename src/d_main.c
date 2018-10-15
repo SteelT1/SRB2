@@ -1186,8 +1186,16 @@ void D_SRB2Main(void)
 	VID_PrepareModeList(); // Regenerate Modelist according to cv_fullscreen
 #endif
 
+#ifdef HAVE_SDL
+	if (M_CheckParm("-borderless"))
+	{
+		CV_SetValue(&cv_showborder, 0); // Here so it applies after the config is loaded.
+	}
+#endif
+
 	// set user default mode or mode set at cmdline
 	SCR_CheckDefaultMode();
+
 
 	wipegamestate = gamestate;
 

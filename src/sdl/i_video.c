@@ -98,7 +98,7 @@ static void ShowBorder_OnChange(void);
 consvar_t cv_vidwait = {"vid_wait", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 static consvar_t cv_stretch = {"stretch", "Off", CV_SAVE|CV_NOSHOWHELP, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-consvar_t cv_showborder = {"showborder", "Yes", CV_SAVE, CV_YesNo, ShowBorder_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_showborder = {"showborder", "Yes", CV_SAVE|CV_CALL|CV_NOINIT, CV_YesNo, ShowBorder_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 UINT8 graphics_started = 0; // Is used in console.c and screen.c
 
@@ -134,7 +134,6 @@ static       SDL_bool    wrapmouseok = SDL_FALSE;
 static       SDL_bool    videoblitok = SDL_FALSE;
 static       SDL_bool    exposevideo = SDL_FALSE;
 static       SDL_bool    usesdl2soft = SDL_FALSE;
-static       SDL_bool    borderlesswindow = SDL_FALSE;
 
 // SDL2 vars
 SDL_Window   *window;
@@ -1265,9 +1264,6 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 	if (fullscreen)
 		flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 
-	if (borderlesswindow)
-		flags |= SDL_WINDOW_BORDERLESS;
-
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
 		flags |= SDL_WINDOW_OPENGL;
@@ -1282,11 +1278,6 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 		CONS_Printf(M_GetText("Couldn't create window: %s\n"), SDL_GetError());
 		return SDL_FALSE;
 	}
-
-  if (!dedicated)
-  {
-      SDL_SetWindowBordered(window, cv_showborder.value);
-  }
 
 	// Renderer-specific stuff
 #ifdef HWRENDER
@@ -1346,6 +1337,7 @@ static void Impl_SetWindowIcon(void)
 static void ShowBorder_OnChange(void)
 {
   SDL_SetWindowBordered(window, cv_showborder.value);
+  COM_BufInsertText(va("vid_mode %d\n", vid.modenum)); // Set video mode to avoid black bars.
 }
 
 
@@ -1441,7 +1433,6 @@ void I_StartupGraphics(void)
 	}
 
 	usesdl2soft = M_CheckParm("-softblit");
-	borderlesswindow = M_CheckParm("-borderless");
 
 	//SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY>>1,SDL_DEFAULT_REPEAT_INTERVAL<<2);
 	VID_Command_ModeList_f();
