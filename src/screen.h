@@ -161,6 +161,10 @@ extern consvar_t cv_scr_width, cv_scr_height, cv_scr_depth, cv_renderview, cv_fu
 // wait for page flipping to end or not
 extern consvar_t cv_vidwait;
 
+#ifdef HAVE_SDL
+extern consvar_t cv_showborder;
+#endif
+
 // quick fix for tall/short skies, depending on bytesperpixel
 extern void (*walldrawerfunc)(void);
 
