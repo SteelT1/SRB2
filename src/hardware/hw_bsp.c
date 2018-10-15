@@ -642,7 +642,7 @@ static void WalkBSPNode(INT32 bspnum, poly_t *poly, UINT16 *leafnode, fixed_t *b
 
 				I_OsPolling();
 				ls_count = numsubsectors/50;
-				CON_Drawer();
+				//CON_Drawer();
 				sprintf(s, "%d%%", (++ls_percent)<<1);
 				x = BASEVIDWIDTH/2;
 				y = BASEVIDHEIGHT/2;
@@ -653,9 +653,9 @@ static void WalkBSPNode(INT32 bspnum, poly_t *poly, UINT16 *leafnode, fixed_t *b
 				V_DrawRightAlignedString(x+50, y, V_YELLOWMAP, s);
 
 				// Is this really necessary at this point..?
-				V_DrawCenteredString(BASEVIDWIDTH/2, 40, V_YELLOWMAP, "OPENGL MODE IS INCOMPLETE AND MAY");
-				V_DrawCenteredString(BASEVIDWIDTH/2, 50, V_YELLOWMAP, "NOT DISPLAY SOME SURFACES.");
-				V_DrawCenteredString(BASEVIDWIDTH/2, 70, V_YELLOWMAP, "USE AT SONIC'S RISK.");
+				V_DrawCenteredString(BASEVIDWIDTH/2, 40, V_YELLOWMAP, "OpenGL mode is incomplete and may");
+				V_DrawCenteredString(BASEVIDWIDTH/2, 50, V_YELLOWMAP, "not display some surfaces.");
+				V_DrawCenteredString(BASEVIDWIDTH/2, 70, V_YELLOWMAP, "Use at Sonic's risk.");
 
 				I_UpdateNoVsync();
 			}

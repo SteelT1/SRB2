@@ -41,7 +41,6 @@ void HWR_DrawViewBorder(INT32 clearlines);
 void HWR_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatlumpnum);
 UINT8 *HWR_GetScreenshot(void);
 boolean HWR_Screenshot(const char *lbmname);
-void HWR_InitTextureMapping(void);
 void HWR_SetViewSize(void);
 void HWR_DrawPatch(GLPatch_t *gpatch, INT32 x, INT32 y, INT32 option);
 void HWR_DrawFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t scale, INT32 option, const UINT8 *colormap);
