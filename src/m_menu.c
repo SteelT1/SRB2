@@ -5938,8 +5938,6 @@ static void M_Connect(INT32 choice)
 	boolean found_server = false;
 
 	(void)choice;
-
-	// Don't do anything if we didn't receive any data yet.
 	if (display_server_info)
 		return;
 

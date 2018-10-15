@@ -34,7 +34,6 @@ void M_Ticker(void);
 
 // Called by main loop, draws the menus directly into the screen buffer.
 void M_Drawer(void);
-void M_MultiPlayerMenuDrawer(void);
 
 // Called by D_SRB2Main, loads the config file.
 void M_Init(void);
