@@ -1345,7 +1345,7 @@ static void Impl_SetWindowIcon(void)
 
 static void ShowBorder_OnChange(void)
 {
-  SDL_SetWindowBorder(window, cv_showborder.value);
+  SDL_SetWindowBordered(window, cv_showborder.value);
 }
 
 
