@@ -97,6 +97,8 @@ boolean highcolor = false;
 consvar_t cv_vidwait = {"vid_wait", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 static consvar_t cv_stretch = {"stretch", "Off", CV_SAVE|CV_NOSHOWHELP, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
+consvar_t cv_showborder = {"showborder", "Yes", CV_SAVE, CV_YesNo, ShowBorder_OnChange, 0, NULL, NULL, 0, 0, NULL};
+
 UINT8 graphics_started = 0; // Is used in console.c and screen.c
 
 // To disable fullscreen at startup; is set in VID_PrepareModeList
@@ -1280,6 +1282,11 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 		return SDL_FALSE;
 	}
 
+  if (!dedicated)
+  {
+      SDL_SetWindowBordered(window, cv_showborder.value)
+  }
+
 	// Renderer-specific stuff
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
@@ -1334,6 +1341,12 @@ static void Impl_SetWindowIcon(void)
 	//SDL2STUB(); // Monster Iestyn: why is this stubbed?
 	SDL_SetWindowIcon(window, icoSurface);
 }
+
+static void ShowBorder_OnChange(void
+{
+  SDL_SetWimdowBorder(window, cv_showborder.value)
+}
+
 
 static void Impl_VideoSetupSDLBuffer(void)
 {
@@ -1396,6 +1409,7 @@ void I_StartupGraphics(void)
 	COM_AddCommand ("vid_mode", VID_Command_Mode_f);
 	CV_RegisterVar (&cv_vidwait);
 	CV_RegisterVar (&cv_stretch);
+  CV_RegisterVar(&cv_showborder)
 	disable_mouse = M_CheckParm("-nomouse");
 	disable_fullscreen = M_CheckParm("-win") ? 1 : 0;
 

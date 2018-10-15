@@ -1164,6 +1164,9 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_STRING | IT_CVAR,    NULL, "Show FPS",            &cv_ticrate,    110},
 	{IT_STRING | IT_CVAR,    NULL, "Clear Before Redraw", &cv_homremoval, 120},
 	{IT_STRING | IT_CVAR,    NULL, "Vertical Sync",       &cv_vidwait,    130},
+#ifdef HAVE_SDL
+	{IT_STRING | IT_CVAR,    NULL, "Show Border",       &cv_showborder,    150},
+#endif
 };
 
 static menuitem_t OP_VideoModeMenu[] =
