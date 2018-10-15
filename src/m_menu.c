@@ -68,7 +68,7 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 //int	vsnprintf(char *str, size_t n, const char *fmt, va_list ap);
 #endif
 
-#define SKULLXOFF -32
+#define CURSORXOFF -32
 #define LINEHEIGHT 16
 #define STRINGHEIGHT 8
 #define FONTBHEIGHT 20
@@ -171,8 +171,8 @@ static saveinfo_t savegameinfo[MAXSAVEGAMES]; // Extra info about the save games
 
 INT16 startmap; // Mario, NiGHTS, or just a plain old normal game?
 
-static INT16 itemOn = 1; // menu item skull is on, Hack by Tails 09-18-2002
-static INT16 skullAnimCounter = 10; // skull animation counter
+static INT16 itemOn = 1;
+static INT16 cursorAnimCounter = 10;
 
 static  boolean setupcontrols_secondaryplayer;
 static  INT32   (*setupcontrols)[2];  // pointer to the gamecontrols of the player being edited
@@ -329,12 +329,11 @@ static void M_OGL_DrawColorMenu(void);
 static void M_DrawConnectMenu(void);
 static void M_DrawConnectIPMenu(void);
 static void M_DrawRoomMenu(void);
-
-/// JimitaMPC
 static void M_DrawServerInfoMenu(void);
-static UINT8 ServerInfoPage = 0;
 #define MAXSERVERINFOPAGES 2
-
+static UINT8 ServerInfoPage = 0;
+static UINT8 ServerInfoSelections[MAXSERVERINFOPAGES];
+static UINT8 ServerInfoMaxSelections[MAXSERVERINFOPAGES];
 #endif
 static void M_DrawJoystick(void);
 static void M_DrawSetupMultiPlayerMenu(void);
@@ -342,7 +341,7 @@ static void M_DrawSetupMultiPlayerMenu(void);
 // Handling functions
 #ifndef NONET
 static boolean M_CancelConnect(void);
-static boolean M_QuitServerInfo(void);		/// JimitaMPC
+static boolean M_QuitServerInfo(void);
 #endif
 static boolean M_ExitPandorasBox(void);
 static boolean M_QuitMultiPlayerMenu(void);
@@ -930,7 +929,6 @@ static menuitem_t MP_ConnectMenu[] =
 	{IT_STRING | IT_SPACE, NULL, "",              M_ShowServerInfo,   168-4},
 };
 
-/// JimitaMPC
 static menuitem_t MP_ServerInfoOptions[] =
 {
 	{IT_STRING | IT_CALL, NULL, "Connect", M_Connect, 146},
@@ -1655,7 +1653,6 @@ menu_t MP_RoomDef =
 	0,
 	NULL
 };
-/// JimitaMPC
 menu_t MP_ServerInfoDef =
 {
 	"M_MULTI",
@@ -2342,16 +2339,6 @@ boolean M_Responder(event_t *ev)
 	// Keys usable within menu
 	switch (ch)
 	{
-		case KEY_DOWNARROW:
-			M_NextOpt();
-			S_StartSound(NULL, sfx_menu1);
-			if (currentMenu == &SP_PlayerDef)
-			{
-				Z_Free(char_notes);
-				char_notes = NULL;
-			}
-			return true;
-
 		case KEY_UPARROW:
 			M_PrevOpt();
 			S_StartSound(NULL, sfx_menu1);
@@ -2360,6 +2347,30 @@ boolean M_Responder(event_t *ev)
 				Z_Free(char_notes);
 				char_notes = NULL;
 			}
+			#ifndef NONET
+			else if (currentMenu == &MP_ServerInfoDef)
+			{
+				ServerInfoSelections[ServerInfoPage] = ServerInfoSelections[ServerInfoPage] > 0 ? ServerInfoSelections[ServerInfoPage]-1 : 0;
+				S_StartSound(NULL, sfx_menu1);
+			}
+			#endif
+			return true;
+
+		case KEY_DOWNARROW:
+			M_NextOpt();
+			S_StartSound(NULL, sfx_menu1);
+			if (currentMenu == &SP_PlayerDef)
+			{
+				Z_Free(char_notes);
+				char_notes = NULL;
+			}
+			#ifndef NONET
+			else if (currentMenu == &MP_ServerInfoDef)
+			{
+				ServerInfoSelections[ServerInfoPage] = ServerInfoSelections[ServerInfoPage] < ServerInfoMaxSelections[ServerInfoPage]-1 ? ServerInfoSelections[ServerInfoPage]+1 : ServerInfoMaxSelections[ServerInfoPage]-1;
+				S_StartSound(NULL, sfx_menu1);
+			}
+			#endif
 			return true;
 
 		case KEY_LEFTARROW:
@@ -2370,7 +2381,6 @@ boolean M_Responder(event_t *ev)
 					S_StartSound(NULL, sfx_menu1);
 				routine(0);
 			}
-			/// JimitaMPC
 			#ifndef NONET
 			else if (currentMenu == &MP_ServerInfoDef)
 			{
@@ -2388,7 +2398,6 @@ boolean M_Responder(event_t *ev)
 					S_StartSound(NULL, sfx_menu1);
 				routine(1);
 			}
-			/// JimitaMPC
 			#ifndef NONET
 			else if (currentMenu == &MP_ServerInfoDef)
 			{
@@ -2720,8 +2729,8 @@ void M_Ticker(void)
 	if (dedicated)
 		return;
 
-	if (--skullAnimCounter <= 0)
-		skullAnimCounter = 8;
+	if (--cursorAnimCounter <= 0)
+		cursorAnimCounter = 8;
 
 	//added : 30-01-98 : test mode for five seconds
 	if (vidm_testingmode > 0)
@@ -3103,7 +3112,7 @@ static void M_DrawGenericMenu(void)
 							case IT_CV_STRING:
 								M_DrawTextBox(x, y + 4, MAXSTRINGLENGTH, 1);
 								V_DrawString(x + 8, y + 12, V_ALLOWLOWERCASE, cv->string);
-								if (skullAnimCounter < 4 && i == itemOn)
+								if (cursorAnimCounter < 4 && i == itemOn)
 									V_DrawCharacter(x + 8 + V_StringWidth(cv->string, 0), y + 12,
 										'_' | 0x80, false);
 								y += 16;
@@ -3154,11 +3163,11 @@ static void M_DrawGenericMenu(void)
 		}
 	}
 
-	// DRAW THE SKULL CURSOR
+	// DRAW THE CURSOR
 	if (((currentMenu->menuitems[itemOn].status & IT_DISPLAY) == IT_PATCH)
 		|| ((currentMenu->menuitems[itemOn].status & IT_DISPLAY) == IT_NOTHING))
 	{
-		V_DrawScaledPatch(currentMenu->x + SKULLXOFF, cursory - 5, 0,
+		V_DrawScaledPatch(currentMenu->x + CURSORXOFF, cursory - 5, 0,
 			W_CachePatchName("M_CURSOR", PU_CACHE));
 	}
 	else
@@ -3380,7 +3389,7 @@ static void M_DrawCenteredMenu(void)
 							case IT_CV_STRING:
 								M_DrawTextBox(x, y + 4, MAXSTRINGLENGTH, 1);
 								V_DrawString(x + 8, y + 12, V_ALLOWLOWERCASE, cv->string);
-								if (skullAnimCounter < 4 && i == itemOn)
+								if (cursorAnimCounter < 4 && i == itemOn)
 									V_DrawCharacter(x + 8 + V_StringWidth(cv->string, 0), y + 12,
 										'_' | 0x80, false);
 								y += 16;
@@ -3416,11 +3425,11 @@ static void M_DrawCenteredMenu(void)
 		}
 	}
 
-	// DRAW THE SKULL CURSOR
+	// DRAW THE CURSOR
 	if (((currentMenu->menuitems[itemOn].status & IT_DISPLAY) == IT_PATCH)
 		|| ((currentMenu->menuitems[itemOn].status & IT_DISPLAY) == IT_NOTHING))
 	{
-		V_DrawScaledPatch(x + SKULLXOFF, cursory - 5, 0,
+		V_DrawScaledPatch(x + CURSORXOFF, cursory - 5, 0,
 			W_CachePatchName("M_CURSOR", PU_CACHE));
 	}
 	else
@@ -5317,7 +5326,7 @@ void M_DrawTimeAttackMenu(void)
 		}
 	}
 
-	// DRAW THE SKULL CURSOR
+	// DRAW THE CURSOR
 	V_DrawScaledPatch(currentMenu->x - 24, cursory, 0, W_CachePatchName("M_CURSOR", PU_CACHE));
 	V_DrawString(currentMenu->x, cursory, V_YELLOWMAP, currentMenu->menuitems[itemOn].text);
 
@@ -5896,7 +5905,6 @@ static void M_HandleServerPage(INT32 choice)
 	}
 }
 
-/// JimitaMPC
 static void M_ShowServerInfo(INT32 choice)
 {
 	int i;
@@ -5908,17 +5916,21 @@ static void M_ShowServerInfo(INT32 choice)
 	choice = server_to_connect-FIRSTSERVERLINE + serverlistpage * SERVERS_PER_PAGE;
 	strcpy(serverconnname, serverlist[choice].info.servername);
 
-	/// Needs serverconnname set, like as above.
 	CL_SendAskInfo();
 	D_ParseFileneeded(serverlist[choice].info.fileneedednum, serverlist[choice].info.fileneeded);
+
 	ServerInfoPage = 0;
+	for (i = 0; i < MAXSERVERINFOPAGES; i++)
+	{
+		ServerInfoSelections[i] = 0;
+		ServerInfoMaxSelections[i] = 0;
+	}
 
 	wipegamestate = -1;
 	S_ChangeMusicInternal("racent", true);
 	M_SetupNextMenu(&MP_ServerInfoDef);
 }
 
-/// JimitaMPC
 static void M_Connect(INT32 choice)
 {
 	serverelem_t *thisserver;
@@ -5927,7 +5939,7 @@ static void M_Connect(INT32 choice)
 
 	(void)choice;
 
-	/// Don't do anything if we didn't receive any data (yet.)
+	// Don't do anything if we didn't receive any data yet.
 	if (display_server_info)
 		return;
 
@@ -5971,7 +5983,6 @@ static void M_Refresh(INT32 choice)
 	if (rendermode == render_soft)
 		I_FinishUpdate(); // page flip or blit buffer
 
-	/// JimitaMPC
 	serverconnlist = true;
 	quittingserverconnlist = false;
 
@@ -6005,7 +6016,6 @@ static void M_DrawRoomMenu(void)
 	V_DrawString(144+8, 32, V_ALLOWLOWERCASE|V_RETURN8, rmotd);
 }
 
-/// JimitaMPC
 static int serverinfotimeout = 0;
 static void M_DrawServerInfoMenu(void)
 {
@@ -6016,14 +6026,11 @@ static void M_DrawServerInfoMenu(void)
 
 	V_DrawPatchFill(W_CachePatchName("SRB2BACK", PU_CACHE));
 
-	/// Don't draw anything if we didn't receive any data (yet.)
-	/// If we don't anyway, give up.
 	if (display_server_info)
 	{
 		char conntext[32];
 		UINT32 i;
 
-		// Animate the dots
 		strcpy(conntext, "Contacting the server");
 		for (i = 0; i < ((serverinfotimeout+48) / 16) % 4; i++)
 			strcat(conntext, ".");
@@ -6041,7 +6048,7 @@ static void M_DrawServerInfoMenu(void)
 			D_QuitNetGame();
 			CL_Reset();
 			D_StartTitle();
-			M_StartMessage(M_GetText("Could not contact the server\n\nPress ESC\n"), NULL, MM_NOTHING);
+			M_StartMessage(M_GetText("Server Timeout\n\nPress ESC\n"), NULL, MM_NOTHING);
 			serverinfotimeout = 0;
 		}
 		return;
@@ -6081,68 +6088,66 @@ static void M_DrawServerInfoMenu(void)
 	if (ServerInfoPage == 0)
 	{
 		boolean hasplayers = false;
-		for (i = 0; i < 7; i++)		/// Limit how many you can see at once, please
+
+		ServerInfoMaxSelections[0] = 0;
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (!serverplayerinfo[i].exists) continue;
+			ServerInfoMaxSelections[0]++;
+		}
+
+		for (i = 0; i < 7; i++)
 		{
 			UINT8 *colormap;
-			if (!serverplayerinfo[i].exists)
-				continue;
+			if (!serverplayerinfo[i].exists) continue;
 
-			hasplayers = true;
-
-			/// Player name
-			V_DrawString(x + 20, y, V_ALLOWLOWERCASE, serverplayerinfo[i].name);
-
-			/// Skin face
+			V_DrawString(x + 20, y, /*(thisplayer == ServerInfoSelections[0] ? V_YELLOWMAP : 0)|*/V_ALLOWLOWERCASE, serverplayerinfo[i].name);
 			V_DrawSmallScaledPatch(x, y-4, 0, livesback);
+
 			colormap = R_GetTranslationColormap(serverplayerinfo[i].skin, serverplayerinfo[i].color, 0);
 			if (!serverplayerinfo[i].unknownskin)
 				V_DrawSmallMappedPatch(x, y-4, 0, faceprefix[serverplayerinfo[i].skin], colormap);
 			else
-				V_DrawSmallMappedPatch(x, y-4, 0, W_CachePatchNum(W_GetNumForName("MISSING"), PU_CACHE), NULL);
+				V_DrawSmallMappedPatch(x, y-4, 0, W_CachePatchNum(W_GetNumForName("CHARICO"), PU_CACHE), colormap);
 
-			/// Score
-			V_DrawRightAlignedString(x+240, y, 0, va("%d", serverplayerinfo[i].score));
-
-			/// Tag, CTF
 			if (serverplayerinfo[i].tagit)
-				V_DrawSmallScaledPatch(x+240+16, y-4, 0, tagico);
+				V_DrawSmallScaledPatch(x+240+8, y-4, 0, tagico);
 			if (serverplayerinfo[i].gotflag && serverplayerinfo[i].team == 2)
-				V_DrawSmallScaledPatch(x+240+16, y-4, 0, rflagico);
+				V_DrawSmallScaledPatch(x+240+8, y-4, 0, rflagico);
 			else if (serverplayerinfo[i].gotflag && serverplayerinfo[i].team == 1)
-				V_DrawSmallScaledPatch(x+240+16, y-4, 0, bflagico);
+				V_DrawSmallScaledPatch(x+240+8, y-4, 0, bflagico);
+
+			V_DrawRightAlignedString(x+280, y, 0, va("%d", serverplayerinfo[i].score));
 
 			y += 16;
+			hasplayers = true;
 		}
 
 		if (!hasplayers)
-		{
-			V_DrawString(x, y, V_ALLOWLOWERCASE, "No players on yet.");
-			V_DrawString(x, y+10, V_ALLOWLOWERCASE|V_YELLOWMAP, "You could be the first!");
-		}
+			V_DrawString(x, y, V_ALLOWLOWERCASE, "\x85No players are connected.");
 
 		V_DrawRightAlignedString(BASEVIDWIDTH-20, 146+30, V_YELLOWMAP|V_MONOSPACE, "   PLAYER LIST =>");
 	}
 	else if (ServerInfoPage == 1)
 	{
+		ServerInfoMaxSelections[1] = 0;
 		if (fileneedednum <= mainwads)
 			V_DrawString(x, y, V_ALLOWLOWERCASE, "\x83No files needed to download.");
 		else
 		{
 			boolean downloadson = true;
 			boolean cantsend = false;
-			int j;
+			INT32 j;
 
-			/// Detect files that won't be sent, or if downloads are disabled
 			for (j = 5; j < fileneedednum; j++)
 			{
-				if (fileneeded[j].status != FS_DOWNLOADING && fileneeded[j].important)
+				if (fileneeded[j].important)
 				{
-					/// Downloading disabled
 					if (fileneeded[j].willsend == 2)
 						downloadson = false;
-					/// Won't send
 					else if (fileneeded[j].willsend == 0)
 						cantsend = true;
+					ServerInfoMaxSelections[1]++;
 				}
 			}
 
@@ -6168,7 +6173,7 @@ static void M_DrawServerInfoMenu(void)
 					else if (cantsend)
 					{
 						strcat(str," - \x85");
-						strcat(str,"Some files too large");
+						strcat(str,"Some files are too large");
 					}
 
 					strcat(str,"\0");
@@ -6178,66 +6183,62 @@ static void M_DrawServerInfoMenu(void)
 				}
 				else
 				{
-					if (fileneeded[i].status != FS_DOWNLOADING && fileneeded[i].important)
+					char filestring[2048];
+					filestring[0] = 0;
+					if (fileneeded[i].important)
 					{
-						char filestring[2048];
-						filestring[0] = 0;
+						static char tempname[28];
+						char *filename = fileneeded[i].filename;
 
-						/// Color coding
-						if (fileneeded[i].status == FS_FOUND)
-							strcat(filestring,"\x83");		/// Green (found)
-						else if (fileneeded[i].status == FS_MD5SUMBAD)
-							strcat(filestring,"\x87");		/// Orange (different MD5 hash)
-						else if (fileneeded[i].status == FS_NOTFOUND)
-							strcat(filestring,"\x85");		/// Red (not found)
+						memset(tempname, 0, sizeof(tempname));
+						filename += strlen(filename) - nameonlylength(filename);
 
-						/// File name
-						strcat(filestring,va("%s",fileneeded[i].filename));
-
-						/// Color coding (filesize)
-						if (fileneeded[i].willsend == 1)
-							strcat(filestring,"\x83");		/// Green (will send)
+						if (strlen(filename) > sizeof(tempname)-1) // too long to display fully
+						{
+							size_t endhalfpos = strlen(filename)-10;
+							snprintf(tempname, sizeof(tempname), "%.14s...%.10s", filename, filename+endhalfpos);
+						}
 						else
-							strcat(filestring,"\x85");		/// Red (will not send)
+							strncpy(tempname, filename, sizeof(tempname)-1);
 
-						strcat(filestring,"(");
-						strcat(filestring,va("%d",fileneeded[i].totalsize >> 10));
-						strcat(filestring,"K)");
+						strcat(filestring,va("%s ",tempname));
+
+						if (fileneeded[i].willsend == 1)
+							strcat(filestring,"\x83");
+						else
+							strcat(filestring,"\x85");
+
+						{
+							INT32 filesize = fileneeded[i].totalsize;
+							strcat(filestring,"(");
+							if (filesize>>10 != 0)
+							{
+								strcat(filestring,va("%d",filesize>>10));
+								strcat(filestring,"K)");
+							}
+							else
+							{
+								strcat(filestring,va("%d",filesize));
+								strcat(filestring," bytes)");
+							}
+						}
 
 						strcat(filestring,"\0");
 
 						V_DrawString(x, y, V_ALLOWLOWERCASE, filestring);
+
 						y += 16;
-
-						if (i-5 <= 6 && fileneedednum-5 <= 6 && i == fileneedednum-1)
-						{
-							char str[512];
-							str[0] = 0;
-
-							if (M_CheckParm("-nodownload"))
-							{
-								strcat(str,"* \x87");
-								strcat(str,"You disabled downloads");
-								strcat(str,"\x80 *");
-							}
-							else if (!downloadson)
-							{
-								strcat(str,"* \x85");
-								strcat(str,"Server disabled downloads");
-								strcat(str,"\x80 *");
-							}
-							else if (cantsend)
-							{
-								strcat(str,"* \x85");
-								strcat(str,"Some files are too large");
-								strcat(str,"\x80 *");
-							}
-
-							strcat(str,"\0");
-
-							V_DrawCenteredString(BASEVIDWIDTH/2, y, V_ALLOWLOWERCASE, str);
-							break;
-						}
+					}
+					if (i-5 <= 6 && fileneedednum-5 <= 6 && i == fileneedednum-1)
+					{
+						if (M_CheckParm("-nodownload"))
+							strcpy(filestring,"\x87You chose to disable file downloading\0");
+						else if (!downloadson)
+							strcpy(filestring,"\x85The server disabled downloads\0");
+						else if (cantsend)
+							strcpy(filestring,"\x85Some files are too large to send\0");
+						V_DrawString(x, y, V_ALLOWLOWERCASE, filestring);
+						break;
 					}
 				}
 			}
@@ -6322,7 +6323,6 @@ static boolean M_CancelConnect(void)
 	return true;
 }
 
-/// JimitaMPC
 static boolean M_QuitServerInfo(void)
 {
 	serverconnlist = false;
@@ -6647,7 +6647,7 @@ static void M_DrawConnectIPMenu(void)
 
 	// draw text cursor for name
 	if (itemOn == 0 &&
-	    skullAnimCounter < 4)   //blink cursor
+	    cursorAnimCounter < 4)   //blink cursor
 		V_DrawCharacter(128+V_StringWidth(setupm_ip, V_MONOSPACE),40,'_',false);
 }
 
@@ -6777,7 +6777,7 @@ static void M_DrawSetupMultiPlayerMenu(void)
 	V_DrawString(208, 72, V_YELLOWMAP|V_ALLOWLOWERCASE, Color_Names[setupm_fakecolor]);
 
 	// draw text cursor for name
-	if (!itemOn && skullAnimCounter < 4) // blink cursor
+	if (!itemOn && cursorAnimCounter < 4) // blink cursor
 		V_DrawCharacter(mx + 98 + V_StringWidth(setupm_name, 0), my, '_',false);
 
 	// anim the player in the box
@@ -7737,7 +7737,7 @@ static void M_OGL_DrawFogMenu(void)
 	V_DrawString(BASEVIDWIDTH - mx - V_StringWidth(cv_grfogcolor.string, 0),
 		my + currentMenu->menuitems[FOG_COLOR_ITEM].alphaKey, V_YELLOWMAP, cv_grfogcolor.string);
 	// blink cursor on FOG_COLOR_ITEM if selected
-	if (itemOn == FOG_COLOR_ITEM && skullAnimCounter < 4)
+	if (itemOn == FOG_COLOR_ITEM && cursorAnimCounter < 4)
 		V_DrawCharacter(BASEVIDWIDTH - mx,
 			my + currentMenu->menuitems[FOG_COLOR_ITEM].alphaKey, '_' | 0x80,false);
 }

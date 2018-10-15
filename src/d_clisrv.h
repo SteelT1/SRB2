@@ -306,7 +306,7 @@ typedef struct
 	UINT8 subversion; // Contains build version
 	UINT8 localplayers;
 	UINT8 mode;
-	char playername[MAXPLAYERNAME];		/// JimitaMPC
+	char playername[MAXPLAYERNAME];
 } ATTRPACK clientconfig_pak;
 
 #define MAXSERVERNAME 32
@@ -485,7 +485,7 @@ void CL_RemoveSplitscreenPlayer(void);
 void CL_Reset(void);
 void CL_ClearPlayer(INT32 playernum);
 void CL_UpdateServerList(boolean internetsearch, INT32 room);
-void CL_SendAskInfo(void);		/// JimitaMPC
+void CL_SendAskInfo(void);
 // Is there a game running?
 boolean Playing(void);
 
@@ -513,7 +513,6 @@ UINT8 GetFreeXCmdSize(void);
 
 extern UINT8 hu_resynching;
 
-/// JimitaMPC
 extern INT32 server_to_connect;
 extern char serverconnname[255];
 
@@ -521,7 +520,6 @@ extern boolean serverconnlist;
 extern boolean quittingserverconnlist;
 extern boolean display_server_info;
 
-/// JimitaMPC
 typedef struct
 {
 	UINT8 maxplayers;

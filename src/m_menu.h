@@ -29,11 +29,12 @@
 // Does all the real work of the menu interaction.
 boolean M_Responder(event_t *ev);
 
-// Called by main loop, only used for menu (skull cursor) animation.
+// Called by main loop.
 void M_Ticker(void);
 
 // Called by main loop, draws the menus directly into the screen buffer.
 void M_Drawer(void);
+void M_MultiPlayerMenuDrawer(void);
 
 // Called by D_SRB2Main, loads the config file.
 void M_Init(void);
@@ -68,7 +69,6 @@ void M_QuitResponse(INT32 ch);
 
 // Determines whether to show a level in the list
 boolean M_CanShowLevelInList(INT32 mapnum, INT32 gt);
-
 
 // flags for items in the menu
 // menu handle (what we do when key is pressed

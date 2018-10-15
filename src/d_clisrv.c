@@ -99,7 +99,7 @@ boolean nodeingame[MAXNETNODES]; // set false as nodes leave game
 static tic_t nettics[MAXNETNODES]; // what tic the client have received
 static tic_t supposedtics[MAXNETNODES]; // nettics prevision for smaller packet
 static UINT8 nodewaiting[MAXNETNODES];
-static char nodenames[MAXNETNODES][MAXPLAYERNAME];		/// JimitaMPC
+static char nodenames[MAXNETNODES][MAXPLAYERNAME];
 static tic_t firstticstosend; // min of the nettics
 static tic_t tictoclear = 0; // optimize d_clearticcmd
 static tic_t maketic;
@@ -131,7 +131,6 @@ SINT8 servernode = 0; // the number of the server node
 /// \todo WORK!
 boolean acceptnewnode = true;
 
-/// JimitaMPC
 INT32 server_to_connect = 0;
 char serverconnname[255];
 
@@ -1106,7 +1105,7 @@ static inline void CL_DrawConnectionStatus(void)
 				cltext = M_GetText("Requesting to join...");
 				break;
 			default:
-				cltext = M_GetText("Connecting to server...");
+				cltext = M_GetText("Connecting to the server...");
 				break;
 		}
 		V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-24-32, V_YELLOWMAP, cltext);
@@ -1179,7 +1178,7 @@ static boolean CL_SendJoin(void)
 	netbuffer->u.clientcfg.localplayers = localplayers;
 	netbuffer->u.clientcfg.version = VERSION;
 	netbuffer->u.clientcfg.subversion = SUBVERSION;
-	strcpy(netbuffer->u.clientcfg.playername, cv_playername.zstring);		/// JimitaMPC
+	strcpy(netbuffer->u.clientcfg.playername, cv_playername.zstring);
 
 	return HSendPacket(servernode, true, 0, sizeof (clientconfig_pak));
 }
@@ -1732,7 +1731,7 @@ void CL_SendAskInfo(void)
 		D_QuitNetGame();
 		CL_Reset();
 		D_StartTitle();
-		M_StartMessage(M_GetText("Could not contact server\n\nPress ESC\n"), NULL, MM_NOTHING);
+		M_StartMessage(M_GetText("Could not contact the server\n\nPress ESC\n"), NULL, MM_NOTHING);
 	}
 #endif // NONET
 }
@@ -3174,7 +3173,7 @@ static boolean SV_AddWaitingPlayers(void)
 {
 	INT32 node, n, newplayer = false;
 	UINT8 newplayernum = 0;
-	UINT8 thisplayernum = 0;		/// JimitaMPC
+	UINT8 thisplayernum = 0;
 
 	// What is the reason for this? Why can't newplayernum always be 0?
 	if (dedicated)
@@ -3266,7 +3265,6 @@ static boolean SV_AddWaitingPlayers(void)
 			}
 			playerpernode[node]++;
 
-			/// JimitaMPC
 			{
 				XBOXSTATIC UINT8 buf[MAXPLAYERNAME+2];
 				UINT8 *p = buf;
@@ -3274,7 +3272,6 @@ static boolean SV_AddWaitingPlayers(void)
 				WRITEUINT8  (p, (UINT8)node);
 				WRITEUINT8  (p, (UINT8)thisplayernum);
 
-				/// Epic magic number to indicate this packet has possible extra data.
 				WRITEUINT8  (p, 0x2A);
 				WRITESTRINGN(p, nodenames[node], MAXPLAYERNAME);
 
@@ -3529,7 +3526,6 @@ static void HandleServerInfo(SINT8 node)
 	netbuffer->u.serverinfo.time = (tic_t)LONG(ticdiff);
 	netbuffer->u.serverinfo.servername[MAXSERVERNAME-1] = 0;
 
-	/// JimitaMPC
 	if (display_server_info)
 	{
 		strcpy(serverconnectioninfo.servername, netbuffer->u.serverinfo.servername);
@@ -3551,7 +3547,6 @@ static void HandleServerInfo(SINT8 node)
 /** Called when a PT_PLAYERINFO packet is received
   *
   * \param node The packet sender
-  * \author JimitaMPC
   *
   */
 static void HandlePlayerInfo(void)
@@ -3567,24 +3562,21 @@ static void HandlePlayerInfo(void)
 		boolean spectator = false, tagit = false, gotflag = false, superon = false, unknownskin = false;
 
 		serverplayerinfo[i].exists = true;
-		/// Player ain't in game
 		if (netbuffer->u.playerinfo[i].node == 255)
 		{
-			serverplayerinfo[i].exists = false;		/// :pensive:
+			serverplayerinfo[i].exists = false;
 			continue;
 		}
 
-		/// Copy player name
 		strncpy(name, netbuffer->u.playerinfo[i].name, MAXPLAYERNAME+1);
 
-		/// Has team?
 		team = netbuffer->u.playerinfo[i].team;
-		if (team == 255)	/// Spectator
+		if (team == 255)
 		{
 			spectator = true;
 			team = 0;
 		}
-		else if (team == 0)	/// Not a team gametype...?
+		else if (team == 0)
 			team = 0;
 		else
 			spectator = false;
@@ -3592,14 +3584,12 @@ static void HandlePlayerInfo(void)
 		score = netbuffer->u.playerinfo[i].score;
 		skin = netbuffer->u.playerinfo[i].skin;
 
-		/// uh oh
 		if (skin > numskins-1)
 		{
 			unknownskin = true;
 			skin = 0;
 		}
 
-		/// Extra data
 		xd = color = netbuffer->u.playerinfo[i].data;
 		color &= ~0x20;
 		color &= ~0x40;
@@ -3612,7 +3602,6 @@ static void HandlePlayerInfo(void)
 		if (xd & 0x80)
 			superon = true;
 
-		/// copy all of that shit
 		strcpy(serverplayerinfo[i].name, name);
 		serverplayerinfo[i].score = score;
 		serverplayerinfo[i].skin = skin;
@@ -4278,7 +4267,6 @@ FILESTAMP
 			HandleServerInfo(node);
 			continue;
 		}
-		/// JimitaMPC
 		if (netbuffer->packettype == PT_PLAYERINFO)
 		{
 			HandlePlayerInfo();
