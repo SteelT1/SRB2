@@ -471,7 +471,7 @@ void R_DrawColumnShadowed_8(void)
 			dc_colormap = dc_lightlist[i].rcolormap;
 			if (solid && dc_yl < bheight)
 				dc_yl = bheight;
-			dc_topstep = dc_yl<<FRACBITS;	/// JimitaMPC
+			dc_topstep = dc_yl<<FRACBITS;	// MPC
 			continue;
 		}
 		// Found a break in the column!
@@ -485,7 +485,7 @@ void R_DrawColumnShadowed_8(void)
 			dc_yl = bheight;
 		else
 			dc_yl = dc_yh + 1;
-		dc_topstep = dc_yl<<FRACBITS;	/// JimitaMPC
+		dc_topstep = dc_yl<<FRACBITS;	// MPC
 
 		dc_colormap = dc_lightlist[i].rcolormap;
 	}

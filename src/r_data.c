@@ -15,10 +15,8 @@
 #include "g_game.h"
 #include "i_video.h"
 #include "r_local.h"
-#include "r_sky.h"
 #include "p_local.h"
 #include "m_misc.h"
-#include "r_data.h"
 #include "w_wad.h"
 #include "z_zone.h"
 #include "p_setup.h" // levelflats

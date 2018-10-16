@@ -84,10 +84,13 @@ extern fixed_t basexscale, baseyscale;
 
 extern lighttable_t **planezlight;
 
-extern fixed_t yslope[MAXVIDHEIGHT];
+#define YSLOPESIZE 2048
+
+extern fixed_t *yslope;
+extern fixed_t yslopetab[YSLOPESIZE][MAXVIDHEIGHT];
 extern fixed_t distscale[MAXVIDWIDTH];
 
-FUNCMATH void R_InitPlanes(void);
+void R_SetupPlanes(void);
 void R_PortalStoreClipValues(INT32 start, INT32 end, INT16 *ceil, INT16 *floor, fixed_t *scale);
 void R_PortalRestoreClipValues(INT32 start, INT32 end, INT16 *ceil, INT16 *floor, fixed_t *scale);
 void R_ClearPlanes(void);

@@ -20,8 +20,6 @@
 #include "z_zone.h"
 #include "m_misc.h"
 #include "i_video.h" // rendermode
-#include "r_things.h"
-#include "r_plane.h"
 #include "p_tick.h"
 #include "p_local.h"
 #include "p_slopes.h"
@@ -619,7 +617,6 @@ void R_DrawMaskedColumn(column_t *column)
 		if (dc_yh >= vid.height)
 			dc_yh = vid.height - 1;
 
-		/// JimitaMPC
 		dc_topstep = dc_yl<<FRACBITS;
 
 		if (dc_yl <= dc_yh && dc_yl < vid.height && dc_yh > 0)
@@ -677,7 +674,6 @@ static void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight)
 		if (dc_yh >= vid.height)
 			dc_yh = vid.height - 1;
 
-		/// JimitaMPC
 		dc_topstep = dc_yl<<FRACBITS;
 
 		if (dc_yl <= dc_yh && dc_yl < vid.height && dc_yh > 0)
@@ -1093,7 +1089,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	{
 		// choose a different rotation based on player view
 		ang = R_PointToAngle (thing->x, thing->y);
-		rot = (ang-thing->angle+ANGLE_202h)>>29;
+		rot = (ang - thing->angle + 0x90000000) >> 29;
 		//Fab: lumpid is the index for spritewidth,spriteoffset... tables
 		lump = sprframe->lumpid[rot];
 		flip = sprframe->flip & (1<<rot);
@@ -1687,7 +1683,7 @@ static void R_CreateDrawNodes(void)
 			drawnode_t * firstdrawnode = nodehead.prev; // previous last drawnode
 			for (p = 0; p < ds->numffloorplanes; p++)
 			{
-				fixed_t planecameraz, planecameraz_r2;	/// JimitaMPC
+				fixed_t planecameraz, planecameraz_r2;
 				if (!ds->ffloorplanes[p])
 					continue;
 				plane = ds->ffloorplanes[p];
@@ -1700,22 +1696,20 @@ static void R_CreateDrawNodes(void)
 				}
 
 				planecameraz = plane->height;
-				#ifdef ESLOPE
-				/// JimitaMPC
+#ifdef ESLOPE
 				if (plane->slope)
 					planecameraz = P_GetZAt(plane->slope, viewx, viewy);
-				#endif
+#endif
 
 				delta = abs(planecameraz-viewz);
 				r2 = firstdrawnode->next;
 				while (r2 != &nodehead)
 				{
 					planecameraz_r2 = r2->plane->height;
-					#ifdef ESLOPE
-					/// JimitaMPC
+#ifdef ESLOPE
 					if (r2->plane->slope)
 						planecameraz_r2 = P_GetZAt(r2->plane->slope, viewx, viewy);
-					#endif
+#endif
 					if (abs(planecameraz_r2-viewz) < delta)
 						break;
 					r2 = r2->next;
@@ -1825,7 +1819,7 @@ static void R_CreateDrawNodes(void)
 			{
 				fixed_t topplaneobjectz, topplanecameraz, botplaneobjectz, botplanecameraz;
 
-				/// JimitaMPC
+				// MPC
 				fixed_t thick_scale_left;
 				fixed_t thick_scale_right;
 
@@ -1899,7 +1893,7 @@ static void R_CreateDrawNodes(void)
 			}
 			else if (r2->seg)
 			{
-				/// JimitaMPC
+				// MPC
 				fixed_t seg_scale_left;
 				fixed_t seg_scale_right;
 

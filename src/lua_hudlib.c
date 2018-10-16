@@ -12,7 +12,6 @@
 
 #include "doomdef.h"
 #ifdef HAVE_BLUA
-#include "r_defs.h"
 #include "r_local.h"
 #include "st_stuff.h" // hudinfo[]
 #include "g_game.h"

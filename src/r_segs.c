@@ -13,7 +13,6 @@
 
 #include "doomdef.h"
 #include "r_local.h"
-#include "r_sky.h"
 
 #include "r_splats.h"
 
@@ -24,7 +23,7 @@
 #include "p_local.h" // Camera...
 #include "p_slopes.h"
 
-// OPTIMIZE: closed two sided lines as single sided
+viswall_t rw;		// MPC
 
 // True if any of the segs textures might be visible.
 static boolean segtextured;
@@ -34,9 +33,6 @@ static boolean markceiling;
 static boolean maskedtexture;
 static INT32 toptexture, bottomtexture, midtexture;
 static INT32 numthicksides, numbackffloors;
-
-/// JimitaMPC
-viswall_t rw;
 
 static INT32 worldtop, worldbottom, worldhigh, worldlow;
 #ifdef ESLOPE
@@ -234,7 +230,6 @@ static void R_Render2sidedMultiPatchColumn(column_t *column)
 	if (dc_yl >= vid.height || dc_yh < 0)
 		return;
 
-	/// JimitaMPC
 	dc_topstep = sprtopscreen;
 	if (windowtop != INT32_MAX && windowbottom != INT32_MAX)
 		dc_topstep = windowtop;
@@ -917,9 +912,10 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			lightnum = R_FakeFlat(frontsector, &tempsec, &templight, &templight, false)
 				->lightlevel >> LIGHTSEGSHIFT;
 
-		if (pfloor->flags & FF_FOG || (frontsector->extra_colormap && frontsector->extra_colormap->fog));
-			else if (curline->v1->y == curline->v2->y)
-		lightnum--;
+		if (pfloor->flags & FF_FOG || (frontsector->extra_colormap && frontsector->extra_colormap->fog))
+			;
+		else if (curline->v1->y == curline->v2->y)
+			lightnum--;
 		else if (curline->v1->x == curline->v2->x)
 			lightnum++;
 
@@ -1252,17 +1248,14 @@ static void R_RenderSegLoop (void)
 			}
 		}
 
-
 		yh = bottomfrac>>HEIGHTBITS;
-
 		bottom = floorclip[rw.x1]-1;
-
 		if (yh > bottom)
 			yh = bottom;
 
 		if (markfloor)
 		{
-			top  = yh < ceilingclip[rw.x1] ? ceilingclip[rw.x1] : yh;
+			top = yh < ceilingclip[rw.x1] ? ceilingclip[rw.x1] : yh;
 
 			if (++top <= bottom && floorplane)
 			{
@@ -1424,12 +1417,11 @@ static void R_RenderSegLoop (void)
 			{
 				dc_yl = yl;
 				dc_yh = yh;
+				dc_topstep = dc_yl<<FRACBITS;
 				dc_texturemid = rw.midtexturemid;
 				dc_source = R_GetColumn(midtexture,texturecolumn);
 				dc_texheight = textureheight[midtexture]>>FRACBITS;
 
-				/// JimitaMPC
-				dc_topstep = dc_yl<<FRACBITS;
 				colfunc();
 
 				// dont draw anything more for this column, since
@@ -1466,8 +1458,6 @@ static void R_RenderSegLoop (void)
 					{
 						dc_yl = yl;
 						dc_yh = mid;
-
-						/// JimitaMPC
 						dc_topstep = dc_yl<<FRACBITS;
 
 						dc_texturemid = rw.toptexturemid;
@@ -1503,8 +1493,6 @@ static void R_RenderSegLoop (void)
 					{
 						dc_yl = mid;
 						dc_yh = yh;
-
-						/// JimitaMPC
 						dc_topstep = dc_yl<<FRACBITS;
 
 						dc_texturemid = rw.bottomtexturemid;
@@ -1564,29 +1552,19 @@ static void R_RenderSegLoop (void)
 	}
 }
 
-/// JimitaMPC
-static inline INT64 R_CalcSegDist2(INT64 x0, INT64 y0, INT64 v1x, INT64 v1y, INT64 v2x, INT64 v2y, INT64 length)
+static inline INT64 R_CalculateLineSegDist(seg_t* seg, INT64 x2, INT64 y2)
 {
-	INT64 dx = v2x-v1x;
-	INT64 dy = v2y-v1y;
-	INT64 vdx = x0-v1x;
-	INT64 vdy = y0-v1y;
-	return ((dy*vdx)-(dx*vdy))/length;
-}
-
-static inline INT64 R_CalcSegDist(seg_t* line, INT64 x2, INT64 y2)
-{
-	if (!line->linedef->dy)				/// Vertical line.
-		return abs(y2-line->v1->y);
-	else if (!line->linedef->dx)		/// Horizontal line.
-		return abs(x2-line->v1->x);
+	if (!seg->linedef->dy)
+		return abs(y2 - seg->v1->y);
+	else if (!seg->linedef->dx)
+		return abs(x2 - seg->v1->x);
 	else
 	{
-		return R_CalcSegDist2(
-						x2, y2,
-						line->v1->x, line->v1->y,
-						line->v2->x, line->v2->y,
-						line->length);
+		INT64 dx = (seg->v2->x)-(seg->v1->x);
+		INT64 dy = (seg->v2->y)-(seg->v1->y);
+		INT64 vdx = x2-(seg->v1->x);
+		INT64 vdy = y2-(seg->v1->y);
+		return ((dy*vdx)-(dx*vdy))/(seg->length);
 	}
 }
 
@@ -1650,11 +1628,11 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	hyp = (fixed_t)R_PointToDist(curline->v1->x,curline->v1->y);
 	rw.distance = FixedMul(hyp,sineval);
 
-	/// JimitaMPC
+	// MPC
 	if (hyp >= INT32_MAX)
 	{
 		hyp = (fixed_t)FixedEuclidean(viewx,viewy,curline->v1->x,curline->v1->y);
-		rw.distance = (fixed_t)R_CalcSegDist(curline,viewx,viewy);
+		rw.distance = (fixed_t)R_CalculateLineSegDist(curline,viewx,viewy);
 	}
 
 	ds_p->x1 = rw.x1 = start;
@@ -2000,30 +1978,26 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			ds_p->silhouette |= SIL_TOP;
 		}
 
-		//SoM: 3/25/2000: This code fixes an automap bug that didn't check
-		// frontsector->ceiling and backsector->floor to see if a door was closed.
-		// Without the following code, sprites get displayed behind closed doors.
+#ifdef ESLOPE
+		if (singlesided || (worldhigh <= worldbottom && worldhighslope <= worldbottomslope))
+#else
+		if (singlesided || backsector->ceilingheight <= frontsector->floorheight)
+#endif
 		{
+			ds_p->sprbottomclip = negonearray;
+			ds_p->bsilheight = INT32_MAX;
+			ds_p->silhouette |= SIL_BOTTOM;
+		}
+
 #ifdef ESLOPE
-			if (doorclosed || (worldhigh <= worldbottom && worldhighslope <= worldbottomslope))
+		if (singlesided || (worldlow >= worldtop && worldlowslope >= worldtopslope))
 #else
-			if (doorclosed || backsector->ceilingheight <= frontsector->floorheight)
+		if (singlesided || backsector->floorheight >= frontsector->ceilingheight)
 #endif
-			{
-				ds_p->sprbottomclip = negonearray;
-				ds_p->bsilheight = INT32_MAX;
-				ds_p->silhouette |= SIL_BOTTOM;
-			}
-#ifdef ESLOPE
-			if (doorclosed || (worldlow >= worldtop && worldlowslope >= worldtopslope))
-#else
-			if (doorclosed || backsector->floorheight >= frontsector->ceilingheight)
-#endif
-			{                   // killough 1/17/98, 2/8/98
-				ds_p->sprtopclip = screenheightarray;
-				ds_p->tsilheight = INT32_MIN;
-				ds_p->silhouette |= SIL_TOP;
-			}
+		{                   // killough 1/17/98, 2/8/98
+			ds_p->sprtopclip = screenheightarray;
+			ds_p->tsilheight = INT32_MIN;
+			ds_p->silhouette |= SIL_TOP;
 		}
 
 		if (worldlow != worldbottom
@@ -2524,7 +2498,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		// OPTIMIZE: get rid of LIGHTSEGSHIFT globally
 		lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
 
-		if (curline->v1->y == curline->v2->y)
+		if (frontsector->extra_colormap && frontsector->extra_colormap->fog)
+			;
+		else if (curline->v1->y == curline->v2->y)
 			lightnum--;
 		else if (curline->v1->x == curline->v2->x)
 			lightnum++;
@@ -2970,7 +2946,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	// get a new or use the same visplane
 	if (markceiling)
 	{
-		if (ceilingplane && !curline->polyseg) /// JimitaMPC
+		if (ceilingplane && !curline->polyseg)
 			ceilingplane = R_CheckPlane (ceilingplane, rw.x1, rw.x2-1);
 		else
 			markceiling = 0;
@@ -2979,7 +2955,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	// get a new or use the same visplane
 	if (markfloor)
 	{
-		if (floorplane && !curline->polyseg) /// JimitaMPC
+		if (floorplane && !curline->polyseg)
 			floorplane = R_CheckPlane (floorplane, rw.x1, rw.x2-1);
 		else
 			markfloor = 0;
@@ -3051,4 +3027,39 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		ds_p->bsilheight = (sidedef->midtexture > 0 && sidedef->midtexture < numtextures) ? INT32_MAX: INT32_MIN;
 	}
 	ds_p++;
+}
+
+// MPC
+void R_RecalculateLineSegs(void)
+{
+	size_t i;
+	UINT8 *hit = Z_Calloc(numvertexes, PU_STATIC, NULL);
+	for (i = 0; i < numsegs; i++)
+	{
+		seg_t *seg = segs+i;
+		line_t *line = seg->linedef;
+		vertex_t *vertex = seg->v1;
+
+		seg->length = (fixed_t)FixedEuclidean(seg->v2->x,seg->v2->y,seg->v1->x,seg->v1->y);
+		if (!line->dx && !line->dy)
+			continue;
+
+		do
+		{
+			if (hit[vertex - vertexes])
+				continue;
+			hit[vertex - vertexes] = true;
+			if (vertex != line->v1 && vertex != line->v2)
+			{
+				INT64 dx = (line->dx>>16)*(line->dx>>16); INT64 dy = (line->dy>>16)*(line->dy>>16);
+				INT64 dxy = (line->dx>>16)*(line->dy>>16);
+				INT64 x0 = vertex->x; INT64 y0 = vertex->y;
+				INT64 x1 = line->v1->x; INT64 y1 = line->v1->y;
+				vertex->x = (fixed_t)((dx * x0 + dy * x1 + dxy * (y0 - y1)) / (dx+dy));
+				vertex->y = (fixed_t)((dy * y0 + dx * y1 + dxy * (x0 - x1)) / (dx+dy));
+			}
+		} while ((vertex != seg->v2) && (vertex = seg->v2));
+	}
+
+	Z_Free(hit);
 }

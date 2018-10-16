@@ -283,7 +283,7 @@ static void M_ChangeControl(INT32 choice);
 
 // Video & Sound
 menu_t OP_VideoOptionsDef, OP_VideoModeDef;
-menu_t OP_SoftwareTogglesDef;	/// JimitaMPC
+menu_t OP_SoftwareTogglesDef;
 #ifdef HWRENDER
 menu_t OP_OpenGLOptionsDef, OP_OpenGLFogDef, OP_OpenGLColorDef;
 #endif
@@ -330,7 +330,6 @@ static void M_DrawRoomMenu(void);
 #endif
 static void M_DrawJoystick(void);
 static void M_DrawSetupMultiPlayerMenu(void);
-static void M_DrawSWTogglesMenu(void);			/// JimitaMPC
 
 // Handling functions
 #ifndef NONET
@@ -1169,7 +1168,6 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_STRING | IT_CVAR,    NULL, "Vertical Sync",       &cv_vidwait,    130},
 };
 
-/// JimitaMPC
 static menuitem_t OP_SoftwareTogglesMenu[] =
 {
 	{IT_STRING | IT_CVAR,    NULL, "Stretch View",        &cv_stretchview,  10},
@@ -1703,14 +1701,13 @@ menu_t OP_VideoModeDef =
 	NULL
 };
 
-/// JimitaMPC
 menu_t OP_SoftwareTogglesDef =
 {
 	"M_VIDEO",
 	sizeof(OP_SoftwareTogglesMenu)/sizeof(menuitem_t),
 	&OP_VideoOptionsDef,
 	OP_SoftwareTogglesMenu,
-	M_DrawSWTogglesMenu,
+	M_DrawGenericMenu,
 	30, 30,
 	0,
 	NULL
@@ -7336,12 +7333,6 @@ static void M_QuitSRB2(INT32 choice)
 	// between 1 and maximum number.
 	(void)choice;
 	M_StartMessage(quitmsg[M_RandomKey(NUM_QUITMESSAGES)], M_QuitResponse, MM_YESNO);
-}
-
-/// JimitaMPC
-static void M_DrawSWTogglesMenu(void)
-{
-	M_DrawGenericMenu();
 }
 
 #ifdef HWRENDER

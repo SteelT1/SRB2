@@ -433,9 +433,7 @@ typedef struct line_s
 	sector_t *backsector;
 
 	size_t validcount; // if == validcount, already checked
-#if 1//#ifdef WALLSPLATS
 	void *splats; // wallsplat_t list
-#endif
 	INT32 firsttag, nexttag; // improves searches for tags.
 #ifdef POLYOBJECTS
 	polyobj_t *polyobj; // Belongs to a polyobject?
@@ -573,11 +571,9 @@ typedef struct seg_s
 	sector_t *frontsector;
 	sector_t *backsector;
 
-	/// JimitaMPC
 	fixed_t length; // length of the seg
 #ifdef HWRENDER
 	float flength; // used by hardware renderer
-
 	lightmap_t *lightmaps; // for static lightmap
 #endif
 

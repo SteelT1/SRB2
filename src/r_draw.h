@@ -57,7 +57,7 @@ extern INT32 ds_y, ds_x1, ds_x2;
 extern lighttable_t *ds_colormap;
 extern fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
 
-/// JimitaMPC
+// MPC
 #ifndef NOWATER
 extern INT32 ds_waterofs;
 extern INT32 ds_bgofs;

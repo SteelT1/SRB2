@@ -16,19 +16,16 @@
 #include "doomdef.h"
 #include "console.h"
 #include "g_game.h"
-#include "r_data.h"
 #include "r_local.h"
-#include "r_state.h"
-#include "r_splats.h" // faB(21jan):testing
-#include "r_sky.h"
+#include "r_splats.h"
+#include "i_video.h"
 #include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"
 #include "p_tick.h"
-
-#include "p_setup.h" // levelflats
-
+#include "p_setup.h"
 #include "p_slopes.h"
+#include "screen.h"
 
 //
 // opening
@@ -82,9 +79,8 @@ static INT32 spanstart[MAXVIDHEIGHT];
 lighttable_t **planezlight;
 static fixed_t planeheight;
 
-/// JimitaMPC: Destroyed yslopetab
-fixed_t yslope[MAXVIDHEIGHT];
-
+fixed_t *yslope;
+fixed_t yslopetab[YSLOPESIZE][MAXVIDHEIGHT];
 fixed_t distscale[MAXVIDWIDTH];
 fixed_t basexscale, baseyscale;
 
@@ -96,12 +92,28 @@ fixed_t cachedystep[MAXVIDHEIGHT];
 static fixed_t xoffs, yoffs;
 
 //
-// R_InitPlanes
-// Only at game startup.
+// R_SetupPlanes
 //
-void R_InitPlanes(void)
+void R_SetupPlanes(void)
 {
-	// FIXME: unused
+	fixed_t dy/*, i*/;
+
+	if (rendermode == render_soft)
+		G_SoftwareClipAimingPitch((INT32 *)&aimingangle);
+
+	dy = FixedMul(focallength, FINETANGENT((ANGLE_90+aimingangle)>>ANGLETOFINESHIFT));
+	centery = (viewheight/2) + (dy>>FRACBITS);
+	centeryfrac = centery<<FRACBITS;
+
+	if (rendermode != render_soft)
+		return;
+
+	// MPC
+	dy >>= FRACBITS;
+	if (dy < 0)
+		yslope = yslopetab[(-dy)+YSLOPESIZE/2];
+	else
+		yslope = yslopetab[dy];
 }
 
 // R_PortalStoreClipValues
@@ -173,7 +185,7 @@ static boolean itswater;
 void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 {
 	angle_t angle, planecos, planesin;
-	fixed_t distance, spansteppy;
+	fixed_t distance, stepping;
 	size_t pindex;
 
 #ifdef RANGECHECK
@@ -184,7 +196,7 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	// from r_splats's R_RenderFloorSplat
 	if (x1 >= vid.width) x1 = vid.width - 1;
 
-	/// JimitaMPC
+	// MPC
 	angle    = (currentplane->viewangle + currentplane->plangle)>>ANGLETOFINESHIFT;
 	planesin = FINESINE  (angle);
 	planecos = FINECOSINE(angle);
@@ -195,12 +207,13 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 		distance = cacheddistance[y] = FixedMul(planeheight, yslope[y]);
 		ds_xstep = cachedxstep[y] = FixedMul(distance, basexscale);
 		ds_ystep = cachedystep[y] = FixedMul(distance, baseyscale);
-		/// JimitaMPC
-		spansteppy = abs(centery-y);
-		if (spansteppy)
+
+		// MPC
+		stepping = abs(centery - y);
+		if (stepping)
 		{
-			ds_xstep = cachedxstep[y] = FixedMul(planesin, planeheight) / spansteppy;
-			ds_ystep = cachedystep[y] = FixedMul(planecos, planeheight) / spansteppy;
+			ds_xstep = cachedxstep[y] = FixedMul(planesin, planeheight) / stepping;
+			ds_ystep = cachedystep[y] = FixedMul(planecos, planeheight) / stepping;
 		}
 	}
 	else
@@ -210,7 +223,7 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 		ds_ystep = cachedystep[y];
 	}
 
-	/// JimitaMPC
+	// MPC
 	ds_xfrac = xoffs + FixedMul(planecos, distance) + (x1 - centerx) * ds_xstep;
 	ds_yfrac = yoffs - FixedMul(planesin, distance) + (x1 - centerx) * ds_ystep;
 
@@ -590,8 +603,6 @@ void R_DrawPlanes(void)
 				{
 					dc_yl = pl->top[x];
 					dc_yh = pl->bottom[x];
-
-					/// JimitaMPC
 					dc_topstep = dc_yl<<FRACBITS;
 
 					if (dc_yl <= dc_yh)
@@ -623,12 +634,10 @@ void R_DrawPlanes(void)
 #endif
 }
 
-/// JimitaMPC
+// MPC
 static void R_SpanShift(INT32 size)
 {
-	INT32 bits = 3;		/// 8x8
-	union {UINT32 i;float x;} u;
-
+	union {UINT32 i;float x;} u; INT16 bits = 3;
 	u.x = size;
 	u.i = (1<<29) + (u.i >> 1) - (1<<22);
 	size = (INT32)u.x;
@@ -800,7 +809,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 			PU_STATIC); // Stay here until Z_ChangeTag
 
 	size = W_LumpLength(levelflats[pl->picnum].lumpnum);
-	R_SpanShift(size);		/// JimitaMPC
+	R_SpanShift(size);		// MPC
 
 	xoffs = pl->xoffs;
 	yoffs = pl->yoffs;

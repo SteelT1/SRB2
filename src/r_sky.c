@@ -17,7 +17,6 @@
 
 #include "doomdef.h"
 #include "doomstat.h"
-#include "r_sky.h"
 #include "r_local.h"
 #include "w_wad.h"
 #include "z_zone.h"

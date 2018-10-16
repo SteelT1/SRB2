@@ -121,8 +121,6 @@ fixed_t FixedHypot(fixed_t x, fixed_t y)
 	return FixedMul(ax, yx1); // |x|*((1 + (x/y)^2)^1/2)
 }
 
-/// JimitaMPC
-/// (not actually fixed_t)
 INT64 FixedEuclidean(INT64 x2, INT64 y2, INT64 x1, INT64 y1)
 {
 	INT64 dx = x2-x1;

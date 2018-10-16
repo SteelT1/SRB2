@@ -26,10 +26,7 @@
 #include "r_sky.h"
 #include "i_system.h"
 
-#include "r_data.h"
-#include "r_things.h"
-#include "r_sky.h"
-#include "r_draw.h"
+#include "r_local.h"
 
 #include "s_sound.h"
 #include "st_stuff.h"
@@ -2487,7 +2484,6 @@ boolean P_SetupLevel(boolean skipprecip)
 	// 99% of the things already did, so.
 	// Map header should always be in place at this point
 	INT32 i, loadprecip = 1, ranspecialwipe = 0;
-	size_t j;
 	INT32 loademblems = 1;
 	INT32 fromnetsave = 0;
 	boolean loadedbm = false;
@@ -2681,12 +2677,8 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_LoadReject(lastloadedmaplumpnum + ML_REJECT);
 	P_GroupLines();
 
-	/// JimitaMPC
-	for (j = 0; j < numsegs; j++)
-	{
-		seg_t *line = segs+j;
-		line->length = (fixed_t)FixedEuclidean(line->v2->x,line->v2->y,line->v1->x,line->v1->y);
-	}
+	/// MPC
+	R_RecalculateLineSegs();
 
 	numdmstarts = numredctfstarts = numbluectfstarts = 0;
 

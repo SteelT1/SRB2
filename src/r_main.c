@@ -16,10 +16,8 @@
 #include "doomdef.h"
 #include "g_game.h"
 #include "g_input.h"
-#include "r_main.h"		/// JimitaMPC
 #include "r_local.h"
 #include "r_splats.h" // faB(21jan): testing
-#include "r_sky.h"
 #include "st_stuff.h"
 #include "p_local.h"
 #include "keys.h"
@@ -37,7 +35,7 @@
 #endif
 
 // Fineangles in the SCREENWIDTH wide window.
-#define FIELDOFVIEW 90
+#define FIELDOFVIEW 2048
 
 size_t framecount;
 size_t validcount = 1;
@@ -47,6 +45,9 @@ fixed_t centerxfrac, centeryfrac;
 fixed_t projection;
 fixed_t projectiony;
 
+fixed_t focallength, aspectx;
+float focallengthf;
+
 fixed_t viewx, viewy, viewz;
 angle_t viewangle, aimingangle;
 fixed_t viewcos, viewsin;
@@ -55,12 +56,7 @@ boolean skyVisible1, skyVisible2; // saved values of skyVisible for P1 and P2, f
 sector_t *viewsector;
 player_t *viewplayer;
 
-/// JimitaMPC
-fixed_t focallength, aspectx;
-float focallengthf;
-
-// PORTALS!
-// You can thank and/or curse JTE for these.
+// Portals
 UINT8 portalrender;
 sector_t *portalcullsector;
 typedef struct portal_pair
@@ -355,7 +351,6 @@ fixed_t R_PointToDist(fixed_t x, fixed_t y)
 	return R_PointToDist2(viewx, viewy, x, y);
 }
 
-/// JimitaMPC
 angle_t R_PointToAngleEx(INT64 x2, INT64 y2, INT64 x1, INT64 y1)
 {
 	INT64 dx = x1-x2;
@@ -456,19 +451,17 @@ static void R_InitTextureMapping(void)
 	INT32 i,x,t;
 	fixed_t fovtan;
 
-	/// JimitaMPC
-	/// Fineangles in the SCREENWIDTH wide window.
-	int FOV = round(FIELDOFVIEW*22.567f);
-	fovtan = FINETANGENT(FINEANGLES/4+FOV/2);
+	// Fineangles in the vid.width wide window.
+	fovtan = FINETANGENT(FINEANGLES/4+FIELDOFVIEW/2);
 
 	// Calc focallength
-	//  so FIELDOFVIEW angles covers SCREENWIDTH.
-	focallength = FixedDiv(centerxfrac,fovtan);
+	// so FIELDOFVIEW angles covers vid.width.
+	focallength = FixedDiv(centerxfrac, fovtan);
 	focallengthf = FIXED_TO_FLOAT(focallength);
 
 	// Use tangent table to generate viewangletox:
-	//  viewangletox will give the next greatest x
-	//  after the view angle.
+	// viewangletox will give the next greatest x
+	// after the view angle.
 	for (i = 0; i < FINEANGLES/2; i++)
 	{
 		if (FINETANGENT(i) > FRACUNIT*2)
@@ -489,8 +482,8 @@ static void R_InitTextureMapping(void)
 	}
 
 	// Scan viewangletox[] to generate xtoviewangle[]:
-	//  xtoviewangle will give the smallest view angle
-	//  that maps to x.
+	// xtoviewangle will give the smallest view angle
+	// that maps to x.
 	for (x = 0; x <= viewwidth;x++)
 	{
 		i = 0;
@@ -502,9 +495,6 @@ static void R_InitTextureMapping(void)
 	// Take out the fencepost cases from viewangletox.
 	for (i = 0; i < FINEANGLES/2; i++)
 	{
-		t = FixedMul(FINETANGENT(i), focallength);
-		t = centerx - t;
-
 		if (viewangletox[i] == -1)
 			viewangletox[i] = 0;
 		else if (viewangletox[i] == viewwidth+1)
@@ -513,9 +503,12 @@ static void R_InitTextureMapping(void)
 
 	clipangle = xtoviewangle[0];
 	doubleclipangle = clipangle*2;
+
+	// MPC
+	for (t = 0; t < YSLOPESIZE; t++)
+		for (i = 0; i < viewheight; i++)
+			yslopetab[t][i] = FixedDiv(aspectx<<FRACBITS, abs(((i-((viewheight/2)+(t > YSLOPESIZE/2 ? -t+(YSLOPESIZE/2) : t)))<<FRACBITS) + FRACUNIT/2)); //SLOPETAB;
 }
-
-
 
 //
 // R_InitLightTables
@@ -604,11 +597,8 @@ void R_ExecuteSetViewSize(void)
 
 	projection = centerxfrac;
 	projectiony = centerxfrac;
-	if (cv_stretchview.value)	/// JimitaMPC
+	if (cv_stretchview.value)
 		projectiony = (((vid.height*centerx*BASEVIDWIDTH)/BASEVIDHEIGHT)/vid.width)<<FRACBITS;
-
-	R_InitViewBuffer(scaledviewwidth, viewheight);
-	R_InitTextureMapping();
 
 #ifdef HWRENDER
 	if (rendermode != render_soft)
@@ -622,11 +612,9 @@ void R_ExecuteSetViewSize(void)
 	// setup sky scaling
 	R_SetSkyScale();
 
-	/// JimitaMPC
 	aspectx = centerx;
 	if (cv_stretchview.value)
 		aspectx = (((vid.height*centerx*BASEVIDWIDTH)/BASEVIDHEIGHT)/vid.width);
-	R_SetupFreeLook();
 
 	for (i = 0; i < viewwidth; i++)
 	{
@@ -654,6 +642,9 @@ void R_ExecuteSetViewSize(void)
 		}
 	}
 
+	R_InitViewBuffer(scaledviewwidth, viewheight);
+	R_InitTextureMapping();
+	R_SetupPlanes();
 	setsizeneeded = false;
 
 	// continue to do the hardware setviewsize as long as we use the reference software view
@@ -677,9 +668,6 @@ void R_Init(void)
 
 	CONS_Printf("R_SetViewSize...\n");
 	R_SetViewSize(); // setsizeneeded is set true
-
-	CONS_Printf("R_InitPlanes...\n");
-	R_InitPlanes();
 
 	CONS_Printf("R_InitLightTables...\n");
 	R_InitLightTables();
@@ -735,34 +723,6 @@ subsector_t *R_IsPointInSubsector(fixed_t x, fixed_t y)
 			return 0;
 
 	return ret;
-}
-
-/** Builds the visplane texture mapping array.
-  * \sa R_SetupFrame, R_SkyboxFrame, R_ExecuteSetViewSize
-  * \author JimitaMPC
-  */
-void R_SetupFreeLook(void)
-{
-	fixed_t dy, i;
-	static angle_t lastaiming;
-
-	if (rendermode == render_soft)
-		G_SoftwareClipAimingPitch((INT32 *)&aimingangle);
-
-	dy = FixedMul(focallength, FINETANGENT((ANGLE_90+aimingangle)>>ANGLETOFINESHIFT));
-	centery = (viewheight/2) + (dy>>FRACBITS);
-	centeryfrac = centery<<FRACBITS;
-
-	if (rendermode == render_soft && ((lastaiming != aimingangle) || setsizeneeded))		/// Of course, we only do that if the aiming angle or the screen height changed.
-	{
-		for (i = 0; i < viewheight; i++)
-		{
-			fixed_t slope = ((i-centery)<<FRACBITS) + FRACUNIT/2;	/// Why is FRACUNIT/2 needed...?
-			slope = abs(slope);
-			yslope[i] = FixedDiv(aspectx<<FRACBITS, slope);
-		}
-		lastaiming = aimingangle;
-	}
 }
 
 //
@@ -876,7 +836,7 @@ void R_SetupFrame(player_t *player, boolean skybox)
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
 
-	R_SetupFreeLook();
+	R_SetupPlanes();
 }
 
 void R_SkyboxFrame(player_t *player)
@@ -1094,7 +1054,7 @@ void R_SkyboxFrame(player_t *player)
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
 
-	R_SetupFreeLook();
+	R_SetupPlanes();
 }
 
 #define ANGLED_PORTALS

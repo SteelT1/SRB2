@@ -100,7 +100,7 @@ INT32 ds_y, ds_x1, ds_x2;
 lighttable_t *ds_colormap;
 fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
 
-/// JimitaMPC
+// MPC
 #ifndef NOWATER
 INT32 ds_waterofs = 0;
 INT32 ds_bgofs = 0;

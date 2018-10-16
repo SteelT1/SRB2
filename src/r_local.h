@@ -33,6 +33,8 @@
 #include "r_data.h"
 #include "r_things.h"
 #include "r_draw.h"
+#include "r_defs.h"
+#include "r_state.h"
 
 extern drawseg_t *firstseg;
 

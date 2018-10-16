@@ -164,7 +164,7 @@ const UINT8 gammatable[5][256] =
 
 // local copy of the palette for V_GetColor()
 RGBA_t *pLocalPalette     = NULL;
-RGBA_t *pLocalPaletteReal = NULL;	/// JimitaMPC
+RGBA_t *pLocalPaletteReal = NULL;
 
 // keep a copy of the palette so that we can get the RGB value for a color index at any time.
 static void LoadPalette(const char *lumpname)
@@ -188,7 +188,6 @@ static void LoadPalette(const char *lumpname)
 		pLocalPalette[i].s.blue  = usegamma[*pal++];
 		pLocalPalette[i].s.alpha = 0xFF;
 	}
-	/// JimitaMPC
 	pal = W_CacheLumpNum(lumpnum, PU_CACHE);
 	for (i = 0; i < palsize; i++)
 	{

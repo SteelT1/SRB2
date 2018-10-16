@@ -22,8 +22,6 @@
 #include "am_map.h"
 #include "m_random.h"
 #include "p_local.h"
-#include "r_draw.h"
-#include "r_main.h"
 #include "s_sound.h"
 #include "g_game.h"
 #include "m_cheat.h"
@@ -37,7 +35,6 @@
 #include "byteptr.h"
 #include "i_joy.h"
 #include "r_local.h"
-#include "r_things.h"
 #include "y_inter.h"
 #include "v_video.h"
 #include "dehacked.h" // get_number (for ghost thok)

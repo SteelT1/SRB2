@@ -18,7 +18,6 @@
 #include "i_system.h"
 #include "i_video.h"
 #include "r_local.h"
-#include "r_sky.h"
 #include "m_argv.h"
 #include "m_misc.h"
 #include "v_video.h"
@@ -166,7 +165,6 @@ void SCR_SetMode(void)
 	SCR_SetupDrawRoutines();
 }
 
-/// JimitaMPC
 static void SCR_CalcVid(void)
 {
 	vid.dupx = vid.width / BASEVIDWIDTH;
@@ -249,7 +247,6 @@ void SCR_Startup(void)
 		return;
 	}
 
-	/// JimitaMPC
 	SCR_CalcVid();
 	vid.modenum = 0;
 
@@ -267,7 +264,6 @@ void SCR_Recalc(void)
 	if (dedicated)
 		return;
 
-	/// JimitaMPC
 	SCR_CalcVid();
 
 	// toggle off automap because some screensize-dependent values will

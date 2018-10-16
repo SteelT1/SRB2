@@ -1535,7 +1535,6 @@ static void CON_DrawConsole(void)
 
 		W_UnlockCachedPatch(con_backpic);
 
-		/// JimitaMPC
 		if (cons_backpic.value && !con_forcepic)
 			V_DrawFadeConsBack(con_curlines);
 	}

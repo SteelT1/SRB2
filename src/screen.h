@@ -34,7 +34,6 @@
 #define NUMSCREENS 7
 #endif
 
-/// JimitaMPC
 // screens[0] = main display window
 // screens[1] = back screen, alternative blitting
 // screens[2] = screenshot/gif movie buffer
@@ -191,7 +190,7 @@ extern consvar_t cv_vidwait;
 
 // Change video mode, only at the start of a refresh.
 void SCR_SetMode(void);
-void SCR_SetupDrawRoutines(void);		/// JimitaMPC
+void SCR_SetupDrawRoutines(void);
 // Recalc screen size dependent stuff
 void SCR_Recalc(void);
 // Check parms once at startup

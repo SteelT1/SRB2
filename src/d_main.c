@@ -56,7 +56,6 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "m_misc.h"
 #include "p_setup.h"
 #include "p_saveg.h"
-#include "r_main.h"
 #include "r_local.h"
 #include "s_sound.h"
 #include "st_stuff.h"

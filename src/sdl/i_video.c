@@ -95,7 +95,6 @@ rendermode_t rendermode = render_soft;
 // synchronize page flipping with screen refresh
 consvar_t cv_vidwait = {"vid_wait", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-/// JimitaMPC
 static INT32 resizedvidwidth = 320;
 static INT32 resizedvidheight = 200;
 
@@ -183,7 +182,6 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen)
 	int bpp = 16;
 	int sw_texture_format = SDL_PIXELFORMAT_ABGR8888;
 
-	/// JimitaMPC
 	SDL_DisplayMode monitor;
 	int display_width, display_height;
 
