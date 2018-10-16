@@ -96,7 +96,7 @@ static fixed_t xoffs, yoffs;
 //
 void R_SetupPlanes(void)
 {
-	fixed_t dy/*, i*/;
+	fixed_t dy;
 
 	if (rendermode == render_soft)
 		G_SoftwareClipAimingPitch((INT32 *)&aimingangle);

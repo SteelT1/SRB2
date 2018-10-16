@@ -451,11 +451,11 @@ static void R_InitTextureMapping(void)
 	INT32 i,x,t;
 	fixed_t fovtan;
 
-	// Fineangles in the vid.width wide window.
+	// Fineangles in the viewwidth wide window.
 	fovtan = FINETANGENT(FINEANGLES/4+FIELDOFVIEW/2);
 
 	// Calc focallength
-	// so FIELDOFVIEW angles covers vid.width.
+	// so FIELDOFVIEW angles covers viewwidth.
 	focallength = FixedDiv(centerxfrac, fovtan);
 	focallengthf = FIXED_TO_FLOAT(focallength);
 

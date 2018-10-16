@@ -26,7 +26,11 @@
 #include "r_sky.h"
 #include "i_system.h"
 
-#include "r_local.h"
+#include "r_data.h"
+#include "r_things.h"
+#include "r_sky.h"
+#include "r_draw.h"
+#include "r_segs.h"
 
 #include "s_sound.h"
 #include "st_stuff.h"
