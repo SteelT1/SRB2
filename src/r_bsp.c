@@ -412,11 +412,11 @@ static void R_AddLine(seg_t *line)
 
 
 clippass:
-	R_ClipWallSegment(x1, x2, false);
+	R_ClipWallSegment(x1, x2 - 1, false);
 	return;
 
 clipsolid:
-	R_ClipWallSegment(x1, x2, true);
+	R_ClipWallSegment(x1, x2 - 1, true);
 }
 
 static void R_AddPolyObjectLine(seg_t *line)
@@ -479,7 +479,7 @@ static void R_AddPolyObjectLine(seg_t *line)
 		return;
 
 	backsector = line->backsector;
-	R_ClipWallSegment(x1, x2, false);
+	R_ClipWallSegment(x1, x2 - 1, false);
 }
 
 //
