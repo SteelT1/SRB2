@@ -164,7 +164,8 @@ static void R_DrawWallSplats(void)
 		// draw the columns
 		for (dc_x = x1; dc_x <= x2; dc_x++, spryscale += rw.scalestep)
 		{
-			pindex = FixedMul(spryscale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
+			// calculate lighting
+			pindex = FixedMul(spryscale, FixedDiv(BASEVIDWIDTH*2, vid.width))>>LIGHTSCALESHIFT;
 			if (pindex >= MAXLIGHTSCALE)
 				pindex = MAXLIGHTSCALE - 1;
 			dc_colormap = walllights[pindex];
@@ -546,10 +547,10 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 						else
 							xwalllights = scalelight[rlight->lightnum];
 
-						pindex = FixedMul(spryscale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
-
+						// calculate lighting
+						pindex = FixedMul(spryscale, FixedDiv(BASEVIDWIDTH*2, vid.width))>>LIGHTSCALESHIFT;
 						if (pindex >= MAXLIGHTSCALE)
-							pindex = MAXLIGHTSCALE - 1;
+							pindex = MAXLIGHTSCALE-1;
 
 						if (rlight->extra_colormap)
 							rlight->rcolormap = rlight->extra_colormap->colormap + (xwalllights[pindex] - colormaps);
@@ -591,13 +592,11 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 				}
 
 				// calculate lighting
-				pindex = FixedMul(spryscale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
-
+				pindex = FixedMul(spryscale, FixedDiv(BASEVIDWIDTH*2, vid.width))>>LIGHTSCALESHIFT;
 				if (pindex >= MAXLIGHTSCALE)
-					pindex = MAXLIGHTSCALE - 1;
+					pindex = MAXLIGHTSCALE-1;
 
 				dc_colormap = walllights[pindex];
-
 				if (frontsector->extra_colormap)
 					dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
 
@@ -909,8 +908,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		else if (colfunc == translucentcolfunc)
 			lightnum = LIGHTLEVELS-1;
 		else
-			lightnum = R_FakeFlat(frontsector, &tempsec, &templight, &templight, false)
-				->lightlevel >> LIGHTSEGSHIFT;
+			lightnum = R_CheckFakeFloorPlanes(frontsector, &tempsec, &templight, &templight, false)->lightlevel>>LIGHTSEGSHIFT;
 
 		if (pfloor->flags & FF_FOG || (frontsector->extra_colormap && frontsector->extra_colormap->fog))
 			;
@@ -1013,8 +1011,8 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 				lighttable_t **xwalllights;
 				fixed_t height;
 				fixed_t bheight = 0;
-				INT32 solid = 0;
-				INT32 lighteffect = 0;
+				boolean solid = false;
+				boolean lighteffect = false;
 
 #ifdef ESLOPE
 				if      (top_frac > (INT64)CLAMPMAX) sprtopscreen = windowtop = CLAMPMAX;
@@ -1050,6 +1048,9 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 				// draw the texture
 				col = (column_t *)((UINT8 *)R_GetColumn(texnum,maskedtexturecol[dc_x]) - 3);
 
+				// guess what I just fixed? -monster psychic cat
+				dc_colormap = colormaps;
+
 				for (i = 0; i < dc_numlights; i++)
 				{
 					// Check if the current light effects the colormap/lightlevel
@@ -1066,9 +1067,9 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 						else
 							xwalllights = scalelight[lightnum];
 
-						pindex = FixedMul(spryscale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
-
-						if (pindex >=  MAXLIGHTSCALE)
+						// calculate lighting
+						pindex = FixedMul(spryscale, FixedDiv(BASEVIDWIDTH*2, vid.width))>>LIGHTSCALESHIFT;
+						if (pindex >= MAXLIGHTSCALE)
 							pindex = MAXLIGHTSCALE-1;
 
 						if (pfloor->flags & FF_FOG)
@@ -1087,11 +1088,11 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 						}
 					}
 
-					solid = 0; // don't carry over solid-cutting flag from the previous light
+					solid = false; // don't carry over solid-cutting flag from the previous light
 
 					// Check if the current light can cut the current 3D floor.
 					if (rlight->flags & FF_CUTSOLIDS && !(pfloor->flags & FF_EXTRA))
-						solid = 1;
+						solid = true;
 					else if (rlight->flags & FF_CUTEXTRA && pfloor->flags & FF_EXTRA)
 					{
 						if (rlight->flags & FF_EXTRA)
@@ -1099,13 +1100,11 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 							// The light is from an extra 3D floor... Check the flags so
 							// there are no undesired cuts.
 							if ((rlight->flags & (FF_FOG|FF_SWIMMABLE)) == (pfloor->flags & (FF_FOG|FF_SWIMMABLE)))
-								solid = 1;
+								solid = true;
 						}
 						else
-							solid = 1;
+							solid = true;
 					}
-					else
-						solid = 0;
 
 					rlight->height += rlight->heightstep;
 					height = rlight->height;
@@ -1129,7 +1128,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 					if (windowbottom >= sprbotscreen)
 					{
 						windowbottom = sprbotscreen;
-						colfunc_2s (col);
+						colfunc_2s(col);
 						for (i++; i < dc_numlights; i++)
 						{
 							rlight = &dc_lightlist[i];
@@ -1139,27 +1138,29 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 						}
 						continue;
 					}
-					colfunc_2s (col);
+
+					colfunc_2s(col);
 					if (solid)
 						windowtop = bheight;
 					else
 						windowtop = windowbottom + 1;
+
 					if (lighteffect)
 						dc_colormap = rlight->rcolormap;
 				}
+
 				windowbottom = sprbotscreen;
 				if (windowtop < windowbottom)
-					colfunc_2s (col);
+					colfunc_2s(col);
 
 				spryscale += rw.scalestep;
 				continue;
 			}
 
 			// calculate lighting
-			pindex = FixedMul(spryscale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
-
+			pindex = FixedMul(spryscale, FixedDiv(BASEVIDWIDTH*2, vid.width))>>LIGHTSCALESHIFT;
 			if (pindex >= MAXLIGHTSCALE)
-				pindex = MAXLIGHTSCALE - 1;
+				pindex = MAXLIGHTSCALE-1;
 
 			dc_colormap = walllights[pindex];
 			if (frontsector->extra_colormap)
@@ -1199,11 +1200,9 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 //
 // R_RenderSegLoop
-// Draws zero, one, or two textures (and possibly a masked
-//  texture) for walls.
-// Can draw or mark the starting pixel of floor and ceiling
-//  textures.
-// CALLED: CORE LOOPING ROUTINE.
+// Draws zero, one, or two textures for walls.
+// Can draw or mark the starting pixel of
+// floor and ceiling flats.
 //
 
 static void R_RenderSegLoop (void)
@@ -1358,8 +1357,7 @@ static void R_RenderSegLoop (void)
 		if (segtextured)
 		{
 			// calculate lighting
-			pindex = FixedMul(rw.scale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
-
+			pindex = FixedMul(rw.scale, FixedDiv(BASEVIDWIDTH*2, vid.width))>>LIGHTSCALESHIFT;
 			if (pindex >= MAXLIGHTSCALE)
 				pindex = MAXLIGHTSCALE-1;
 
@@ -1393,8 +1391,8 @@ static void R_RenderSegLoop (void)
 				else
 					xwalllights = scalelight[lightnum];
 
-				pindex = FixedMul(rw.scale, FixedDiv(640, vid.width))>>LIGHTSCALESHIFT;
-
+				// calculate lighting
+				pindex = FixedMul(rw.scale, FixedDiv(BASEVIDWIDTH*2, vid.width))>>LIGHTSCALESHIFT;
 				if (pindex >= MAXLIGHTSCALE)
 					pindex = MAXLIGHTSCALE-1;
 
@@ -1512,10 +1510,12 @@ static void R_RenderSegLoop (void)
 				floorclip[rw.x1] = (yh < viewheight) ? ((yh < -1) ? -1 : (INT16)((INT16)yh + 1)) : (INT16)viewheight;
 		}
 
+		if ((markceiling || markfloor) && (floorclip[rw.x1] <= ceilingclip[rw.x1] + 1))
+			solidsegs[rw.x1] = 1;
+
 		if (maskedtexture || numthicksides)
 		{
-			// save texturecol
-			//  for backdrawing of masked mid texture
+			// save texturecol for backdrawing of masked mid texture
 			maskedtexturecol[rw.x1] = (INT16)texturecolumn;
 
 #ifdef ESLOPE
@@ -1569,9 +1569,33 @@ static inline INT64 R_CalculateLineSegDist(seg_t* seg, INT64 x2, INT64 y2)
 }
 
 //
+// R_ScaleFromGlobalAngle
+// Returns the texture mapping scale for the current line
+//  at the given angle.
+// rw.distance must be calculated first.
+static fixed_t R_ScaleFromGlobalAngle(angle_t segangle)
+{
+	angle_t anglea = ANGLE_90 + (segangle-viewangle);
+	angle_t angleb = ANGLE_90 + (segangle-rw.normalangle);
+	fixed_t den = FixedMul(rw.distance, FINESINE(anglea>>ANGLETOFINESHIFT));
+	fixed_t num = FixedMul(projectiony, FINESINE(angleb>>ANGLETOFINESHIFT));
+
+	if (den > num>>16)
+	{
+		num = FixedDiv(num, den);
+		if (num > 512*FRACUNIT)
+			return 512*FRACUNIT;
+		if (num < 256)
+			return 256;
+		return num;
+	}
+	return 512*FRACUNIT;
+}
+
+//
 // R_StoreWallRange
 // A wall segment will be drawn
-//  between start and stop pixels (inclusive).
+//  between start and stop pixels.
 //
 void R_StoreWallRange(INT32 start, INT32 stop)
 {

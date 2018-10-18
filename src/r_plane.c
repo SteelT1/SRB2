@@ -169,13 +169,9 @@ void R_PortalRestoreClipValues(INT32 start, INT32 end, INT16 *ceil, INT16 *floor
 //  centerx
 //  viewx
 //  viewy
-//  viewcos
 //  viewsin
+//  viewcos
 //  viewheight
-//  xoffs
-//  yoffs
-//  planeheight
-//  ds_source
 
 #ifndef NOWATER
 static INT32 wtofs = 0;
@@ -209,8 +205,7 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 		ds_ystep = cachedystep[y] = FixedMul(distance, baseyscale);
 
 		// MPC
-		stepping = abs(centery - y);
-		if (stepping)
+		if ((stepping = abs(centery-y)))
 		{
 			ds_xstep = cachedxstep[y] = FixedMul(planesin, planeheight) / stepping;
 			ds_ystep = cachedystep[y] = FixedMul(planecos, planeheight) / stepping;
@@ -247,16 +242,15 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 #endif
 
 	pindex = distance >> LIGHTZSHIFT;
-
 	if (pindex >= MAXLIGHTZ)
-		pindex = MAXLIGHTZ - 1;
+		pindex = MAXLIGHTZ-1;
 
 #ifdef ESLOPE
 	if (currentplane->slope)
 		ds_colormap = colormaps;
 	else
 #endif
-	ds_colormap = planezlight[pindex];
+		ds_colormap = planezlight[pindex];
 
 	if (currentplane->extra_colormap)
 		ds_colormap = currentplane->extra_colormap->colormap + (ds_colormap - colormaps);
@@ -278,6 +272,8 @@ void R_ClearPlanes(void)
 	angle_t angle;
 
 	// opening / clipping determination
+	numffloors = 0;
+	lastopening = openings;
 	for (i = 0; i < viewwidth; i++)
 	{
 		floorclip[i] = (INT16)viewheight;
@@ -290,24 +286,13 @@ void R_ClearPlanes(void)
 		}
 	}
 
-	numffloors = 0;
-
 	for (i = 0; i < MAXVISPLANES; i++)
-	for (*freehead = visplanes[i], visplanes[i] = NULL;
-		freehead && *freehead ;)
-	{
-		freehead = &(*freehead)->next;
-	}
+		for (*freehead = visplanes[i], visplanes[i] = NULL; freehead && *freehead ;)
+			freehead = &(*freehead)->next;
 
-	lastopening = openings;
-
-	// texture calculation
 	memset(cachedheight, 0, sizeof (cachedheight));
 
-	// left to right mapping
 	angle = (viewangle-ANGLE_90)>>ANGLETOFINESHIFT;
-
-	// scale will be unit scale at SCREENWIDTH/2 distance
 	basexscale =  FixedDiv(FINECOSINE(angle),centerxfrac);
 	baseyscale = -FixedDiv(FINESINE  (angle),centerxfrac);
 }

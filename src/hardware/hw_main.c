@@ -2763,7 +2763,7 @@ static void HWR_AddLine(seg_t * line)
 	if (!gr_backsector)
 		goto clipsolid;
 
-	gr_backsector = R_FakeFlat(gr_backsector, &tempsec, NULL, NULL, true);
+	gr_backsector = R_CheckFakeFloorPlanes(gr_backsector, &tempsec, NULL, NULL, true);
 
 #ifdef ESLOPE
 	if (gr_frontsector->f_slope || gr_frontsector->c_slope || gr_backsector->f_slope || gr_backsector->c_slope)
@@ -3266,7 +3266,7 @@ static void HWR_Subsector(size_t num)
 	}
 
 	//SoM: 4/7/2000: Test to make Boom water work in Hardware mode.
-	gr_frontsector = R_FakeFlat(gr_frontsector, &tempsec, &floorlightlevel,
+	gr_frontsector = R_CheckFakeFloorPlanes(gr_frontsector, &tempsec, &floorlightlevel,
 								&ceilinglightlevel, false);
 	//FIXME: Use floorlightlevel and ceilinglightlevel insted of lightlevel.
 

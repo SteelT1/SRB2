@@ -2681,7 +2681,7 @@ boolean P_SetupLevel(boolean skipprecip)
 	P_LoadReject(lastloadedmaplumpnum + ML_REJECT);
 	P_GroupLines();
 
-	/// MPC
+	// MPC
 	R_RecalculateLineSegs();
 
 	numdmstarts = numredctfstarts = numbluectfstarts = 0;

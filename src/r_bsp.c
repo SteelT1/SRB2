@@ -100,15 +100,8 @@ static boolean R_PseudoSingleSidedWall(sector_t *backsec, sector_t *frontsec, se
 	&& (backsec->ceilingpic != skyflatnum || frontsec->ceilingpic != skyflatnum);
 }
 
-//
-// If player's view height is underneath fake floor, lower the
-// drawn ceiling to be just under the floor height, and replace
-// the drawn floor and ceiling textures, and light level, with
-// the control sector's.
-//
-// Similar for ceiling, only reflected.
-//
-sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, INT32 *floorlightlevel,
+// for fake floors duh
+sector_t *R_CheckFakeFloorPlanes(sector_t *sec, sector_t *tempsec, INT32 *floorlightlevel,
 	INT32 *ceilinglightlevel, boolean back)
 {
 	INT32 mapnum = -1;
@@ -121,7 +114,7 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, INT32 *floorlightlevel,
 		*ceilinglightlevel = sec->ceilinglightsec == -1 ?
 			sec->lightlevel : sectors[sec->ceilinglightsec].lightlevel;
 
-	// If the sector has a midmap, it's probably from 280 type
+	// If the sector has a midmap, it's probably from linedef type 606
 	if (sec->midmap != -1)
 		mapnum = sec->midmap;
 	else if (sec->heightsec != -1)
@@ -322,14 +315,14 @@ static void R_AddLine(seg_t *line)
 			}
 		}
 		// Recursed TOO FAR (viewing a portal within a portal)
-		// So uhhh, render it as a normal wall instead or something ???
+		// So uhhh, render it as a normal wall instead or something???
 	}
 
 	// Single sided line?
 	if (!backsector)
 		goto clipsolid;
 
-	backsector = R_FakeFlat(backsector, &tempsec, NULL, NULL, true);
+	backsector = R_CheckFakeFloorPlanes(backsector, &tempsec, NULL, NULL, true);	// Fake floor effect (linedef type 63)
 	singlesided = false;
 
 #ifdef ESLOPE
@@ -419,11 +412,11 @@ static void R_AddLine(seg_t *line)
 
 
 clippass:
-	R_ClipWallSegment(x1, x2 - 1, false);
+	R_ClipWallSegment(x1, x2, false);
 	return;
 
 clipsolid:
-	R_ClipWallSegment(x1, x2 - 1, true);
+	R_ClipWallSegment(x1, x2, true);
 }
 
 static void R_AddPolyObjectLine(seg_t *line)
@@ -486,7 +479,7 @@ static void R_AddPolyObjectLine(seg_t *line)
 		return;
 
 	backsector = line->backsector;
-	R_ClipWallSegment(x1, x2 - 1, false);
+	R_ClipWallSegment(x1, x2, false);
 }
 
 //
@@ -753,11 +746,10 @@ static void R_Subsector(size_t num)
 	count = sub->numlines;
 	line = &segs[sub->firstline];
 
-	// Deep water/fake ceiling effect.
-	frontsector = R_FakeFlat(frontsector, &tempsec, &floorlightlevel, &ceilinglightlevel, false);
+	// Fake floor effect (linedef type 63)
+	frontsector = R_CheckFakeFloorPlanes(frontsector, &tempsec, &floorlightlevel, &ceilinglightlevel, false);
 
 	floorcolormap = ceilingcolormap = frontsector->extra_colormap;
-
 	floorcenterz =
 #ifdef ESLOPE
 		frontsector->f_slope ? P_GetZAt(frontsector->f_slope, frontsector->soundorg.x, frontsector->soundorg.y) :

@@ -375,34 +375,6 @@ angle_t R_PointToAngleEx(INT64 x2, INT64 y2, INT64 x1, INT64 y1)
 }
 
 //
-// R_ScaleFromGlobalAngle
-// Returns the texture mapping scale for the current line (horizontal span)
-//  at the given angle.
-// rw.distance must be calculated first.
-//
-// killough 5/2/98: reformatted, cleaned up
-//
-// note: THIS IS USED ONLY FOR WALLS!
-fixed_t R_ScaleFromGlobalAngle(angle_t segangle)
-{
-	angle_t anglea = ANGLE_90 + (segangle-viewangle);
-	angle_t angleb = ANGLE_90 + (segangle-rw.normalangle);
-	fixed_t den = FixedMul(rw.distance, FINESINE(anglea>>ANGLETOFINESHIFT));
-	fixed_t num = FixedMul(projectiony, FINESINE(angleb>>ANGLETOFINESHIFT));
-
-	if (den > num>>16)
-	{
-		num = FixedDiv(num, den);
-		if (num > 512*FRACUNIT)
-			return 512*FRACUNIT;
-		if (num < 256)
-			return 256;
-		return num;
-	}
-	return 512*FRACUNIT;
-}
-
-//
 // R_DoCulling
 // Checks viewz and top/bottom heights of an item against culling planes
 // Returns true if the item is to be culled, i.e it shouldn't be drawn!

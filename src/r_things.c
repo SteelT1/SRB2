@@ -1815,11 +1815,9 @@ static void R_CreateDrawNodes(void)
 
 				if (r2->seg)
 				{
-					/// Plane gets drawn over.
 					for (i = x1; i <= x2; i++)
 						if (r2->seg->frontscale[i] > rover->scale)
 							break;
-					/// Plane draws over.
 					if (i > x2)
 						continue;
 				}
@@ -1865,8 +1863,8 @@ static void R_CreateDrawNodes(void)
 					thick_scale_left = r2->thickseg->scale1;
 				}
 
-				intersect_left += 1;
-				intersect_right -= 1;
+				intersect_left++;
+				intersect_right--;
 
 				if (scale <= rover->scale)
 					continue;
@@ -1954,8 +1952,8 @@ static void R_CreateDrawNodes(void)
 					seg_scale_left = r2->seg->scale1;
 				}
 
-				intersect_left += 1;
-				intersect_right -= 1;
+				intersect_left++;
+				intersect_right--;
 
 				if (scale <= rover->scale)
 					continue;
@@ -2320,11 +2318,6 @@ void R_DrawMasked(void)
 
 INT32 numskins = 0;
 skin_t skins[MAXSKINS+1];
-// FIXTHIS: don't work because it must be inistilised before the config load
-//#define SKINVALUES
-#ifdef SKINVALUES
-CV_PossibleValue_t skin_cons_t[MAXSKINS+1];
-#endif
 
 static void Sk_SetDefaultValue(skin_t *skin)
 {
@@ -2380,15 +2373,6 @@ static void Sk_SetDefaultValue(skin_t *skin)
 void R_InitSkins(void)
 {
 	skin_t *skin;
-#ifdef SKINVALUES
-	INT32 i;
-
-	for (i = 0; i <= MAXSKINS; i++)
-	{
-		skin_cons_t[i].value = 0;
-		skin_cons_t[i].strvalue = NULL;
-	}
-#endif
 
 	// skin[0] = Sonic skin
 	skin = &skins[0];
@@ -2397,17 +2381,15 @@ void R_InitSkins(void)
 
 	// Hardcoded S_SKIN customizations for Sonic.
 	strcpy(skin->name,       DEFAULTSKIN);
-#ifdef SKINVALUES
-	skin_cons_t[0].strvalue = skins[0].name;
-#endif
-	skin->flags = SF_SUPER|SF_SUPERANIMS|SF_SUPERSPIN;
 	strcpy(skin->realname,   "Sonic");
 	strcpy(skin->hudname,    "SONIC");
 
 	strncpy(skin->charsel,   "CHRSONIC", 8);
 	strncpy(skin->face,      "LIVSONIC", 8);
 	strncpy(skin->superface, "LIVSUPER", 8);
+
 	skin->prefcolor = SKINCOLOR_BLUE;
+	skin->flags = SF_SUPER|SF_SUPERANIMS|SF_SUPERSPIN;
 
 	skin->ability =   CA_THOK;
 	skin->actionspd = 60<<FRACBITS;
@@ -2823,11 +2805,7 @@ next_token:
 
 		R_FlushTranslationColormapCache();
 
-		CONS_Printf(M_GetText("Added skin '%s'\n"), skin->name);
-#ifdef SKINVALUES
-		skin_cons_t[numskins].value = numskins;
-		skin_cons_t[numskins].strvalue = skin->name;
-#endif
+		CONS_Printf(M_GetText("R_AddSkins: added skin '%s'\n"), skin->name);
 
 		// add face graphics
 		ST_LoadFaceGraphics(skin->face, skin->superface, numskins);

@@ -30,6 +30,7 @@ extern drawseg_t *ds_p;
 extern boolean singlesided;
 
 extern INT32 checkcoord[12][4];
+extern UINT8 *solidsegs;
 
 // BSP
 void R_ClearClipSegs(void);
@@ -46,7 +47,7 @@ extern size_t num_po_ptrs;     // number of polyobject pointers allocated
 extern polyobj_t **po_ptrs; // temp ptr array to sort polyobject pointers
 #endif
 
-sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, INT32 *floorlightlevel,
+sector_t *R_CheckFakeFloorPlanes(sector_t *sec, sector_t *tempsec, INT32 *floorlightlevel,
 	INT32 *ceilinglightlevel, boolean back);
 
 INT32 R_GetPlaneLight(sector_t *sector, fixed_t planeheight, boolean underside);
