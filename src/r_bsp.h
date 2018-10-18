@@ -23,7 +23,6 @@ extern side_t *sidedef;
 extern line_t *linedef;
 extern sector_t *frontsector;
 extern sector_t *backsector;
-extern boolean portalline; // is curline a portal seg?
 
 extern drawseg_t *drawsegs;
 extern drawseg_t *ds_p;

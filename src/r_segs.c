@@ -1660,9 +1660,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	}
 
 	ds_p->x1 = rw.x1 = start;
-	ds_p->x2 = stop;
+	ds_p->x2 = stop;			// HUH???
 	ds_p->curline = curline;
-	rw.x2 = stop+1;
+	rw.x2 = stop+1;				// HUH?????? HUUUHHH???? EEEHHHHHH???????
 
 	{
 		size_t pos = lastopening - openings;
@@ -2973,7 +2973,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		if (ceilingplane && !curline->polyseg)
 			ceilingplane = R_CheckPlane (ceilingplane, rw.x1, rw.x2-1);
 		else
-			markceiling = 0;
+			markceiling = false;
 	}
 
 	// get a new or use the same visplane
@@ -2982,7 +2982,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		if (floorplane && !curline->polyseg)
 			floorplane = R_CheckPlane (floorplane, rw.x1, rw.x2-1);
 		else
-			markfloor = 0;
+			markfloor = false;
 	}
 
 	ds_p->numffloorplanes = 0;
@@ -3020,8 +3020,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		R_RenderSegLoop();
 	colfunc = wallcolfunc;
 
-	if (portalline) // if curline is a portal, set portalrender for drawseg
-		ds_p->portalpass = portalrender+1;
+	if (rw.portalline) // if curline is a portal, set currentportals for drawseg
+		ds_p->portalpass = portalrender.currentportals+1;
 	else
 		ds_p->portalpass = 0;
 

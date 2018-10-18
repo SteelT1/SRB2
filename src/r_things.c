@@ -1126,12 +1126,12 @@ static void R_ProjectSprite(mobj_t *thing)
 		return;
 
 	// PORTAL SPRITE CLIPPING
-	if (portalrender)
+	if (portalrender.currentportals)
 	{
-		if (x2 < portalclipstart || x1 > portalclipend)
+		if (x2 < portalrender.clipstart || x1 > portalrender.clipend)
 			return;
 
-		if (P_PointOnLineSide(thing->x, thing->y, portalclipline) != 0)
+		if (P_PointOnLineSide(thing->x, thing->y, portalrender.clipline) != 0)
 			return;
 	}
 
@@ -1222,12 +1222,12 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
 
 	// PORTAL SEMI-CLIPPING
-	if (portalrender)
+	if (portalrender.currentportals)
 	{
-		if (vis->x1 < portalclipstart)
-			vis->x1 = portalclipstart;
-		if (vis->x2 > portalclipend)
-			vis->x2 = portalclipend;
+		if (vis->x1 < portalrender.clipstart)
+			vis->x1 = portalrender.clipstart;
+		if (vis->x2 > portalrender.clipend)
+			vis->x2 = portalrender.clipend;
 	}
 
 	vis->xscale = xscale; //SoM: 4/17/2000
@@ -1392,12 +1392,12 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 		return;
 
 	// PORTAL SPRITE CLIPPING
-	if (portalrender)
+	if (portalrender.currentportals)
 	{
-		if (x2 < portalclipstart || x1 > portalclipend)
+		if (x2 < portalrender.clipstart || x1 > portalrender.clipend)
 			return;
 
-		if (P_PointOnLineSide(thing->x, thing->y, portalclipline) != 0)
+		if (P_PointOnLineSide(thing->x, thing->y, portalrender.clipline) != 0)
 			return;
 	}
 
@@ -1439,12 +1439,12 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
 
 	// PORTAL SEMI-CLIPPING
-	if (portalrender)
+	if (portalrender.currentportals)
 	{
-		if (vis->x1 < portalclipstart)
-			vis->x1 = portalclipstart;
-		if (vis->x2 > portalclipend)
-			vis->x2 = portalclipend;
+		if (vis->x1 < portalrender.clipstart)
+			vis->x1 = portalrender.clipstart;
+		if (vis->x2 > portalrender.clipend)
+			vis->x2 = portalrender.clipend;
 	}
 
 	vis->xscale = xscale; //SoM: 4/17/2000
@@ -2113,7 +2113,7 @@ void R_ClipSprites(void)
 				continue;
 			}
 
-			if (ds->portalpass > 0 && ds->portalpass <= portalrender)
+			if (ds->portalpass > 0 && ds->portalpass <= portalrender.currentportals)
 				continue; // is a portal
 
 			r1 = ds->x1 < spr->x1 ? spr->x1 : ds->x1;

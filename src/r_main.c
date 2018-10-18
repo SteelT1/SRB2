@@ -17,7 +17,8 @@
 #include "g_game.h"
 #include "g_input.h"
 #include "r_local.h"
-#include "r_splats.h" // faB(21jan): testing
+#include "r_state.h"
+#include "r_splats.h"
 #include "st_stuff.h"
 #include "p_local.h"
 #include "keys.h"
@@ -57,29 +58,7 @@ sector_t *viewsector;
 player_t *viewplayer;
 
 // Portals
-UINT8 portalrender;
-sector_t *portalcullsector;
-typedef struct portal_pair
-{
-	INT32 line1;
-	INT32 line2;
-	UINT8 pass;
-	struct portal_pair *next;
-
-	fixed_t viewx;
-	fixed_t viewy;
-	fixed_t viewz;
-	angle_t viewangle;
-
-	INT32 start;
-	INT32 end;
-	INT16 *ceilingclip;
-	INT16 *floorclip;
-	fixed_t *frontscale;
-} portal_pair;
-portal_pair *portal_base, *portal_cap;
-line_t *portalclipline;
-INT32 portalclipstart, portalclipend;
+renderportal_t portalrender;
 
 //
 // precalculated math tables
@@ -1039,7 +1018,6 @@ static void R_PortalFrame(line_t *start, line_t *dest, portal_pair *portal)
 	angle_t dangle = R_PointToAngle2(0,0,dest->dx,dest->dy) - R_PointToAngle2(start->dx,start->dy,0,0);
 #endif
 
-	//R_SetupFrame(player, false);
 	viewx = portal->viewx;
 	viewy = portal->viewy;
 	viewz = portal->viewz;
@@ -1048,11 +1026,10 @@ static void R_PortalFrame(line_t *start, line_t *dest, portal_pair *portal)
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
 
-	portalcullsector = dest->frontsector;
-	viewsector = dest->frontsector;
-	portalclipline = dest;
-	portalclipstart = portal->start;
-	portalclipend = portal->end;
+	portalrender.cullsector = viewsector = dest->frontsector;
+	portalrender.clipline = dest;
+	portalrender.clipstart = portal->start;
+	portalrender.clipend = portal->end;
 
 	// Offset the portal view by the linedef centers
 
@@ -1107,7 +1084,7 @@ void R_AddPortal(INT32 line1, INT32 line2, INT32 x1, INT32 x2)
 
 	portal->line1 = line1;
 	portal->line2 = line2;
-	portal->pass = portalrender+1;
+	portal->pass = portalrender.currentportals+1;
 	portal->next = NULL;
 
 	R_PortalStoreClipValues(x1, x2, ceilingclipsave, floorclipsave, frontscalesave);
@@ -1119,23 +1096,23 @@ void R_AddPortal(INT32 line1, INT32 line2, INT32 x1, INT32 x2)
 	portal->start = x1;
 	portal->end = x2;
 
-	portalline = true; // this tells R_StoreWallRange that curline is a portal seg
-
 	portal->viewx = viewx;
 	portal->viewy = viewy;
 	portal->viewz = viewz;
 	portal->viewangle = viewangle;
 
-	if (!portal_base)
+	if (!portalrender.base)
 	{
-		portal_base = portal;
-		portal_cap = portal;
+		portalrender.base = portal;
+		portalrender.cap = portal;
 	}
 	else
 	{
-		portal_cap->next = portal;
-		portal_cap = portal;
+		portalrender.cap->next = portal;
+		portalrender.cap = portal;
 	}
+
+	rw.portalline = true; // this tells R_StoreWallRange that curline is a portal seg
 }
 
 // ================
@@ -1167,8 +1144,8 @@ void R_RenderPlayerView(player_t *player)
 	else
 		skyVisible = skyVisible1;
 
-	portalrender = 0;
-	portal_base = portal_cap = NULL;
+	portalrender.currentportals = 0;
+	portalrender.base = portalrender.cap = NULL;
 
 	if (skybox && skyVisible)
 	{
@@ -1213,11 +1190,11 @@ void R_RenderPlayerView(player_t *player)
 	R_ClipSprites();
 
 	// PORTAL RENDERING
-	for(portal = portal_base; portal; portal = portal_base)
+	for (portal = portalrender.base; portal; portal = portalrender.base)
 	{
 		// render the portal
 		CONS_Debug(DBG_RENDER, "Rendering portal from line %d to %d\n", portal->line1, portal->line2);
-		portalrender = portal->pass;
+		portalrender.currentportals = portal->pass;
 
 		R_PortalFrame(&lines[portal->line1], &lines[portal->line2], portal);
 
@@ -1229,12 +1206,9 @@ void R_RenderPlayerView(player_t *player)
 
 		R_RenderBSPNode((INT32)numnodes - 1);
 		R_ClipSprites();
-		//R_DrawPlanes();
-		//R_DrawMasked();
-
 		// okay done. free it.
-		portalcullsector = NULL; // Just in case...
-		portal_base = portal->next;
+		portalrender.cullsector = NULL; // Just in case...
+		portalrender.base = portal->next;
 		Z_Free(portal->ceilingclip);
 		Z_Free(portal->floorclip);
 		Z_Free(portal->frontscale);

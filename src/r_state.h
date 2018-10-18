@@ -89,10 +89,37 @@ extern boolean skyVisible1, skyVisible2; // saved values of skyVisible for P1 an
 extern sector_t *viewsector;
 extern player_t *viewplayer;
 
-extern UINT8 portalrender;
-extern sector_t *portalcullsector;
-extern line_t *portalclipline;
-extern INT32 portalclipstart, portalclipend;
+// Portals
+typedef struct portal_pair
+{
+	INT32 line1;
+	INT32 line2;
+	UINT8 pass;
+	struct portal_pair *next;
+
+	fixed_t viewx;
+	fixed_t viewy;
+	fixed_t viewz;
+	angle_t viewangle;
+
+	INT32 start;
+	INT32 end;
+	INT16 *ceilingclip;
+	INT16 *floorclip;
+	fixed_t *frontscale;
+} portal_pair;
+
+typedef struct
+{
+	UINT8 currentportals;
+	sector_t *cullsector;
+
+	line_t *clipline;
+	INT32 clipstart, clipend;
+
+	portal_pair *base, *cap;
+} renderportal_t;
+extern renderportal_t portalrender;
 
 extern consvar_t cv_allowmlook;
 extern consvar_t cv_maxportals;

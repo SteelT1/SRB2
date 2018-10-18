@@ -42,6 +42,8 @@ typedef struct
 	fixed_t toptextureslide, midtextureslide, bottomtextureslide;
 	fixed_t midtextureback, midtexturebackslide;
 	#endif
+
+	boolean portalline;
 } viswall_t;
 extern viswall_t rw;
 

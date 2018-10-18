@@ -14,6 +14,7 @@
 #include "doomdef.h"
 #include "g_game.h"
 #include "r_local.h"
+#include "r_state.h"
 
 #include "r_splats.h"
 #include "p_local.h" // camera
@@ -25,7 +26,6 @@ side_t *sidedef;
 line_t *linedef;
 sector_t *frontsector;
 sector_t *backsector;
-boolean portalline; // is curline a portal seg?
 
 drawseg_t *drawsegs = NULL;
 drawseg_t *ds_p = NULL;
@@ -242,12 +242,12 @@ static void R_AddLine(seg_t *line)
 	angle_t angle1, angle2, span, tspan;
 	static sector_t tempsec;
 
+	rw.portalline = false;
+
 	if (line->polyseg && !(line->polyseg->flags & POF_RENDERSIDES))
 		return;
 
 	curline = line;
-	portalline = false;
-
 	angle1 = R_PointToAngleEx(viewx, viewy, line->v1->x, line->v1->y);
 	angle2 = R_PointToAngleEx(viewx, viewy, line->v2->x, line->v2->y);
 
@@ -301,7 +301,7 @@ static void R_AddLine(seg_t *line)
 	// Portal line
 	if (line->linedef->special == 40 && line->side == 0)
 	{
-		if (portalrender < cv_maxportals.value)
+		if (portalrender.currentportals < cv_maxportals.value)
 		{
 			// Find the other side!
 			INT32 line2 = P_FindSpecialLineFromTag(40, line->linedef->tag, -1);
@@ -424,12 +424,12 @@ static void R_AddPolyObjectLine(seg_t *line)
 	INT32 x1, x2;
 	angle_t angle1, angle2, span, tspan;
 
+	rw.portalline = false;
+
 	if (line->polyseg && !(line->polyseg->flags & POF_RENDERSIDES))
 		return;
 
 	curline = line;
-	portalline = false;
-
 	angle1 = R_PointToAngleEx(viewx, viewy, line->v1->x, line->v1->y);
 	angle2 = R_PointToAngleEx(viewx, viewy, line->v2->x, line->v2->y);
 
@@ -540,7 +540,7 @@ static boolean R_CheckBBox(const fixed_t *bspcoord)
 	sx1 = viewangletox[angle1];
 	sx2 = viewangletox[angle2];
 
-	if (sx1 == sx2) return false;
+	if (sx1 >= sx2) return false;
 	if (!memchr(solidsegs+sx1, 0, sx2-sx1)) return false;
 
 	return true;
@@ -1305,11 +1305,12 @@ void R_RenderBSPNode(INT32 bspnum)
 	}
 
 	// PORTAL CULLING
-	if (portalcullsector) {
+	if (portalrender.cullsector)
+	{
 		sector_t *sect = subsectors[bspnum & ~NF_SUBSECTOR].sector;
-		if (sect != portalcullsector)
+		if (sect != portalrender.cullsector)
 			return;
-		portalcullsector = NULL;
+		portalrender.cullsector = NULL;
 	}
 
 	R_Subsector(bspnum == -1 ? 0 : bspnum & ~NF_SUBSECTOR);
