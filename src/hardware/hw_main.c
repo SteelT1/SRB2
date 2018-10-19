@@ -1740,9 +1740,14 @@ static void HWR_RenderLineSeg(void)
 				}
 				else if (gr_backsector->ceilingheight-gr_backsector->floorheight <= 0) // behind sector is a thok barrier, current sector is not
 				{
-					if (gr_backsector->ceilingheight >= gr_frontsector->ceilingheight // thok barrier ceiling height is equal to or greater than current sector ceiling height
-						|| gr_backsector->floorheight <= gr_frontsector->floorheight // thok barrier ceiling height is equal to or less than current sector floor height
-						|| gr_backsector->ceilingpic != skyflatnum) // thok barrier is not a sky
+					if ((gr_backsector->ceilingheight <= gr_frontsector->ceilingheight // thok barrier ceiling height is equal to or less than current sector ceiling height
+						|| gr_backsector->floorheight >= gr_frontsector->floorheight) // thok barrier ceiling height is equal to or greater than current sector floor height
+						&& gr_backsector->ceilingpic == skyflatnum) // thok barrier IS a sky
+							HWR_DrawSkyWall(wallVerts, &Surf, depthwallheight, INT32_MAX);
+				}
+				else if (gr_backsector->floorheight >= gr_frontsector->ceilingheight && gr_backsector->ceilingheight >= gr_frontsector->ceilingheight) // "invisible" barrier
+				{
+					if (gr_backsector->ceilingpic == skyflatnum)
 						HWR_DrawSkyWall(wallVerts, &Surf, depthwallheight, INT32_MAX);
 				}
 				else // neither sectors are thok barriers
