@@ -182,7 +182,7 @@ boolean OglSdlSurface(INT32 w, INT32 h)
 	SDL_GL_SetSwapInterval(cv_vidwait.value ? 1 : 0);
 
 	SetModelView(w, h);
-	SetStates();
+	HWR_SetStates();
 	pglClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
 	HWR_Startup();

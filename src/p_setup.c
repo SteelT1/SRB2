@@ -731,6 +731,9 @@ static void P_LoadSectors(lumpnum_t lumpnum)
 		ss->sectorLines = NULL;
 		ss->stackList = NULL;
 		ss->lineoutLength = -1.0l;
+
+		ss->virtualFloorLightLevel = -1;
+		ss->virtualCeilingLightLevel = -1;
 #endif // ----- end special tricks -----
 	}
 
@@ -2714,13 +2717,13 @@ boolean P_SetupLevel(boolean skipprecip)
 	globalweather = mapheaderinfo[gamemap-1]->weather;
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
-	if (rendermode != render_soft && rendermode != render_none)
+	if (rendermode == render_opengl)
 	{
 #ifdef ALAM_LIGHTING
 		// BP: reset light between levels (we draw preview frame lights on current frame)
 		HWR_ResetLights();
 #endif
-		// Correct missing sidedefs & deep water trick
+		// Fake floor trick
 		HWR_CorrectSWTricks();
 		HWR_CreatePlanePolygons((INT32)numnodes - 1);
 	}

@@ -242,7 +242,7 @@ boolean OglSdlSurface(INT32 w, INT32 h, boolean isFullscreen)
 	granisotropicmode_cons_t[1].value = maximumAnisotropy;
 
 	SetModelView(w, h);
-	SetStates();
+	HWR_SetStates();
 	pglClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
 	HWR_Startup();

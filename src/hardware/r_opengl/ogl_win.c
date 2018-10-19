@@ -375,7 +375,7 @@ static INT32 WINAPI SetRes(viddef_t *lvid, vmode_t *pcurrentmode)
 		textureformatGL = GL_RGB5_A1;
 
 	SetModelView(lvid->width, lvid->height);
-	SetStates();
+	HWR_SetStates();
 	// we need to clear the depth buffer. Very important!!!
 	pglClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 

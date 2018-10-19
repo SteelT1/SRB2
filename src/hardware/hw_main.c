@@ -93,8 +93,6 @@ consvar_t cv_grfiltermode = {"gr_filtermode", "Nearest", CV_CALL, grfiltermode_c
                              CV_filtermode_ONChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_granisotropicmode = {"gr_anisotropicmode", "1", CV_CALL, granisotropicmode_cons_t,
                              CV_anisotropic_ONChange, 0, NULL, NULL, 0, 0, NULL};
-//static consvar_t cv_grzbuffer = {"gr_zbuffer", "On", 0, CV_OnOff};
-consvar_t cv_grcorrecttricks = {"gr_correcttricks", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grsolvetjoin = {"gr_solvetjoin", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grcullbackfaces = {"gr_cullbackfaces", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
@@ -622,9 +620,6 @@ static void HWR_RenderPlane(extrasubsector_t *xsub, boolean isceiling, fixed_t f
 		v3d->sow = (float)((pv->x / fflatsize) - flatxref + scrollx);
 		v3d->tow = (float)(flatyref - (pv->y / fflatsize) + scrolly);
 
-		//v3d->sow = (float)(pv->x / fflatsize);
-		//v3d->tow = (float)(pv->y / fflatsize);
-
 		// Need to rotate before translate
 		if (angle) // Only needs to be done if there's an altered angle
 		{
@@ -633,9 +628,6 @@ static void HWR_RenderPlane(extrasubsector_t *xsub, boolean isceiling, fixed_t f
 			v3d->sow = (FIXED_TO_FLOAT(FixedMul(tempxsow, FINECOSINE(angle)) - FixedMul(tempytow, FINESINE(angle))));
 			v3d->tow = (FIXED_TO_FLOAT(-FixedMul(tempxsow, FINESINE(angle)) - FixedMul(tempytow, FINECOSINE(angle))));
 		}
-
-		//v3d->sow = (float)(v3d->sow - flatxref + scrollx);
-		//v3d->tow = (float)(flatyref - v3d->tow + scrolly);
 
 		v3d->x = pv->x;
 		v3d->y = height;
@@ -650,46 +642,11 @@ static void HWR_RenderPlane(extrasubsector_t *xsub, boolean isceiling, fixed_t f
 #endif
 	}
 
-	// only useful for flat coloured triangles
-	//Surf.FlatColor = 0xff804020;
-
 	// use different light tables
 	// for horizontal / vertical / diagonal
 	// note: try to get the same visual feel as the original
 	Surf.FlatColor.s.red = Surf.FlatColor.s.green =
 	Surf.FlatColor.s.blue = LightLevelToLum(lightlevel); //  Don't take from the frontsector, or the game will crash
-
-#if 0 // no colormap test
-	// colormap test
-	if (gr_frontsector)
-	{
-		sector_t *psector = gr_frontsector;
-
-#ifdef ESLOPE
-		if (slope)
-			fixedheight = P_GetZAt(slope, psector->soundorg.x, psector->soundorg.y);
-#endif
-
-		if (psector->ffloors)
-		{
-			ffloor_t *caster = psector->lightlist[R_GetPlaneLight(psector, fixedheight, false)].caster;
-			psector = caster ? &sectors[caster->secnum] : psector;
-
-			if (caster)
-			{
-				lightlevel = psector->lightlevel;
-				Surf.FlatColor.s.red = Surf.FlatColor.s.green = Surf.FlatColor.s.blue = LightLevelToLum(lightlevel);
-			}
-		}
-		if (psector->extra_colormap)
-			Surf.FlatColor.rgba = HWR_Lighting(lightlevel,psector->extra_colormap->rgba,psector->extra_colormap->fadergba, false, true);
-		else
-			Surf.FlatColor.rgba = HWR_Lighting(lightlevel,NORMALFOG,FADEFOG, false, true);
-	}
-	else
-		Surf.FlatColor.rgba = HWR_Lighting(lightlevel,NORMALFOG,FADEFOG, false, true);
-
-#endif // NOPE
 
 	if (planecolormap)
 	{
@@ -1240,9 +1197,7 @@ static void HWR_RenderLineSeg(void)
 			worldtopslope = P_GetZAt(gr_frontsector->c_slope, v2x, v2y);
 		}
 		else
-		{
 			worldtop = worldtopslope = gr_frontsector->ceilingheight;
-		}
 
 		if (gr_frontsector->f_slope)
 		{
@@ -1250,9 +1205,7 @@ static void HWR_RenderLineSeg(void)
 			worldbottomslope = P_GetZAt(gr_frontsector->f_slope, v2x, v2y);
 		}
 		else
-		{
 			worldbottom = worldbottomslope = gr_frontsector->floorheight;
-		}
 #else
 		worldtop    = gr_frontsector->ceilingheight;
 		worldbottom = gr_frontsector->floorheight;
@@ -1308,9 +1261,7 @@ static void HWR_RenderLineSeg(void)
 				worldhighslope = P_GetZAt(gr_backsector->c_slope, v2x, v2y);
 			}
 			else
-			{
 				worldhigh = worldhighslope = gr_backsector->ceilingheight;
-			}
 
 			if (gr_backsector->f_slope)
 			{
@@ -1318,9 +1269,7 @@ static void HWR_RenderLineSeg(void)
 				worldlowslope = P_GetZAt(gr_backsector->f_slope, v2x, v2y);
 			}
 			else
-			{
 				worldlow = worldlowslope = gr_backsector->floorheight;
-			}
 #else
 			worldhigh = gr_backsector->ceilingheight;
 			worldlow  = gr_backsector->floorheight;
@@ -1755,21 +1704,12 @@ static void HWR_RenderLineSeg(void)
 				if (!(blendmode & PF_Masked))
 					HWR_SplitWall(gr_frontsector, wallVerts, gr_midtexture, &Surf, FF_TRANSLUCENT, NULL);
 				else
-				{
 					HWR_SplitWall(gr_frontsector, wallVerts, gr_midtexture, &Surf, FF_CUTLEVEL, NULL);
-				}
 			}
 			else if (!(blendmode & PF_Masked))
 				HWR_AddTransparentWall(wallVerts, &Surf, gr_midtexture, blendmode, false, lightnum, colormap);
 			else
 				HWR_ProjectWall(wallVerts, &Surf, blendmode, lightnum, colormap);
-
-			// If there is a colormap change, remove it.
-/*			if (!(Surf.FlatColor.s.red + Surf.FlatColor.s.green + Surf.FlatColor.s.blue == Surf.FlatColor.s.red/3)
-			{
-				Surf.FlatColor.s.red = Surf.FlatColor.s.green = Surf.FlatColor.s.blue = 0xff;
-				Surf.FlatColor.rgba = 0xffffffff;
-			}*/
 		}
 
 		// Isn't this just the most lovely mess
@@ -2540,39 +2480,29 @@ static void HWR_Subsector(size_t num)
 		line = NULL;
 	}
 
-	//SoM: 4/7/2000: Test to make Boom water work in Hardware mode.
-	gr_frontsector = R_FakeFlat(gr_frontsector, &tempsec, &floorlightlevel,
-								&ceilinglightlevel, false);
-	//FIXME: Use floorlightlevel and ceilinglightlevel insted of lightlevel.
+	gr_frontsector = R_FakeFlat(gr_frontsector, &tempsec, &floorlightlevel, &ceilinglightlevel, false);
 
 	floorcolormap = ceilingcolormap = gr_frontsector->extra_colormap;
 
-// ----- for special tricks with HW renderer -----
+	cullCeilingHeight = locCeilingHeight = gr_frontsector->ceilingheight;
+	cullFloorHeight   = locFloorHeight   = gr_frontsector->floorheight;
+
 	if (gr_frontsector->pseudoSector)
 	{
-		cullFloorHeight = locFloorHeight = gr_frontsector->virtualFloorheight;
-		cullCeilingHeight = locCeilingHeight = gr_frontsector->virtualCeilingheight;
+		cullFloorHeight = locFloorHeight = gr_frontsector->virtualFloorHeight;
+		cullCeilingHeight = locCeilingHeight = gr_frontsector->virtualCeilingHeight;
 	}
 	else if (gr_frontsector->virtualFloor)
 	{
-		///@TODO Is this whole virtualFloor mess even useful? I don't think it even triggers ever.
-		cullFloorHeight = locFloorHeight = gr_frontsector->virtualFloorheight;
+		cullFloorHeight = locFloorHeight = gr_frontsector->virtualFloorHeight;
 		if (gr_frontsector->virtualCeiling)
-			cullCeilingHeight = locCeilingHeight = gr_frontsector->virtualCeilingheight;
-		else
-			cullCeilingHeight = locCeilingHeight = gr_frontsector->ceilingheight;
+			cullCeilingHeight = locCeilingHeight = gr_frontsector->virtualCeilingHeight;
 	}
 	else if (gr_frontsector->virtualCeiling)
-	{
-		cullCeilingHeight = locCeilingHeight = gr_frontsector->virtualCeilingheight;
-		cullFloorHeight   = locFloorHeight   = gr_frontsector->floorheight;
-	}
+		cullCeilingHeight = locCeilingHeight = gr_frontsector->virtualCeilingHeight;
+#ifdef ESLOPE
 	else
 	{
-		cullFloorHeight   = locFloorHeight   = gr_frontsector->floorheight;
-		cullCeilingHeight = locCeilingHeight = gr_frontsector->ceilingheight;
-
-#ifdef ESLOPE
 		if (gr_frontsector->f_slope)
 		{
 			cullFloorHeight = P_GetZAt(gr_frontsector->f_slope, viewx, viewy);
@@ -2584,9 +2514,8 @@ static void HWR_Subsector(size_t num)
 			cullCeilingHeight = P_GetZAt(gr_frontsector->c_slope, viewx, viewy);
 			locCeilingHeight = P_GetZAt(gr_frontsector->c_slope, gr_frontsector->soundorg.x, gr_frontsector->soundorg.y);
 		}
-#endif
 	}
-// ----- end special tricks -----
+#endif
 
 	if (gr_frontsector->ffloors)
 	{
@@ -2609,6 +2538,11 @@ static void HWR_Subsector(size_t num)
 			ceilinglightlevel = *gr_frontsector->lightlist[light].lightlevel;
 		ceilingcolormap = gr_frontsector->lightlist[light].extra_colormap;
 	}
+
+	if (gr_frontsector->virtualCeilingLightLevel != -1)
+		ceilinglightlevel = gr_frontsector->virtualCeilingLightLevel;
+	if (gr_frontsector->virtualFloorLightLevel != -1)
+		floorlightlevel = gr_frontsector->virtualFloorLightLevel;
 
 	sub->sector->extra_colormap = gr_frontsector->extra_colormap;
 
@@ -2640,7 +2574,7 @@ static void HWR_Subsector(size_t num)
 					// Hack to make things continue to work around slopes.
 					locCeilingHeight == cullCeilingHeight ? locCeilingHeight : gr_frontsector->ceilingheight,
 					// We now return you to your regularly scheduled rendering.
-					PF_Occlude, ceilinglightlevel, levelflats[gr_frontsector->ceilingpic].lumpnum,NULL, 255, false, ceilingcolormap);
+					PF_Occlude, ceilinglightlevel, levelflats[gr_frontsector->ceilingpic].lumpnum, NULL, 255, false, ceilingcolormap);
 			}
 		}
 	}
@@ -4950,7 +4884,6 @@ void HWR_AddCommands(void)
 	CV_RegisterVar(&cv_grfogdensity);
 	CV_RegisterVar(&cv_grfiltermode);
 	CV_RegisterVar(&cv_granisotropicmode);
-	CV_RegisterVar(&cv_grcorrecttricks);
 	CV_RegisterVar(&cv_grsolvetjoin);
 	CV_RegisterVar(&cv_grcullbackfaces);
 }
@@ -5156,7 +5089,6 @@ void HWR_DoPostProcessor(player_t *player)
 	{
 		// 10 by 10 grid. 2 coordinates (xy)
 		float v[SCREENVERTS][SCREENVERTS][2];
-		static double disStart = 0;
 		UINT8 x, y;
 		INT32 WAVELENGTH;
 		INT32 AMPLITUDE;
@@ -5181,12 +5113,11 @@ void HWR_DoPostProcessor(player_t *player)
 			for (y = 0; y < SCREENVERTS; y++)
 			{
 				// Change X position based on its Y position.
-				v[x][y][0] = (x/((float)(SCREENVERTS-1.0f)/9.0f))-4.5f + (float)sin((disStart+(y*WAVELENGTH))/FREQUENCY)/AMPLITUDE;
+				v[x][y][0] = (x/((float)(SCREENVERTS-1.0f)/9.0f))-4.5f + (float)sin((((double)leveltime)+(y*WAVELENGTH))/FREQUENCY)/AMPLITUDE;
 				v[x][y][1] = (y/((float)(SCREENVERTS-1.0f)/9.0f))-4.5f;
 			}
 		}
 		HWD.pfnPostImgRedraw(v);
-		disStart += 1;
 
 		// Capture the screen again for screen waving on the intermission
 		if(gamestate != GS_INTERMISSION)

@@ -697,42 +697,31 @@ void SetModelView(GLint w, GLint h)
 
 
 // -----------------+
-// SetStates        : Set permanent states
+// HWR_SetStates        : Set permanent states
 // -----------------+
-void SetStates(void)
+void HWR_SetStates(void)
 {
-	// Bind little white RGBA texture to ID NOTEXTURE_NUM.
-	/*
-	FUINT Data[8*8];
-	INT32 i;
-	*/
 #ifdef GL_LIGHT_MODEL_AMBIENT
 	GLfloat LightDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
 #endif
 
-//	DBG_Printf("SetStates()\n");
+	DBG_Printf("HWR_SetStates()...\n");
 
 	// Hurdler: not necessary, is it?
 	pglShadeModel(GL_SMOOTH);      // iterate vertice colors
-	//pglShadeModel(GL_FLAT);
-
 	pglEnable(GL_TEXTURE_2D);      // two-dimensional texturing
 #ifndef KOS_GL_COMPATIBILITY
 	pglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-
 	pglAlphaFunc(GL_NOTEQUAL, 0.0f);
 #endif
-	//pglBlendFunc(GL_ONE, GL_ZERO); // copy pixel to frame buffer (opaque)
 	pglEnable(GL_BLEND);           // enable color blending
 
 #ifndef KOS_GL_COMPATIBILITY
 	pglColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 #endif
 
-	//pglDisable(GL_DITHER);         // faB: ??? (undocumented in OpenGL 1.1)
-	                              // Hurdler: yes, it is!
 	pglEnable(GL_DEPTH_TEST);    // check the depth buffer
-	pglDepthMask(GL_TRUE);             // enable writing to depth buffer
+	pglDepthMask(GL_TRUE);       // enable writing to depth buffer
 	pglClearDepth(1.0f);
 	pglDepthRange(0.0f, 1.0f);
 	pglDepthFunc(GL_LEQUAL);
@@ -741,30 +730,12 @@ void SetStates(void)
 	CurrentPolyFlags = 0xffffffff;
 	SetBlend(0);
 
-	/*
-	for (i = 0; i < 64; i++)
-		Data[i] = 0xffFFffFF;       // white pixel
-	*/
-
 	tex_downloaded = (GLuint)-1;
 	SetNoTexture();
-	//pglBindTexture(GL_TEXTURE_2D, NOTEXTURE_NUM);
-	//tex_downloaded = NOTEXTURE_NUM;
-	//pglTexImage2D(GL_TEXTURE_2D, 0, 4, 8, 8, 0, GL_RGBA, GL_UNSIGNED_BYTE, Data);
 
 #ifndef KOS_GL_COMPATIBILITY
 	pglPolygonOffset(-1.0f, -1.0f);
 #endif
-
-	//pglEnable(GL_CULL_FACE);
-	//pglCullFace(GL_FRONT);
-	//pglPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	//pglPolygonMode(GL_FRONT, GL_LINE);
-
-	//glFogi(GL_FOG_MODE, GL_EXP);
-	//pglHint(GL_FOG_HINT, GL_FASTEST);
-	//pglFogfv(GL_FOG_COLOR, fogcolor);
-	//pglFogf(GL_FOG_DENSITY, 0.0005f);
 
 	// Lighting for models
 #ifdef GL_LIGHT_MODEL_AMBIENT
@@ -1724,17 +1695,6 @@ EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value)
 {
 	switch (IdState)
 	{
-
-#if 0
-		case 77:
-		{
-			//08/01/00: Hurdler this is a test for mirror
-			if (!Value)
-				ClearBuffer(false, true, 0); // clear depth buffer
-			break;
-		}
-#endif
-
 		case HWD_SET_PALETTECOLOR:
 		{
 			pal_col = Value;

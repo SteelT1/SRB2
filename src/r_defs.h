@@ -353,9 +353,14 @@ typedef struct sector_s
 #ifdef HWRENDER // ----- for special tricks with HW renderer -----
 	boolean pseudoSector;
 	boolean virtualFloor;
-	fixed_t virtualFloorheight;
+	fixed_t virtualFloorHeight;
+
 	boolean virtualCeiling;
-	fixed_t virtualCeilingheight;
+	fixed_t virtualCeilingHeight;
+
+	fixed_t virtualFloorLightLevel;
+	fixed_t virtualCeilingLightLevel;
+
 	linechain_t *sectorLines;
 	struct sector_s **stackList;
 	double lineoutLength;

@@ -586,7 +586,7 @@ static boolean areBottomtexturesMissing(sector_t *thisSector)
 //
 static boolean isCeilingFloating(sector_t *thisSector)
 {
-	sector_t *adjSector, *refSector = NULL, *frontSector, *backSector;
+	sector_t *adjSector, *frontSector, *backSector;
 	boolean floating = true;
 	linechain_t *thisElem, *nextElem;
 
@@ -614,29 +614,17 @@ static boolean isCeilingFloating(sector_t *thisSector)
 			break;
 		}
 
-		if (!refSector)
-		{
-			refSector = adjSector;
-			continue;
-		}
-
-		// if adjacent sector has same height or more than one adjacent sector exists -> stop
-		if (thisSector->ceilingheight == adjSector->ceilingheight ||
-		   refSector != adjSector)
+		// if adjacent sector has same height -> stop
+		if (thisSector->ceilingheight == adjSector->ceilingheight)
 		{
 			floating = false;
-			break;
+			continue;
 		}
 	}
 
 	// now check for walltextures
-	if (floating)
-	{
-		if (!areToptexturesMissing(thisSector))
-		{
-			floating = false;
-		}
-	}
+	if (!areToptexturesMissing(thisSector))
+		floating = false;
 	return floating;
 }
 
@@ -646,7 +634,7 @@ static boolean isCeilingFloating(sector_t *thisSector)
 //
 static boolean isFloorFloating(sector_t *thisSector)
 {
-	sector_t *adjSector, *refSector = NULL, *frontSector, *backSector;
+	sector_t *adjSector, *frontSector, *backSector;
 	boolean floating = true;
 	linechain_t *thisElem, *nextElem;
 
@@ -668,21 +656,14 @@ static boolean isFloorFloating(sector_t *thisSector)
 		else
 			adjSector = frontSector;
 
-		if (NULL == adjSector) // assume floating sectors have surrounding sectors
+		if (!adjSector) // assume floating sectors have surrounding sectors
 		{
 			floating = false;
 			break;
 		}
 
-		if (NULL == refSector)
-		{
-			refSector = adjSector;
-			continue;
-		}
-
-		// if adjacent sector has same height or more than one adjacent sector exists -> stop
-		if (thisSector->floorheight == adjSector->floorheight ||
-		   refSector != adjSector)
+		// if adjacent sector has same height -> stop
+		if (thisSector->floorheight == adjSector->floorheight)
 		{
 			floating = false;
 			break;
@@ -707,50 +688,84 @@ static fixed_t estimateCeilHeight(sector_t *thisSector)
 {
 	sector_t *adjSector;
 
-	if (!thisSector ||
-	 !thisSector->sectorLines ||
-	  !thisSector->sectorLines->line)
-		return 0;
+	if (!thisSector || !thisSector->sectorLines || !thisSector->sectorLines->line)
+		return thisSector->ceilingheight;
 
 	adjSector = thisSector->sectorLines->line->frontsector;
 	if (adjSector == thisSector)
-	adjSector = thisSector->sectorLines->line->backsector;
+	{
+		adjSector = thisSector->sectorLines->line->backsector;
+		if (adjSector->ceilingpic == skyflatnum)
+			return thisSector->ceilingheight;
+	}
 
 	if (!adjSector)
-		return 0;
+		return thisSector->ceilingheight;
 
 	return adjSector->ceilingheight;
 }
 
 //
-// estimate ceilingheight according to height of adjacent sector
+// estimate floorheight according to height of adjacent sector
 //
 static fixed_t estimateFloorHeight(sector_t *thisSector)
 {
 	sector_t *adjSector;
 
-	if (!thisSector ||
-	 !thisSector->sectorLines ||
-	  !thisSector->sectorLines->line)
-	return 0;
+	if (!thisSector || !thisSector->sectorLines ||  !thisSector->sectorLines->line)
+		return thisSector->floorheight;
 
 	adjSector = thisSector->sectorLines->line->frontsector;
 	if (adjSector == thisSector)
-	adjSector = thisSector->sectorLines->line->backsector;
+		adjSector = thisSector->sectorLines->line->backsector;
 
-	if (NULL == adjSector)
-	return 0;
+	if (!adjSector)
+		return thisSector->floorheight;
 
 	return adjSector->floorheight;
 }
 
-#define CORRECT_FLOAT_EXPERIMENTAL
+//
+// find correct light levels according to height of adjacent sector
+//
+static fixed_t findCeilingLightLevel(sector_t *thisSector)
+{
+	sector_t *adjSector;
 
-// --------------------------------------------------------------------------
-// Some levels have missing sidedefs, which produces HOM, so lets try to compensate for that
-// and some levels have deep water trick, invisible staircases etc.
-// --------------------------------------------------------------------------
-// FIXME: put some nice default texture in legacy.dat and use it
+	if (!thisSector || !thisSector->sectorLines || !thisSector->sectorLines->line)
+		return thisSector->lightlevel;
+
+	adjSector = thisSector->sectorLines->line->frontsector;
+	if (adjSector == thisSector)
+	{
+		adjSector = thisSector->sectorLines->line->backsector;
+		if (adjSector->ceilingpic == skyflatnum)
+			return thisSector->lightlevel;
+	}
+
+	if (!adjSector)
+		return thisSector->lightlevel;
+
+	return adjSector->lightlevel;
+}
+
+static fixed_t findFloorLightLevel(sector_t *thisSector)
+{
+	sector_t *adjSector;
+
+	if (!thisSector || !thisSector->sectorLines ||  !thisSector->sectorLines->line)
+		return thisSector->lightlevel;
+
+	adjSector = thisSector->sectorLines->line->frontsector;
+	if (adjSector == thisSector)
+		adjSector = thisSector->sectorLines->line->backsector;
+
+	if (!adjSector)
+		return thisSector->lightlevel;
+
+	return adjSector->lightlevel;
+}
+
 void HWR_CorrectSWTricks(void)
 {
 	size_t i;
@@ -818,20 +833,27 @@ void HWR_CorrectSWTricks(void)
 				outSector = *(sectorList+k);
 				if (!outSector->pseudoSector)
 				{
-					sectors[i].virtualFloorheight = outSector->floorheight;
-					sectors[i].virtualCeilingheight = outSector->ceilingheight;
+					sectors[i].virtualFloorHeight = outSector->floorheight;
+					sectors[i].virtualCeilingHeight = outSector->ceilingheight;
+
+					sectors[i].virtualFloorLightLevel = outSector->lightlevel;
+					sectors[i].virtualCeilingLightLevel = outSector->lightlevel;
+
 					break;
 				}
 				k++;
 			}
 			if (*(sectorList+k) == NULL) // sorry, did not work :(
 			{
-				sectors[i].virtualFloorheight = sectors[i].floorheight;
-				sectors[i].virtualCeilingheight = sectors[i].ceilingheight;
+				sectors[i].virtualFloorHeight = sectors[i].floorheight;
+				sectors[i].virtualCeilingHeight = sectors[i].ceilingheight;
+
+				sectors[i].virtualFloorLightLevel = sectors[i].lightlevel;
+				sectors[i].virtualCeilingLightLevel = sectors[i].lightlevel;
 			}
 		}
 	}
-#ifdef CORRECT_FLOAT_EXPERIMENTAL
+
 	// correct ceiling/floor heights of totally floating sectors
 	for (i = 0; i < numsectors; i++)
 	{
@@ -842,22 +864,27 @@ void HWR_CorrectSWTricks(void)
 		// correct height of floating sectors
 		if (isCeilingFloating(floatSector))
 		{
-			fixed_t corrheight;
+			fixed_t corrheight, lightlevel;
 
 			corrheight = estimateCeilHeight(floatSector);
-			floatSector->virtualCeilingheight = corrheight;
+			floatSector->virtualCeilingHeight = corrheight;
 			floatSector->virtualCeiling = true;
+
+			lightlevel = findCeilingLightLevel(floatSector);
+			sectors[i].virtualCeilingLightLevel = lightlevel;
 		}
 		if (isFloorFloating(floatSector))
 		{
-			fixed_t corrheight;
+			fixed_t corrheight, lightlevel;
 
 			corrheight = estimateFloorHeight(floatSector);
-			floatSector->virtualFloorheight = corrheight;
+			floatSector->virtualFloorHeight = corrheight;
 			floatSector->virtualFloor = true;
+
+			lightlevel = findFloorLightLevel(floatSector);
+			sectors[i].virtualFloorLightLevel = lightlevel;
 		}
 	}
-#endif
 
 	// now for the missing textures
 	for (i = 0; i < numlines; i++)

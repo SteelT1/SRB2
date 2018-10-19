@@ -217,48 +217,15 @@ static polyvertex_t *fracdivline(fdivline_t *bsp, polyvertex_t *v1,
 	return &pt;
 }
 
-#if 0
-//Hurdler: it's not used anymore
-static boolean NearVertice (polyvertex_t *p1, polyvertex_t *p2)
-{
-#if 1
-	float diff;
-	diff = p2->x - p1->x;
-	if (diff < -1.5f || diff > 1.5f)
-		return false;
-	diff = p2->y - p1->y;
-	if (diff < -1.5f || diff > 1.5f)
-		return false;
-#else
-	if (p1->x != p2->x)
-		return false;
-	if (p1->y != p2->y)
-		return false;
-#endif
-	// p1 and p2 are considered the same vertex
-	return true;
-}
-#endif
-
 // if two vertice coords have a x and/or y difference
 // of less or equal than 1 FRACUNIT, they are considered the same
 // point. Note: hardcoded value, 1.0f could be anything else.
 static boolean SameVertice (polyvertex_t *p1, polyvertex_t *p2)
 {
-#if 0
-	float diff;
-	diff = p2->x - p1->x;
-	if (diff < -1.5f || diff > 1.5f)
-		return false;
-	diff = p2->y - p1->y;
-	if (diff < -1.5f || diff > 1.5f)
-		return false;
-#else
 	if (p1->x != p2->x)
 		return false;
 	if (p1->y != p2->y)
 		return false;
-#endif
 	// p1 and p2 are considered the same vertex
 	return true;
 }
@@ -872,6 +839,7 @@ static void AdjustSegs(void)
 	poly_t *p;
 	INT32 v1found = 0, v2found = 0;
 	float nearv1, nearv2;
+	float x, y;
 
 	for (i = 0; i < numsubsectors; i++)
 	{
@@ -938,17 +906,11 @@ static void AdjustSegs(void)
 			}
 
 			// recompute length
-			{
-				float x,y;
-				x = ((polyvertex_t *)lseg->v2)->x - ((polyvertex_t *)lseg->v1)->x
-					+ FIXED_TO_FLOAT(FRACUNIT/2);
-				y = ((polyvertex_t *)lseg->v2)->y - ((polyvertex_t *)lseg->v1)->y
-					+ FIXED_TO_FLOAT(FRACUNIT/2);
-				lseg->flength = (float)hypot(x, y);
-				// BP: debug see this kind of segs
-				//if (nearv2 > NEARDIST*NEARDIST || nearv1 > NEARDIST*NEARDIST)
-				//    lseg->length = 1;
-			}
+			x = ((polyvertex_t *)lseg->v2)->x - ((polyvertex_t *)lseg->v1)->x
+				/*+ FIXED_TO_FLOAT(FRACUNIT/2)*/;
+			y = ((polyvertex_t *)lseg->v2)->y - ((polyvertex_t *)lseg->v1)->y
+				/*+ FIXED_TO_FLOAT(FRACUNIT/2)*/;
+			lseg->flength = (float)hypot(x, y);
 		}
 	}
 }
