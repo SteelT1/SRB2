@@ -16,6 +16,8 @@
 #include <unistd.h>
 #endif
 
+#include <time.h>
+
 #include "m_menu.h"
 
 #include "doomdef.h"
@@ -4349,6 +4351,9 @@ static void M_DrawLoadGameData(void)
 {
 	INT32 ecks;
 	INT32 i;
+	time_t st;
+	struct tm *tinfo;
+	char timestrbuf[80];
 
 	ecks = SP_LoadDef.x + 24;
 	M_DrawTextBox(SP_LoadDef.x-12,144, 24, 4);
@@ -4423,6 +4428,15 @@ static void M_DrawLoadGameData(void)
 		if (savegameinfo[saveSlotSelected].numemeralds & (1 << i))
 			V_DrawScaledPatch(ecks + 104 + (i * 8), 172, 0, tinyemeraldpics[i]);
 	}
+
+	if (savegameinfo[saveSlotSelected].savetime)
+	{
+		st = savegameinfo[saveSlotSelected].savetime;
+		tinfo = localtime(&st);
+		strftime(timestrbuf,80,"%d/%m/%Y - %H:%M%p", tinfo);
+		V_DrawThinString(ecks - 24, 184, 0, va("Last saved: %s", timestrbuf));
+	}
+
 }
 
 #define LOADBARHEIGHT SP_LoadDef.y + (LINEHEIGHT * (j+1)) + ymod
@@ -4631,6 +4645,7 @@ static void M_ReadSavegameInfo(UINT32 slot)
 	else
 		strcpy(savegameinfo[slot].playername, skins[savegameinfo[slot].skinnum].realname);
 
+	savegameinfo[slot].savetime = READINT32(save_p);
 	savegameinfo[slot].playername[31] = 0;
 
 	// File end marker check

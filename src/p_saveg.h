@@ -38,6 +38,7 @@ typedef struct
 	INT32 lives;
 	INT32 continues;
 	UINT16 emeralds;
+	INT32 savetime;
 } savedata_t;
 
 extern savedata_t savedata;

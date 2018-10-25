@@ -11,6 +11,7 @@
 /// \file  p_saveg.c
 /// \brief Archiving: SaveGame I/O
 
+#include <time.h>
 #include "doomdef.h"
 #include "byteptr.h"
 #include "d_main.h"
@@ -63,6 +64,7 @@ typedef enum
 //
 static inline void P_ArchivePlayer(void)
 {
+	time_t current_time;
 	const player_t *player = &players[consoleplayer];
 	INT32 pllives = player->lives;
 	if (pllives < 3) // Bump up to 3 lives if the player
@@ -80,6 +82,8 @@ static inline void P_ArchivePlayer(void)
 		WRITEUINT8(save_p, botskin);
 		WRITEUINT8(save_p, botcolor);
 	}
+	current_time = time(NULL);
+	WRITEINT32(save_p, current_time);
 }
 
 //
@@ -103,6 +107,9 @@ static inline void P_UnArchivePlayer(void)
 	}
 	else
 		savedata.botskin = 0;
+
+	savedata.savetime = READINT32(save_p);
+
 }
 
 //
@@ -3113,6 +3120,7 @@ static inline void P_ArchiveMisc(void)
 
 	WRITEUINT16(save_p, (botskin ? (emeralds|(1<<10)) : emeralds)+357);
 	WRITESTRINGN(save_p, timeattackfolder, sizeof(timeattackfolder));
+
 }
 
 static inline void P_UnArchiveSPGame(INT16 mapoverride)

@@ -201,6 +201,7 @@ typedef struct
 	INT32 lives;
 	INT32 continues;
 	INT32 gamemap;
+	INT32 savetime;
 	UINT8 netgame;
 } saveinfo_t;
 
