@@ -4433,11 +4433,7 @@ static void M_DrawLoadGameData(void)
 	{
 		st = savegameinfo[saveSlotSelected].savetime;
 		tinfo = localtime(&st);
-<<<<<<< Updated upstream
-		strftime(timestrbuf,80,"%d/%m/%Y - %H:%M%p", tinfo);
-=======
 		strftime(timestrbuf,80,"%d.%m.%Y %H:%M", tinfo);
->>>>>>> Stashed changes
 		V_DrawThinString(ecks - 24, 184, 0, va("Last saved: %s", timestrbuf));
 	}
 
