@@ -230,7 +230,7 @@ addons:
 
 before_script:
   - wget --referer=https://srb2.org --verbose --server-response -c https://files.srb2.org/srb2.org/SRB2-v2120-Installer.exe -O $HOME/srb2_cache/SRB2-v2120-Installer.exe
-  - 7z x $HOME/srb2_cache/SRB2-v2120-Installer.exe *.dta* -oassets
+  - 7z x $HOME/srb2_cache/SRB2-v2120-Installer.exe *.dta* *.srb* -oassets
   - mkdir build
   - cd build
   - export CFLAGS="-Wall -W -Werror $WFLAGS"
