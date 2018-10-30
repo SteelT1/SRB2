@@ -229,8 +229,8 @@ addons:
     - p7zip-full
 
 before_script:
-  - wget --verbose --server-response -c http://rosenthalcastle.org/srb2/SRB2-v2115-assets-2.7z -O $HOME/srb2_cache/SRB2-v2115-assets-2.7z
-  - 7z x $HOME/srb2_cache/SRB2-v2115-assets-2.7z -oassets
+  - wget --referer=https://srb2.org --verbose --server-response -c https://files.srb2.org/srb2.org/SRB2-v2120-Installer.exe -O $HOME/srb2_cache/SRB2-v2120-Installer.exe
+  - 7z x $HOME/srb2_cache/SRB2-v2120-Installer.exe *.dta* -oassets
   - mkdir build
   - cd build
   - export CFLAGS="-Wall -W -Werror $WFLAGS"
@@ -249,4 +249,3 @@ script: make -k
 
 after_script:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then make package; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then make install; fi
