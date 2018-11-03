@@ -30,6 +30,9 @@ extern char srb2path[256]; //Alam: SRB2's Home
 // the infinite loop of D_SRB2Loop() called from win_main for windows version
 void D_SRB2Loop(void) FUNCNORETURN;
 
+// setpalette command
+char setpal[9];
+
 //
 // D_SRB2Main()
 // Not a globally visible function, just included for source reference,

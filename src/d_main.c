@@ -104,6 +104,9 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 // platform independant focus loss
 UINT8 window_notinfocus = false;
 
+//setpalette command
+char setpal[9] = "PLAYPAL";
+
 //
 // DEMO LOOP
 //
@@ -727,7 +730,7 @@ void D_StartTitle(void)
 
 	// Reset the palette
 	if (rendermode != render_none)
-		V_SetPaletteLump("PLAYPAL");
+		V_SetPaletteLump(setpal);
 }
 
 //

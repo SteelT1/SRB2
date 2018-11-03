@@ -162,6 +162,8 @@ static void Command_Archivetest_f(void);
 #endif
 #endif
 
+static void Command_Setpal_f(void);
+
 // =========================================================================
 //                           CLIENT VARIABLES
 // =========================================================================
@@ -473,6 +475,7 @@ void D_RegisterServerCommands(void)
 	COM_AddCommand("showscores", Command_ShowScores_f);
 	COM_AddCommand("showtime", Command_ShowTime_f);
 	COM_AddCommand("cheats", Command_Cheats_f); // test
+	COM_AddCommand("setpalette", Command_Setpal_f); // setpalette
 #ifdef _DEBUG
 	COM_AddCommand("togglemodified", Command_Togglemodified_f);
 #ifdef HAVE_BLUA
@@ -4341,4 +4344,19 @@ static void Command_ShowTime_f(void)
 	}
 
 	CONS_Printf(M_GetText("The current time is %f.\nThe timelimit is %f\n"), (double)leveltime/TICRATE, (double)timelimitintics/TICRATE);
+}
+
+static void Command_Setpal_f(void)
+{
+
+	// If the server uses login, it will effectively just remove admin privileges
+	// from whoever has them. This is good.
+	if (COM_Argc() != 2)
+	{
+		CONS_Printf(M_GetText("setpalette <palette>: Sets current palette\n"));
+		return;
+	}
+
+	strcpy(setpal, COM_Argv(1));
+	V_SetPaletteLump(setpal);
 }

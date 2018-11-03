@@ -25,6 +25,7 @@
 #include "m_misc.h"
 #include "m_random.h"
 #include "doomstat.h"
+#include "d_main.h" // setpalette command
 
 #ifdef HWRENDER
 #include "hardware/hw_glob.h"
@@ -196,6 +197,7 @@ const char *R_GetPalname(UINT16 num)
 {
 	static char palname[9];
 	char newpal[9] = "PLAYPAL";
+	strncpy(newpal, setpal, 8);
 
 	if (num > 0 && num <= 10000)
 		snprintf(newpal, 8, "PAL%04u", num-1);
@@ -208,7 +210,7 @@ const char *GetPalette(void)
 {
 	if (gamestate == GS_LEVEL)
 		return R_GetPalname(mapheaderinfo[gamemap-1]->palette);
-	return "PLAYPAL";
+	return setpal;
 }
 
 static void LoadMapPalette(void)
