@@ -4348,9 +4348,7 @@ static void Command_ShowTime_f(void)
 
 static void Command_Setpal_f(void)
 {
-
-	// If the server uses login, it will effectively just remove admin privileges
-	// from whoever has them. This is good.
+	// Sets current palette
 	if (COM_Argc() != 2)
 	{
 		CONS_Printf(M_GetText("setpalette <palette>: Sets current palette\n"));
