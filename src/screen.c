@@ -118,7 +118,7 @@ void SCR_SetupDrawRoutines(void)
 	shadowcolfunc = R_DrawColumnShadowed_8;
 	fogcolfunc = R_DrawFogColumn_8;
 	twosmultipatchfunc = R_Draw2sMultiPatchColumn_8;
-	twosmultipatchtransfunc = R_Draw2sMultiPatchColumn_8;
+	twosmultipatchtransfunc = R_Draw2sMultiPatchTranslucentColumn_8;
 
 	spanfunc = basespanfunc = R_DrawSpan_8;
 	splatspanfunc = R_DrawSplat_8;
