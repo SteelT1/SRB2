@@ -105,7 +105,7 @@ void R_VideoCopy(size_t ofs, INT32 count);
 /** Columns **/
 
 void R_DrawColumn_8(void);
-#define R_DrawWallColumn_8	R_DrawColumn_8		/// Macro
+#define R_DrawWallColumn_8	R_DrawColumn_8				// Macro
 
 void R_DrawTranslatedColumn_8(void);
 void R_DrawTranslucentColumn_8(void);
@@ -116,16 +116,17 @@ void R_DrawFogColumn_8(void);
 void R_DrawColumnShadowed_8(void);
 
 void R_Draw2sMultiPatchColumn_8(void);
+void R_Draw2sMultiPatchTranslucentColumn_8(void);
 
 #ifdef USEASM
-/// ASM
+// ASM
 void ASMCALL R_DrawColumn_8_ASM(void);
-#define R_DrawWallColumn_8_ASM	R_DrawColumn_8_ASM		/// Macro
+#define R_DrawWallColumn_8_ASM	R_DrawColumn_8_ASM		// Macro
 void ASMCALL R_Draw2sMultiPatchColumn_8_ASM(void);
 
-/// MMX
+// MMX
 void ASMCALL R_DrawColumn_8_MMX(void);
-#define R_DrawWallColumn_8_MMX	R_DrawColumn_8_MMX		/// Macro
+#define R_DrawWallColumn_8_MMX	R_DrawColumn_8_MMX		// Macro
 
 void ASMCALL R_Draw2sMultiPatchColumn_8_MMX(void);
 void ASMCALL R_DrawSpan_8_MMX(void);
