@@ -142,7 +142,7 @@ extern vmode_t specialmodes[NUMSPECIALMODES];
 extern void (*colfunc)(void);
 extern void (*spanfunc)(void);
 
-/** Columns **/
+// Walls
 extern void (*basecolfunc)(void);
 extern void (*basewallcolfunc)(void);
 
@@ -153,8 +153,9 @@ extern void (*wallcolfunc)(void);
 extern void (*shadowcolfunc)(void);
 extern void (*fogcolfunc)(void);
 extern void (*twosmultipatchfunc)(void);
+extern void (*twosmultipatchtransfunc)(void);
 
-/** Spans **/
+// Floors
 extern void (*basespanfunc)(void);
 extern void (*splatspanfunc)(void);
 extern void (*translucentspanfunc)(void);

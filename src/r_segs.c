@@ -243,6 +243,8 @@ static void R_Render2sidedMultiPatchColumn(column_t *column)
 
 		if (colfunc == wallcolfunc)
 			twosmultipatchfunc();
+		else if (colfunc == translucentcolfunc)
+			twosmultipatchtransfunc();
 		else
 			colfunc();
 	}
