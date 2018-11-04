@@ -216,7 +216,7 @@ void R_Draw2sMultiPatchTranslucentColumn_8(void)
 	// Determine scaling, which is the only mapping to be done.
 	fracstep = dc_iscale;
 	//frac = dc_texturemid + (dc_yl - centery)*fracstep;
-	frac = (dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep))*(!dc_hires);
+	frac = (dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep));
 
 	// Inner loop that does the actual texture mapping, e.g. a DDA-like scaling.
 	// This is as fast as it gets.
