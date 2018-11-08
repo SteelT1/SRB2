@@ -45,6 +45,7 @@
 #include "lua_hook.h"
 #include "m_cond.h"
 #include "m_anigif.h"
+#include "w_wad.h" // For setpalette command to check if a lump exists
 
 #ifdef NETGAME_DEVMODE
 #define CV_RESTRICT CV_NETVAR
@@ -4351,10 +4352,18 @@ static void Command_Setpal_f(void)
 	// Sets current palette
 	if (COM_Argc() != 2)
 	{
-		CONS_Printf(M_GetText("setpalette <palette>: Sets current palette\n"));
+		CONS_Printf(M_GetText("setpalette <lumpname>: Sets current palette\n"));
 		return;
 	}
 
-	strcpy(setpal, COM_Argv(1));
-	V_SetPaletteLump(setpal);
+	if (W_LumpExists(COM_Argv(1)))
+	{
+		strcpy(setpal, COM_Argv(1));
+		V_SetPaletteLump(setpal);
+	}
+	else
+	{
+		CONS_Alert(CONS_ERROR, M_GetText("Can't set palette to '%s', lump not found!\n"), COM_Argv(1));
+		return;
+	}
 }
