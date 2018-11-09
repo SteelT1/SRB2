@@ -4384,7 +4384,7 @@ static void Command_Setpal_f(void)
 	}
 	else
 	{
-		CONS_Alert(CONS_ERROR, M_GetText("Palette lump '%s' not found!\n"), palarg);
+		CONS_Alert(CONS_ERROR, M_GetText("Lump '%s' not found!\n"), palarg);
 		return;
 	}
 }
