@@ -4350,6 +4350,7 @@ static void Command_ShowTime_f(void)
 static void Command_Setpal_f(void)
 {
 	const char *palarg;
+	char *palcheck = NULL;
 
 	// Sets current palette
 	if (COM_Argc() != 2)
@@ -4361,7 +4362,7 @@ static void Command_Setpal_f(void)
 
 	palarg = COM_Argv(1);
 
-	if (!strcasecmp(palarg, "-default"))
+	if (!strcasecmp(palarg, "-default") || (!strcasecmp(palarg, "PLAYPAL")))
 	{
 		strcpy(setpal, "PLAYPAL");
 		V_SetPaletteLump("PLAYPAL");
@@ -4370,12 +4371,20 @@ static void Command_Setpal_f(void)
 
 	if (W_LumpExists(palarg))
 	{
-		strcpy(setpal, palarg);
-		V_SetPaletteLump(setpal);
+		palcheck = strstr(palarg, "PAL");
+		if (palcheck == palarg)
+		{
+			strcpy(setpal, palarg);
+			V_SetPaletteLump(setpal);
+		}
+		else
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("Not a valid palette lump!\n"));
+		}
 	}
 	else
 	{
-		CONS_Alert(CONS_ERROR, M_GetText("Can't set palette to '%s', lump not found!\n"), palarg);
+		CONS_Alert(CONS_ERROR, M_GetText("Palette lump '%s' not found!\n"), palarg);
 		return;
 	}
 }
