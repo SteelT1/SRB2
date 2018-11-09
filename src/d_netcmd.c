@@ -4349,21 +4349,33 @@ static void Command_ShowTime_f(void)
 
 static void Command_Setpal_f(void)
 {
+	const char *palarg;
+
 	// Sets current palette
 	if (COM_Argc() != 2)
 	{
-		CONS_Printf(M_GetText("setpalette <lumpname>: Sets current palette\n"));
+		CONS_Printf(M_GetText("setpalette <lumpname>: Sets current palette\n\n"));
+		CONS_Printf(M_GetText("* With \"-default\", returns to the default palette.\n"));
 		return;
 	}
 
-	if (W_LumpExists(COM_Argv(1)))
+	palarg = COM_Argv(1);
+
+	if (!strcasecmp(palarg, "-default"))
 	{
-		strcpy(setpal, COM_Argv(1));
+		strcpy(setpal, "PLAYPAL");
+		V_SetPaletteLump("PLAYPAL");
+		return;
+	}
+
+	if (W_LumpExists(palarg))
+	{
+		strcpy(setpal, palarg);
 		V_SetPaletteLump(setpal);
 	}
 	else
 	{
-		CONS_Alert(CONS_ERROR, M_GetText("Can't set palette to '%s', lump not found!\n"), COM_Argv(1));
+		CONS_Alert(CONS_ERROR, M_GetText("Can't set palette to '%s', lump not found!\n"), palarg);
 		return;
 	}
 }
