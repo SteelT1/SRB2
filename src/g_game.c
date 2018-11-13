@@ -3644,7 +3644,6 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	mapmusflags |= MUSIC_RELOADRESET;
 
 	ultimatemode = pultmode;
-	playerdeadview = false;
 	automapactive = false;
 	imcontinuing = false;
 

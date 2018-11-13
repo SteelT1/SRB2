@@ -196,20 +196,17 @@ INT32 postimgparam;
 postimg_t postimgtype2 = postimg_none;
 INT32 postimgparam2;
 
-#ifdef _XBOX
-boolean nomidimusic = true, nosound = true;
-boolean nodigimusic = true;
-#else
-boolean nomidimusic = false, nosound = false;
-boolean nodigimusic = false; // No fmod-based music
-#endif
-
 // These variables are only true if
-// the respective sound system is initialized
-// and active, but no sounds/music should play.
-boolean music_disabled = false;
+// whether the respective sound system is disabled
+// or they're init'ed, but the player just toggled them
+#ifdef _XBOX
+boolean midi_disabled = true, sound_disabled = true;
+boolean digital_disabled = true;
+#else
+boolean midi_disabled = false;
 boolean sound_disabled = false;
 boolean digital_disabled = false;
+#endif
 
 boolean advancedemo;
 #ifdef DEBUGFILE
@@ -248,7 +245,7 @@ void D_PostEvent(const event_t *ev)
 	eventhead = (eventhead+1) & (MAXEVENTS-1);
 }
 // just for lock this function
-#ifndef DOXYGEN
+#if defined (PC_DOS) && !defined (DOXYGEN)
 void D_PostEvent_end(void) {};
 #endif
 
@@ -496,10 +493,13 @@ static void D_Display(void)
 			}
 
 			// Image postprocessing effect
-			if (postimgtype)
-				V_DoPostProcessor(0, postimgtype, postimgparam);
-			if (postimgtype2)
-				V_DoPostProcessor(1, postimgtype2, postimgparam2);
+			if (rendermode == render_soft)
+			{
+				if (postimgtype)
+					V_DoPostProcessor(0, postimgtype, postimgparam);
+				if (postimgtype2)
+					V_DoPostProcessor(1, postimgtype2, postimgparam2);
+			}
 		}
 
 		if (lastdraw)
@@ -802,7 +802,6 @@ void D_StartTitle(void)
 	maptol = 0;
 
 	gameaction = ga_nothing;
-	playerdeadview = false;
 	displayplayer = consoleplayer = 0;
 	//demosequence = -1;
 	gametype = GT_COOP;
@@ -854,10 +853,6 @@ static inline void D_CleanFile(void)
 		startupwadfiles[pnumwadfiles] = NULL;
 	}
 }
-
-#ifndef _MAX_PATH
-#define _MAX_PATH MAX_WADPATH
-#endif
 
 // ==========================================================================
 // Identify the SRB2 version, and IWAD file to use.
@@ -1306,21 +1301,29 @@ void D_SRB2Main(void)
 	R_Init();
 
 	// setting up sound
-	CONS_Printf("S_Init(): Setting up sound.\n");
+	if (dedicated)
+	{
+		sound_disabled = true;
+		midi_disabled = digital_disabled = true;
+	}
+	else
+	{
+		CONS_Printf("S_InitSfxChannels(): Setting up sound channels.\n");
+	}
 	if (M_CheckParm("-nosound"))
-		nosound = true;
+		sound_disabled = true;
 	if (M_CheckParm("-nomusic")) // combines -nomidimusic and -nodigmusic
-		nomidimusic = nodigimusic = true;
+		midi_disabled = digital_disabled = true;
 	else
 	{
 		if (M_CheckParm("-nomidimusic"))
-			nomidimusic = true; ; // WARNING: DOS version initmusic in I_StartupSound
+			midi_disabled = true; ; // WARNING: DOS version initmusic in I_StartupSound
 		if (M_CheckParm("-nodigmusic"))
-			nodigimusic = true; // WARNING: DOS version initmusic in I_StartupSound
+			digital_disabled = true; // WARNING: DOS version initmusic in I_StartupSound
 	}
 	I_StartupSound();
 	I_InitMusic();
-	S_Init(cv_soundvolume.value, cv_digmusicvolume.value, cv_midimusicvolume.value);
+	S_InitSfxChannels(cv_soundvolume.value);
 
 	CONS_Printf("ST_Init(): Init status bar.\n");
 	ST_Init();
