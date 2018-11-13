@@ -103,30 +103,31 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #endif
 
 // Discord rich presence
-#include "discord-rpc.h"
+#include "discord_rpc.h"
 
-static void DiscordRP_OnChange(void);
+static void DiscordRPC_OnChange(void);
 
-consvar_t cv_discordrp = {"discordrp", "On", CV_SAVE|CV_CALL, CV_OnOff, DiscordRP_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_discordrpc = {"discordrpc", "On", CV_SAVE|CV_CALL, CV_OnOff, DiscordRPC_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 // App ID
 // SteelTitanium: this app is managed by me, feel free to make and use your own app if you like
 static const char* APPLICATION_ID = "467115173761777664";
 
 // Straight copy-paste from the C demo app, lul
-static void handleDiscordReady()
+static void handleDiscordReady(const DiscordUser *u)
 {
-    CONS_Printf("Discord: ready\n");
+	CONS_Alert(CONS_NOTICE, "Discord: Displaying Presence for %s#%s\n", u->username, u->discriminator);
+	CONS_Alert(CONS_NOTICE, "Discord: Ready\n");
 }
 
 static void handleDiscordDisconnected(int errcode, const char* message)
 {
-    CONS_Printf("Discord: disconnected (%d: %s)\n", errcode, message);
+	CONS_Alert(CONS_NOTICE, "Discord: disconnected (%d: %s)\n", errcode, message);
 }
 
 static void handleDiscordError(int errcode, const char* message)
 {
-    CONS_Printf("Discord: error (%d: %s)\n", errcode, message);
+	CONS_Alert(CONS_ERROR, "Discord: error (%d: %s)\n", errcode, message);
 }
 
 // Function to set the status while in the menus
@@ -161,17 +162,19 @@ static void RPC_DiscordInit()
 	Discord_Initialize(APPLICATION_ID, &handlers, 1, NULL);
 }
 
-static void DiscordRP_OnChange(void)
+static void DiscordRPC_OnChange(void)
 {
-	if (cv_discordrp.value == 1)
+	if (cv_discordrpc.value == 1)
 	{
 		RPC_DiscordInit();
+		Discord_RunCallbacks();
 		dp.details = "Idle";
 		dp.largeImageKey = "main_menu";
 		Discord_UpdatePresence(&dp);
 	}
-	else if (cv_discordrp.value == 0)
+	else if (cv_discordrpc.value == 0)
 	{
+		Discord_ClearPresence();
 		Discord_Shutdown();
 	}
 }
@@ -731,9 +734,11 @@ void D_SRB2Loop(void)
 		LUA_Step();
 #endif
 
-	if (cv_discordrp.value == 1 && Playing()) // We want to make sure the player is in-game first.
+	if (cv_discordrpc.value == 1)
 	{
-		P_SetDiscordStatus();
+		Discord_RunCallbacks();
+		if (Playing()) // We want to make sure the player is in-game first
+			P_SetDiscordStatus();
 	}
 
 	}
@@ -1264,10 +1269,7 @@ void D_SRB2Main(void)
 	I_RegisterSysCommands();
 
 	// Register Discord Rich Presence
-	CV_RegisterVar(&cv_discordrp);
-
-	// Register Discord Rich Presence shutdown function
-	I_AddExitFunc(Discord_Shutdown);
+	CV_RegisterVar(&cv_discordrpc);
 
 	//--------------------------------------------------------- CONFIG.CFG
 	M_FirstLoadConfig(); // WARNING : this do a "COM_BufExecute()"

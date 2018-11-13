@@ -25,7 +25,7 @@
 #include "m_menu.h" //gametype_cons_t
 
 // Discord rich presence
-#include "discord-rpc.h"
+#include "discord_rpc.h"
 
 #define FLOATSPEED (FRACUNIT*4)
 

@@ -1302,7 +1302,7 @@ static menuitem_t OP_GameOptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Uppercase Console",      &cv_allcaps,     130},
 
 	{IT_STRING | IT_CVAR, NULL, "Title Screen Demos",     &cv_rollingdemos, 140},
-	{IT_STRING | IT_CVAR, NULL, "Discord Rich Presence",     &cv_discordrp, 150},
+	{IT_STRING | IT_CVAR, NULL, "Discord Rich Presence",  &cv_discordrpc, 150},
 };
 
 static menuitem_t OP_ChatOptionsMenu[] =

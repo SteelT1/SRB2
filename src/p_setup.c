@@ -75,6 +75,7 @@
 #ifdef ESLOPE
 #include "p_slopes.h"
 #endif
+
 #include <time.h>
 
 //
@@ -2148,6 +2149,10 @@ static void P_LevelInitStuff(void)
 
 	localaiming = 0;
 	localaiming2 = 0;
+	dtimeleft = 0;
+
+	if (timeinmap == 0)
+		mapstarttime = 0;
 
 	// special stage tokens, emeralds, and ring total
 	tokenbits = 0;
@@ -2957,7 +2962,6 @@ boolean P_SetupLevel(boolean skipprecip)
 		LUAh_MapLoad();
 #endif
 	}
-	StartTimeStamp = time(0);
 	return true;
 }
 
@@ -3190,21 +3194,47 @@ void P_SetDiscordStatus(void)
 		strcpy(realskinname, "Unknown");
 	}
 
-	dp.state = G_BuildMapTitle(gamemap);
-
 	// Current gametype
-	if (!(netgame || multiplayer)) // Send "Solo" instead of "Co-op" for single player
-		dp.details = va("Solo, Score: %u", players[consoleplayer].score);
-	else if (multiplayer || netgame)
+	// SteelT: Checking for multiplayer only is good enough as it also returns true if in a netgame or doing splitscreen
+	if (!(multiplayer)) // Send "Single Player" instead of "Co-op"
+        dp.details = va("Single Player, Score: %u", players[consoleplayer].score);
+	else if (multiplayer)
 		dp.details = va("%s, Score: %u", gametype_cons_t[gametype].strvalue, players[consoleplayer].score);
 
-	dp.largeImageText = mapname; // Map tooltip
-	dp.largeImageKey = strlwr(mapkey); // Map image
-	dp.smallImageKey = currentskin; // Current skin
-	dp.smallImageText = realskinname; // Real skin name
-	if(!dp.startTimestamp)
+	if (gamestate == GS_LEVEL)
 	{
-		dp.startTimestamp = StartTimeStamp;
+		dp.largeImageText = mapname; // Map numer tooltip
+		dp.largeImageKey = strlwr(mapkey); // Map image
+		dp.smallImageKey = currentskin; // Current skin
+		dp.smallImageText = realskinname; // Real skin name
+		dp.startTimestamp = mapstarttime; // Keep track of how long the player has been on the level.
+		dp.state = G_BuildMapTitle(gamemap); // Level name
+		dp.instance = 1;
 	}
+	else if (gamestate == GS_INTERMISSION)
+	{
+		Discord_ClearPresence();
+		dp.details = "Intermission";
+   		dp.largeImageKey = "main_menu";
+   		dp.state = G_BuildMapTitle(gamemap);
+   		dp.instance = 1;
+	}
+
+	// Keep track of time remaining on supported gametypes and if timelimit has a value of non-zero
+	if (gametype != GT_RACE && gametype != GT_COMPETITION && gametype != GT_COOP && gamestate == GS_LEVEL)
+	{
+		if (dtimeleft > 0)
+		{
+			if (!paused)
+				dp.endTimestamp = dtimeleft;
+			else
+				dp.endTimestamp = 0;
+		}
+		else
+		{
+			dp.endTimestamp = 0;
+		}
+	}
+
 	Discord_UpdatePresence(&dp);
 }

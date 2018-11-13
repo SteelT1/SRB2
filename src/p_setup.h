@@ -19,7 +19,7 @@
 #include "r_defs.h"
 
 // Discord rich presence
-#include "discord-rpc.h"
+#include "discord_rpc.h"
 
 // map md5, sent to players via PT_SERVERINFO
 extern unsigned char mapmd5[16];
@@ -32,6 +32,10 @@ extern INT32 numdmstarts, numcoopstarts, numredctfstarts, numbluectfstarts;
 extern boolean levelloading;
 
 extern lumpnum_t lastloadedmaplumpnum; // for comparative savegame
+
+int64_t dtimeleft;
+int64_t mapstarttime;
+
 //
 // MAP used flats lookup table
 //
@@ -85,6 +89,5 @@ void P_UpdateSkin(const char *skinname);
 DiscordRichPresence dp;
 char currentskin[255];
 char realskinname[255];
-int64_t StartTimeStamp;
 
 #endif

@@ -23,11 +23,15 @@
 #include "lua_hook.h"
 #include "d_main.h"
 #include "p_setup.h"
+#include <time.h>
 
 // Object place
 #include "m_cheat.h"
 
 tic_t leveltime;
+int64_t dtimeleft;
+
+int64_t mapstarttime;
 
 //
 // THINKERS
@@ -576,6 +580,15 @@ void P_Ticker(boolean run)
 		if (playeringame[i])
 			++players[i].jointime;
 
+	if (!leveltime)
+		mapstarttime = time(NULL);
+
+	if (cv_timelimit.value != 0 && paused)
+		// Set discord remaining time
+		dtimeleft = time(NULL) + G_TicsToMinutes(timelimitintics, true) * 60 - G_TicsToSeconds(leveltime)+1;
+	else
+		dtimeleft = 0;
+
 	if (objectplacing)
 	{
 		if (OP_FreezeObjectplace())
@@ -700,6 +713,15 @@ void P_Ticker(boolean run)
 	}
 
 	P_MapEnd();
+
+	if (cv_timelimit.value && timelimitintics > 0 && !dtimeleft)
+	{
+		dtimeleft = time(NULL) + G_TicsToMinutes(timelimitintics, true) * 60 - G_TicsToSeconds(leveltime)+1;
+	}
+	else
+	{
+		dtimeleft = 0;
+	}
 
 //	Z_CheckMemCleanup();
 }

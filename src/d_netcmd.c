@@ -47,7 +47,8 @@
 #include "m_anigif.h"
 
 // Discord rich presence
-#include "discord-rpc.h"
+#include "discord_rpc.h"
+#include <time.h>
 
 #ifdef NETGAME_DEVMODE
 #define CV_RESTRICT CV_NETVAR
@@ -3462,6 +3463,12 @@ static void TimeLimit_OnChange(void)
 		if (G_TagGametype())
 			timelimitintics += hidetime * TICRATE;
 
+		// Set discord remaining time
+		if (cv_timelimit.value != 0)
+			dtimeleft = time(NULL) + G_TicsToMinutes(timelimitintics, true) * 60 - G_TicsToSeconds(leveltime)+1;
+		else
+			dtimeleft = 0;
+
 		// Note the deliberate absence of any code preventing
 		//   pointlimit and timelimit from being set simultaneously.
 		// Some people might like to use them together. It works.
@@ -3817,6 +3824,9 @@ static void Hidetime_OnChange(void)
 	//uh oh, gotta change timelimitintics now too
 	if (G_TagGametype())
 		timelimitintics = (cv_timelimit.value * 60 * TICRATE) + (hidetime * TICRATE);
+
+	// Set discord remaining time
+	dtimeleft = time(NULL) + G_TicsToMinutes(timelimitintics, true) * 60 - G_TicsToSeconds(leveltime)+1;
 }
 
 static void Command_Showmap_f(void)

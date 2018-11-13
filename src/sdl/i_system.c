@@ -186,7 +186,7 @@ static char returnWadPath[256];
 #endif
 
 // Discord rich presence
-#include "discord-rpc.h"
+#include "discord_rpc.h"
 
 /**	\brief	The JoyReset function
 
@@ -2111,6 +2111,11 @@ void I_Quit(void)
 
 	/* prevent recursive I_Quit() */
 	if (quiting) goto death;
+
+	//Shutdown Discord Rich Presence
+	Discord_ClearPresence();
+	Discord_Shutdown();
+
 	SDLforceUngrabMouse();
 	quiting = SDL_FALSE;
 	I_ShutdownConsole();
@@ -2342,7 +2347,6 @@ void I_ShutdownSystem(void)
 		logstream = NULL;
 	}
 #endif
-
 }
 
 void I_GetDiskFreeSpace(INT64 *freespace)
