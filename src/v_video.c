@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2016 by Sonic Team Junior.
+// Copyright (C) 1999-2018 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -344,8 +344,8 @@ void V_DrawFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t 
 		return;
 
 #ifdef HWRENDER
-	// oh please
-	if (rendermode != render_soft && !con_startup)
+	//if (rendermode != render_soft && !con_startup)		// Why?
+	if (rendermode != render_soft)
 	{
 		HWR_DrawFixedPatch((GLPatch_t *)patch, x, y, pscale, scrn, colormap);
 		return;
@@ -841,13 +841,47 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 		memset(dest, c, w * vid.bpp);
 }
 
+#ifdef HWRENDER
+// This is now a function since it's otherwise repeated 2 times and honestly looks retarded:
+static UINT32 V_GetHWConsBackColor(void)
+{
+	UINT32 hwcolor;
+	switch (cons_backcolor.value)
+	{
+		case 0:		hwcolor = 0xffffff00;	break; 	// White
+		case 1:		hwcolor = 0x80808000;	break; 	// Gray
+		case 2:		hwcolor = 0xdeb88700;	break;	// Sepia
+		case 3:		hwcolor = 0x40201000;	break; 	// Brown
+		case 4:		hwcolor = 0xfa807200;	break; 	// Pink
+		case 5:		hwcolor = 0xff69b400;	break; 	// Raspberry
+		case 6:		hwcolor = 0xff000000;	break; 	// Red
+		case 7:		hwcolor = 0xffd68300;	break;	// Creamsicle
+		case 8:		hwcolor = 0xff800000;	break; 	// Orange
+		case 9:		hwcolor = 0xdaa52000;	break; 	// Gold
+		case 10:	hwcolor = 0x80800000;	break; 	// Yellow
+		case 11:	hwcolor = 0x00ff0000;	break; 	// Emerald
+		case 12:	hwcolor = 0x00800000;	break; 	// Green
+		case 13:	hwcolor = 0x4080ff00;	break; 	// Cyan
+		case 14:	hwcolor = 0x4682b400;	break; 	// Steel
+		case 15:	hwcolor = 0x1e90ff00;	break;	// Periwinkle
+		case 16:	hwcolor = 0x0000ff00;	break; 	// Blue
+		case 17:	hwcolor = 0xff00ff00;	break; 	// Purple
+		case 18:	hwcolor = 0xee82ee00;	break; 	// Lavender
+		// Default green
+		default:	hwcolor = 0x00800000;	break;
+	}
+	return hwcolor;
+}
+#endif
+
+
 // THANK YOU MPC!!!
 
 void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 {
 	UINT8 *dest;
-	const UINT8 *deststop;
-    INT32 u, v;
+	INT32 u, v;
+	UINT8 *fadetable;
 	UINT32 alphalevel = 0;
 
 	if (rendermode == render_none)
@@ -856,21 +890,7 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 #ifdef HWRENDER
 	if (rendermode != render_soft && rendermode != render_none)
 	{
-		UINT32 hwcolor;
-		switch (cons_backcolor.value)
-		{
-			case 0:		hwcolor = 0xffffff00;	break; // White
-			case 1:		hwcolor = 0x80808000;	break; // Gray
-			case 2:		hwcolor = 0x40201000;	break; // Brown
-			case 3:		hwcolor = 0xff000000;	break; // Red
-			case 4:		hwcolor = 0xff800000;	break; // Orange
-			case 5:		hwcolor = 0x80800000;	break; // Yellow
-			case 6:		hwcolor = 0x00800000;	break; // Green
-			case 7:		hwcolor = 0x0000ff00;	break; // Blue
-			case 8:		hwcolor = 0x4080ff00;	break; // Cyan
-			// Default green
-			default:	hwcolor = 0x00800000;	break;
-		}
+		UINT32 hwcolor = V_GetHWConsBackColor();
 		HWR_DrawConsoleFill(x, y, w, h, hwcolor, c);	// we still use the regular color stuff but only for flags. actual draw color is "hwcolor" for this.
 		return;
 	}
@@ -946,23 +966,18 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 
 	c &= 255;
 
-	if (!alphalevel) {
-        for (v = 0; v < h; v++, dest += vid.width) {
-            for (u = 0; u < w; u++) {
-                dest[u] = consolebgmap[dest[u]];
-            }
-        }
-	} else {        // mpc 12-04-2018
-        const UINT8 *fadetable = ((UINT8 *)transtables + ((alphalevel-1)<<FF_TRANSSHIFT) + (c*256));
-        #define clip(x,y) (x>y) ? y : x
-        w = clip(w,vid.width);
-        h = clip(h,vid.height);
-        for (v = 0; v < h; v++, dest += vid.width) {
-            for (u = 0; u < w; u++) {
-                dest[u] = fadetable[consolebgmap[dest[u]]];
-            }
-        }
-	}
+	// Jimita (12-04-2018)
+	w = min(w, vid.width);
+	h = min(h, vid.height);
+	fadetable = ((UINT8 *)transtables + ((alphalevel-1)<<FF_TRANSSHIFT) + (c*256));
+	for (v = 0; v < h; v++, dest += vid.width)
+		for (u = 0; u < w; u++)
+		{
+			if (!alphalevel)
+				dest[u] = consolebgmap[dest[u]];
+			else
+				dest[u] = fadetable[consolebgmap[dest[u]]];
+		}
 }
 
 //
@@ -1107,21 +1122,7 @@ void V_DrawFadeConsBack(INT32 plines)
 #ifdef HWRENDER // not win32 only 19990829 by Kin
 	if (rendermode != render_soft && rendermode != render_none)
 	{
-		UINT32 hwcolor;
-		switch (cons_backcolor.value)
-		{
-			case 0:		hwcolor = 0xffffff00;	break; // White
-			case 1:		hwcolor = 0x80808000;	break; // Gray
-			case 2:		hwcolor = 0x40201000;	break; // Brown
-			case 3:		hwcolor = 0xff000000;	break; // Red
-			case 4:		hwcolor = 0xff800000;	break; // Orange
-			case 5:		hwcolor = 0x80800000;	break; // Yellow
-			case 6:		hwcolor = 0x00800000;	break; // Green
-			case 7:		hwcolor = 0x0000ff00;	break; // Blue
-			case 8:		hwcolor = 0x4080ff00;	break; // Cyan
-			// Default green
-			default:	hwcolor = 0x00800000;	break;
-		}
+		UINT32 hwcolor = V_GetHWConsBackColor();
 		HWR_DrawConsoleBack(hwcolor, plines);
 		return;
 	}
@@ -1136,7 +1137,7 @@ void V_DrawFadeConsBack(INT32 plines)
 
 // Gets string colormap, used for 0x80 color codes
 //
-static const UINT8 *V_GetStringColormap(INT32 colorflags)
+UINT8 *V_GetStringColormap(INT32 colorflags)
 {
 	switch ((colorflags & V_CHARCOLORMASK) >> V_CHARCOLORSHIFT)
 	{
@@ -1205,10 +1206,10 @@ void V_DrawChatCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed, UI
 	w = (vid.width < 640 ) ? (SHORT(hu_font[c]->width)/2) : (SHORT(hu_font[c]->width));	// use normal sized characters if we're using a terribly low resolution.
 	if (x + w > vid.width)
 		return;
-	
+
 	V_DrawFixedPatch(x*FRACUNIT, y*FRACUNIT, (vid.width < 640) ? (FRACUNIT) : (FRACUNIT/2), flags, hu_font[c], colormap);
 
-	
+
 }
 
 // Precompile a wordwrapped string to any given width.
