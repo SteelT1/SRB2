@@ -13793,19 +13793,19 @@ skincolor_t skincolors[MAXSKINCOLORS] = {
 	{"Olive",		{105,105,105,106,106,107,107,108,108,108,109,109,110,110,111,111},	108, 0,			 8, true},
 	{"Yellow",		{103,103,104,104,105,105,106,106,107,107,108,108,109,109,110,110},	104, 0,			 8, true},
 	{"Gold",		{112,112,113,113,114,114,115,115,116,116,117,117,118,118,119,119},	115, 0,			 8, true},
-	
+
 	{"Super1",		{120,120,120,120,120,120,120,120,120,120, 96, 97, 98, 99,100,101},	 97, 0, 0, false},
 	{"Super2",		{ 96, 97, 98, 99,100,112,101,101,102,102,103,103,104,104,113,114},	100, 0, 0, false},
 	{"Super3",		{ 98, 99,100,112,101,101,102,102,103,103,104,104,113,114,115,116},	103, 0, 0, false},
 	{"Super4",		{112,101,101,102,102,103,103,104,104,113,114,115,116,117,118,119},	113, 0, 0, false},
 	{"Super5",		{101,101,102,102,103,103,104,104,113,114,115,116,117,118,119,155},	116, 0, 0, false},
-	
+
 	{"TSuper1",		{120,120,120,120,120,120,120,120,120,120, 80, 81, 82, 83, 84, 85},	 81, 0, 0, false},
 	{"TSuper2",		{120,120,120,120, 80, 80, 81, 81, 82, 82, 83, 83, 84, 84, 85, 85},	 82, 0, 0, false},
 	{"TSuper3",		{120,120, 80, 80, 81, 81, 82, 82, 83, 83, 84, 84, 85, 85, 86, 86},	 84, 0, 0, false},
 	{"TSuper4",		{120, 80, 81, 82, 83, 84, 85, 86, 87,115,115,116,117,117,118,119},	 85, 0, 0, false},
 	{"TSuper5",		{ 80, 81, 82, 83, 84, 85, 86, 87,115,115,116,116,117,118,118,119},	 87, 0, 0, false},
-	
+
 	{"KSuper1",		{120,120,120,120,121,121,121,121,122,122,122,122,123,123,123,123},	112, 0, 0, false},
 	{"KSuper2",		{120,120,120,121,121,121,122,122,123,123,123,124,124,124,125,125},	123, 0, 0, false},
 	{"KSuper3",		{120,120,121,121,122,122,123,123,124,124,125,125,126,126,127,127},	124, 0, 0, false},
@@ -13819,6 +13819,8 @@ skincolor_t skincolors[MAXSKINCOLORS] = {
 void P_PatchInfoTables(void)
 {
 	INT32 i;
+	int a;
+	int b;
 	char *tempname;
 
 #if NUMSPRITEFREESLOTS > 1000
@@ -13842,8 +13844,8 @@ void P_PatchInfoTables(void)
 	memset(&states[S_FIRSTFREESLOT], 0, sizeof (state_t) * NUMSTATEFREESLOTS);
 	memset(&mobjinfo[MT_FIRSTFREESLOT], 0, sizeof (mobjinfo_t) * NUMMOBJFREESLOTS);
 	memset(&skincolors[SKINCOLOR_FIRSTFREESLOT], 0, sizeof (skincolor_t) * NUMCOLORFREESLOTS);
-	for (int a = SKINCOLOR_FIRSTFREESLOT; i <= SKINCOLOR_LASTFREESLOT; i++)
-		for (int b=0; b<COLORRAMPSIZE; b++) {
+	for (a = SKINCOLOR_FIRSTFREESLOT; i <= SKINCOLOR_LASTFREESLOT; i++)
+		for (b=0; b<COLORRAMPSIZE; b++) {
 			skincolors[a].ramp[b] = 120;
 			skincolors[a].accessible = false;
 		}
@@ -13888,7 +13890,7 @@ void P_BackupTables(void)
 		mobjinfobackup = Z_Realloc(mobjinfobackup, mobjinfobackupsize, PU_STATIC, NULL);
 	else
 		M_Memcpy(mobjinfobackup, mobjinfo, sizeof(mobjinfo));
-	
+
 	//Skincolor info
 	skincolorsbackupsize = lzf_compress(skincolors, sizeof(skincolors), skincolorsbackup, sizeof(skincolors));
 	if (skincolorsbackupsize > 0)
@@ -13927,7 +13929,7 @@ void P_ResetData(INT32 flags)
 		else
 			M_Memcpy(mobjinfo, mobjinfobackup, sizeof(mobjinfobackup));
 	}
-	
+
 	if (flags & 8)
 	{
 		if (skincolorsbackupsize > 0)

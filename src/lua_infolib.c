@@ -888,8 +888,10 @@ static int lib_getSkinColor(lua_State *L)
 
 //Set the entire c->ramp array
 static void setRamp(lua_State *L, skincolor_t* c) {
+	int i;
+
 	lua_pushnil(L);
-	for (int i=0; i<COLORRAMPSIZE; i++) {
+	for (i=0; i<COLORRAMPSIZE; i++) {
 		if (lua_objlen(L,-2)<COLORRAMPSIZE) {
 			luaL_error(L, LUA_QL("skincolor_t") " field 'ramp' must be %d entries long; got %d.", COLORRAMPSIZE, lua_objlen(L,-2));
 			break;
@@ -906,6 +908,7 @@ static void setRamp(lua_State *L, skincolor_t* c) {
 // Lua table full of data -> skincolors[]
 static int lib_setSkinColor(lua_State *L)
 {
+	int j;
 	skincolor_t *info;
 	boolean teamcolor; // team colors cannot be denied accessibility
 	UINT8 cnum; //skincolor num
@@ -923,11 +926,11 @@ static int lib_setSkinColor(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter skincolors in HUD rendering code!");
-	
+
 	// clear the skincolor to start with, in case of missing table elements
 	memset(info,0,sizeof(skincolor_t));
 	if (teamcolor) info->accessible = true;
-	
+
 	Color_cons_t[cnum].value = cnum;
 	lua_pushnil(L);
 	while (lua_next(L, 1)) {
@@ -951,7 +954,7 @@ static int lib_setSkinColor(lua_State *L)
 			else if (lua_istable(L, 3))
 				setRamp(L, info);
 			else
-				for (int j=0; j<COLORRAMPSIZE; j++)
+				for (j=0; j<COLORRAMPSIZE; j++)
 					info->ramp[j] = (*((UINT8 **)luaL_checkudata(L, 3, META_COLORRAMP)))[j];
 			R_FlushTranslationColormapCache();
 		} else if (i == 3 || (str && fastcmp(str,"md2color")))
@@ -1004,12 +1007,13 @@ static int skincolor_get(lua_State *L)
 // skincolor_t *, field, number -> skincolors[]
 static int skincolor_set(lua_State *L)
 {
+	int i;
 	skincolor_t *info = *((skincolor_t **)luaL_checkudata(L, 1, META_SKINCOLOR));
 	const char *field = luaL_checkstring(L, 2);
-	
+
 	I_Assert(info != NULL);
 	I_Assert(info >= skincolors);
-	
+
 	if (fastcmp(field,"name")) {
 		const char* n = luaL_checkstring(L, 3);
 		if (strchr(n, ' ') != NULL)
@@ -1023,7 +1027,7 @@ static int skincolor_set(lua_State *L)
 		else if (lua_istable(L, 3))
 			setRamp(L, info);
 		else
-			for (int i=0; i<COLORRAMPSIZE; i++)
+			for (i=0; i<COLORRAMPSIZE; i++)
 				info->ramp[i] = (*((UINT8 **)luaL_checkudata(L, 3, META_COLORRAMP)))[i];
 		R_FlushTranslationColormapCache();
 	} else if (fastcmp(field,"md2color"))
