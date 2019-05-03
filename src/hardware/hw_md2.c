@@ -974,7 +974,7 @@ void HWR_DrawMD2(gr_vissprite_t *spr)
 			return; // we already failed loading this before :(
 		if (!md2->model)
 		{
-			//CONS_Debug(DBG_RENDER, "Loading MD2... (%s)", sprnames[spr->mobj->sprite]);
+			//CONS_Debug(DBG_RENDER, "Loading model... (%s)", sprnames[spr->mobj->sprite]);
 			sprintf(filename, "mdls/%s", md2->filename);
 			md2->model = md2_readModel(filename);
 
