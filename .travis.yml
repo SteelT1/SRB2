@@ -689,5 +689,5 @@ script:
 after_success:
   # Run the upload scripts
   # These do nothing if Deployer is not triggered
-  - bash -xv ../deployer/travis/deployer_ftp.sh
-  - bash -xv ../deployer/travis/deployer_dput.sh
+  - . ../deployer/travis/deployer_ftp.sh
+  - . ../deployer/travis/deployer_dput.sh
