@@ -18,6 +18,8 @@ matrix:
         - os: linux
           addons:
             apt:
+              sources:
+              - sourceline: 'ppa:steelt/srb2test'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -32,6 +34,8 @@ matrix:
         - os: linux
           addons:
             apt:
+              sources:
+              - sourceline: 'ppa:steelt/srb2test'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -46,6 +50,8 @@ matrix:
         - os: linux
           addons:
             apt:
+              sources:
+              - sourceline: 'ppa:steelt/srb2test'
               packages:
               - libsdl2-mixer-dev
               - libpng-dev
@@ -66,6 +72,7 @@ matrix:
           addons:
             apt:
               sources:
+              - sourceline: 'ppa:steelt/srb2test'
               - ubuntu-toolchain-r-test
               packages:
               - libsdl2-mixer-dev
@@ -98,6 +105,7 @@ matrix:
           addons:
             apt:
               sources:
+              - sourceline: 'ppa:steelt/srb2test'
               - ubuntu-toolchain-r-test
               packages:
               - libsdl2-mixer-dev
@@ -133,6 +141,7 @@ matrix:
           addons:
             apt:
               sources:
+              - sourceline: 'ppa:steelt/srb2test'
               - llvm-toolchain-precise-3.6
               - ubuntu-toolchain-r-test
               packages:
@@ -165,6 +174,7 @@ matrix:
           addons:
             apt:
               sources:
+              - sourceline: 'ppa:steelt/srb2test'
               - llvm-toolchain-precise-3.8
               - ubuntu-toolchain-r-test
               packages:
@@ -181,6 +191,7 @@ matrix:
           addons:
             apt:
               sources:
+              - sourceline: 'ppa:steelt/srb2test'
               - llvm-toolchain-precise-3.9
               - ubuntu-toolchain-r-test
               packages:
@@ -197,6 +208,7 @@ matrix:
 #          addons:
 #            apt:
 #              sources:
+#              - sourceline: 'ppa:steelt/srb2test'
 #              - llvm-toolchain-precise-4.0
 #              - ubuntu-toolchain-r-test
 #              packages:
