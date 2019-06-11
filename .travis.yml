@@ -659,9 +659,10 @@ install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
       mkdir libpng-apng;
       cd libpng-apng;
-      git clone https://github.com/SteelTitanium/libpng-apng.git --branch libpng16-37 --single-branch;
+      git clone https://github.com/SteelTitanium/libpng-apng.git --branch libpng16-37 --single-branch .;
       mkdir build-dir;
       cd build-dir;
+      echo $PWD;
       cmake ..;
       make -k;
       make install;
