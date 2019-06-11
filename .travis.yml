@@ -614,6 +614,9 @@ addons:
     - game-music-emu
     - p7zip
     - cmake
+    - autoconf
+    - automake
+    - libtool
     update: true
 
 
