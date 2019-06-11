@@ -701,7 +701,7 @@ before_script:
       cmake ..;
       make -k;
       make install;
-      cd "$OLDPWD";
+      cd "$TRAVIS_BUILD_DIR";
     fi
 
   # Go back to root repo folder
