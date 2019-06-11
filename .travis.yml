@@ -702,8 +702,7 @@ before_script:
       make -k;
       make install;
       cd "$TRAVIS_BUILD_DIR";
-    fi
-
+    fi;
   # Go back to root repo folder
   - cd "$OLDPWD"
 
