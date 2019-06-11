@@ -345,7 +345,7 @@ matrix:
         #       - sourceline: 'ppa:steelt/srb2test'
         #       packages:
         #       - libsdl2-mixer-dev
-        #       - libpng-dev
+        #       - libpng12-dev
         #       - libgl1-mesa-dev
         #       - libgme-dev
         #       - p7zip-full
@@ -485,7 +485,7 @@ matrix:
               - sourceline: 'ppa:steelt/srb2test'
               packages:
               - libsdl2-mixer-dev
-              - libpng-dev
+              - libpng12-dev
               - libgl1-mesa-dev
               - libgme-dev
               - p7zip-full
