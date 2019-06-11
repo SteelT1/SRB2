@@ -702,6 +702,8 @@ before_script:
       make -k;
       make install;
       echo "$OLDPWD";
+      cd ..;
+      echo "$OLDPWD";
     fi;
   # Go back to root repo folder
   - cd "$OLDPWD"
