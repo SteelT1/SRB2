@@ -701,9 +701,8 @@ before_script:
       cmake ..;
       make -k;
       make install;
-      cd ..;
-      cd ..;
-    fi;
+      cd "$OLDPWD";
+    fi
 
   # Go back to root repo folder
   - cd "$OLDPWD"
