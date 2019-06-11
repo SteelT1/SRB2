@@ -654,6 +654,20 @@ install:
         brew postinstall sdl2 game-music-emu mazmazz/srb2/sdl2_mixer;
       fi;
     fi
+
+# Build libpng with patched apng support for MacOS
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      mkdir libpng-apng;
+      cd libpng-apng;
+      git clone https://github.com/SteelTitanium/libpng-apng.git --branch libpng16-37 --single-branch;
+      mkdir build-dir;
+      cd build-dir;
+      cmake ..;
+      make -k;
+      make install;
+      cd ..;
+    fi;
+
   - mkdir -p $HOME/srb2_cache
 
 
@@ -691,20 +705,6 @@ before_script:
       7z x "$(basename $ASSET_ARCHIVE_OPTIONAL_PATH)" -o"$__ASSET_DIRECTORY" -aos;
     fi;
 
-  # Build libpng with patched apng support for MacOS
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-      mkdir libpng-apng;
-      cd libpng-apng;
-      git clone https://github.com/SteelTitanium/libpng-apng.git --branch libpng16-37 --single-branch;
-      mkdir build-dir;
-      cd build-dir;
-      cmake ..;
-      make -k;
-      make install;
-      echo "$OLDPWD";
-      cd ..;
-      echo "$OLDPWD";
-    fi;
   # Go back to root repo folder
   - cd "$OLDPWD"
 
