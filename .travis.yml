@@ -662,7 +662,7 @@ install:
       git clone https://github.com/SteelTitanium/libpng-apng.git --branch libpng16-37 --single-branch .;
       mkdir build-dir;
       cd build-dir;
-      cmake .. -DCMAKE_INSTALL_PREFIX=/usr/lib
+      cmake .. -DCMAKE_INSTALL_PREFIX=/usr/lib;
       make -k;
       make install;
       cd "$TRAVIS_BUILD_DIR";
