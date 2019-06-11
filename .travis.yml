@@ -697,9 +697,11 @@ before_script:
       cd libpng-apng
       git checkout libpng16-37
       mkdir build-dir
+      cd build-dir
       cmake ..
       make -k
       make install
+      cd ..
       cd ..
     fi;
 
