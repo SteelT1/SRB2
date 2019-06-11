@@ -691,6 +691,18 @@ before_script:
       7z x "$(basename $ASSET_ARCHIVE_OPTIONAL_PATH)" -o"$__ASSET_DIRECTORY" -aos;
     fi;
 
+  # Build libpng with patched apng support for MacOS
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      git clone https://github.com/SteelTitanium/libpng-apng.git --branch libpng16-37 --single-branch
+      cd libpng-apng
+      git checkout libpng16-37
+      mkdir build-dir
+      cmake ..
+      make -k
+      make install
+      cd ..
+    fi;
+
   # Go back to root repo folder
   - cd "$OLDPWD"
 
