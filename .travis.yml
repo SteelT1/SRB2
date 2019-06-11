@@ -693,16 +693,16 @@ before_script:
 
   # Build libpng with patched apng support for MacOS
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-      git clone https://github.com/SteelTitanium/libpng-apng.git --branch libpng16-37 --single-branch
-      cd libpng-apng
-      git checkout libpng16-37
-      mkdir build-dir
-      cd build-dir
-      cmake ..
-      make -k
-      make install
-      cd ..
-      cd ..
+      git clone https://github.com/SteelTitanium/libpng-apng.git --branch libpng16-37 --single-branch;
+      cd libpng-apng;
+      git checkout libpng16-37;
+      mkdir build-dir;
+      cd build-dir;
+      cmake ..;
+      make -k;
+      make install;
+      cd ..;
+      cd ..;
     fi;
 
   # Go back to root repo folder
