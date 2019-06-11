@@ -695,7 +695,7 @@ before_script:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
       mkdir libpng-apng;
       cd libpng-apng;
-      rm -f .DS_Store # Just in case
+      rm -f .DS_Store; # Just in case
       git clone https://github.com/SteelTitanium/libpng-apng.git --branch libpng16-37 --single-branch;
       mkdir build-dir;
       cd build-dir;
