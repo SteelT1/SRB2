@@ -664,7 +664,7 @@ install:
       cd build-dir;
       cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/mac-dev-env/libpng-1.6.37;
       make -k;
-      make install;
+      sudo make install;
       sudo ln -s /usr/local/mac-dev-env/libpng-1.6.37 /usr/local/libpng;
       cd "$TRAVIS_BUILD_DIR";
       echo $PWD;
