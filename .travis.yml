@@ -662,11 +662,11 @@ install:
       git clone https://github.com/SteelTitanium/libpng-apng.git --branch libpng16-37 --single-branch .;
       mkdir build-dir;
       cd build-dir;
-      echo $PWD;
       cmake ..;
       make -k;
       make install;
-      cd ..;
+      cd "$TRAVIS_BUILD_DIR";
+      echo $PWD;
     fi;
 
   - mkdir -p $HOME/srb2_cache
