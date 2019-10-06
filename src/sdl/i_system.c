@@ -187,6 +187,8 @@ static char returnWadPath[256];
 
 #include "../m_menu.h"
 
+#include "../r_main.h" // Frame interpolation/uncapped
+
 #ifdef MAC_ALERT
 #include "macosx/mac_alert.h"
 #endif
@@ -2044,6 +2046,8 @@ ticcmd_t *I_BaseTiccmd2(void)
 	return &emptycmd2;
 }
 
+static Uint64 basetime = 0;
+
 #if defined (_WIN32)
 static HMODULE winmm = NULL;
 static DWORD starttickcount = 0; // hack for win2k time bug
@@ -2104,20 +2108,8 @@ DWORD TimeFunction(int requested_frequency)
 
 	return newtics;
 }
-
-static void I_ShutdownTimer(void)
-{
-	pfntimeGetTime = NULL;
-	if (winmm)
-	{
-		p_timeEndPeriod pfntimeEndPeriod = (p_timeEndPeriod)(LPVOID)GetProcAddress(winmm, "timeEndPeriod");
-		if (pfntimeEndPeriod)
-			pfntimeEndPeriod(1);
-		FreeLibrary(winmm);
-		winmm = NULL;
-	}
-}
 #else
+
 //
 // I_GetTime
 // returns time in 1/TICRATE second tics
@@ -2126,8 +2118,7 @@ static void I_ShutdownTimer(void)
 // millisecond precision only
 int TimeFunction(int requested_frequency)
 {
-	static Uint64 basetime = 0;
-		   Uint64 ticks = SDL_GetTicks();
+	Uint64 ticks = SDL_GetTicks();
 
 	if (!basetime)
 		basetime = ticks;
@@ -2141,6 +2132,18 @@ int TimeFunction(int requested_frequency)
 	return ticks;
 }
 #endif
+
+fixed_t I_GetTimeFrac(void) {
+	Uint64 ticks;
+	Uint64 prevticks;
+	fixed_t frac;
+
+	ticks = SDL_GetTicks() - basetime;
+	prevticks = prev_tics * 1000 / TICRATE;
+
+	frac = FixedDiv((ticks - prevticks) * FRACUNIT, (int)lroundf((1.f/TICRATE)*1000 * FRACUNIT));
+	return frac > FRACUNIT ? FRACUNIT : frac;
+}
 
 tic_t I_GetTime(void)
 {
@@ -2157,26 +2160,8 @@ int I_GetTimeMicros(void)
 //
 void I_StartupTimer(void)
 {
-#ifdef _WIN32
-	// for win2k time bug
-	if (M_CheckParm("-gettickcount"))
-	{
-		starttickcount = GetTickCount();
-		CONS_Printf("%s", M_GetText("Using GetTickCount()\n"));
-	}
-	winmm = LoadLibraryA("winmm.dll");
-	if (winmm)
-	{
-		p_timeEndPeriod pfntimeBeginPeriod = (p_timeEndPeriod)(LPVOID)GetProcAddress(winmm, "timeBeginPeriod");
-		if (pfntimeBeginPeriod)
-			pfntimeBeginPeriod(1);
-		pfntimeGetTime = (p_timeGetTime)(LPVOID)GetProcAddress(winmm, "timeGetTime");
-	}
-	I_AddExitFunc(I_ShutdownTimer);
-#endif
+	// no-op
 }
-
-
 
 void I_Sleep(void)
 {
