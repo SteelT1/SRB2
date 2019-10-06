@@ -46,6 +46,7 @@
 #include "b_bot.h"
 #include "m_cond.h" // condition sets
 #include "md5.h" // demo checksums
+#include "r_fps.h" // frame interpolation/uncapped
 
 gameaction_t gameaction;
 gamestate_t gamestate = GS_NULL;
@@ -2017,6 +2018,7 @@ void G_Ticker(boolean run)
 			if (titledemo)
 				F_TitleDemoTicker();
 			P_Ticker(run); // tic the game
+			R_UpdateViewInterpolation();
 			ST_Ticker();
 			AM_Ticker();
 			HU_Ticker();

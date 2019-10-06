@@ -265,6 +265,9 @@ typedef struct mobj_s
 
 	// Info for drawing: position.
 	fixed_t x, y, z;
+	fixed_t new_x, new_y, new_z;
+	fixed_t old_x, old_y, old_z; // position interpolation
+	INT32 firstlerp; // set after first lerp iteration so we don't lose positions on first frame
 
 	// More list: links in sector (if needed)
 	struct mobj_s *snext;
@@ -380,6 +383,9 @@ typedef struct precipmobj_s
 
 	// Info for drawing: position.
 	fixed_t x, y, z;
+	fixed_t new_x, new_y, new_z;
+	fixed_t old_x, old_y, old_z; // position interpolation
+	INT32 firstlerp; // set after first lerp iteration so we don't lose positions on first frame
 
 	// More list: links in sector (if needed)
 	struct precipmobj_s *snext;
