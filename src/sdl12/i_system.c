@@ -240,6 +240,7 @@ static char returnWadPath[256];
 #include "../i_joy.h"
 
 #include "../m_argv.h"
+#include "../m_fixed.h"
 
 #ifdef MAC_ALERT
 #include "macosx/mac_alert.h"
@@ -2188,6 +2189,11 @@ tic_t I_GetTime (void)
 	return (tic_t)ticks;
 }
 #endif
+
+fixed_t I_GetTimeFrac(void)
+{
+	return 0;
+}
 
 //
 //I_StartupTimer
