@@ -10479,6 +10479,12 @@ static inline int lib_getenum(lua_State *L)
 	} else if (fastcmp(word,"paused")) {
 		lua_pushboolean(L, paused);
 		return 1;
+	} else if (fastcmp(word,"bluescore")) {
+		lua_pushinteger(L, bluescore);
+		return 1;
+	} else if (fastcmp(word,"redscore")) {
+		lua_pushinteger(L, redscore);
+		return 1;
 	// begin map vars
 	} else if (fastcmp(word,"spstage_start")) {
 		lua_pushinteger(L, spstage_start);
@@ -10691,6 +10697,8 @@ static int lib_getActionName(lua_State *L)
 
 	return luaL_typerror(L, 1, "action userdata or Lua function");
 }
+
+
 
 int LUA_SOCLib(lua_State *L)
 {
