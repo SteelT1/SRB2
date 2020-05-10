@@ -5,9 +5,23 @@ UINT8 sound_started = false;
 static boolean songpaused;
 static UINT8 music_volume, sfx_volume, internal_volume;
 static const char* BassErrorCodeToString(int bass_errorcode);
+HSTREAM music;
 
-char *bassver;
-char *music = NULL;
+static UINT8 music_volume, sfx_volume, internal_volume;
+static float loop_point;
+static float song_length; // length in seconds
+static boolean songpaused;
+static UINT32 music_bytes;
+static boolean is_looping;
+// fading
+static boolean is_fading;
+static UINT8 fading_source;
+static UINT8 fading_target;
+static UINT32 fading_timer;
+static UINT32 fading_duration;
+//static INT32 fading_id;
+static void (*fading_callback)(void);
+static boolean fading_nocleanup;
 
 const char *bec2str[] = {
 	"All is OK",
@@ -50,6 +64,25 @@ const char *bec2str[] = {
 	"The device is busy"
 };
 
+static void var_cleanup(void)
+{
+	song_length = loop_point = 0.0f;
+	music_bytes = fading_source = fading_target =\
+	 fading_timer = fading_duration = 0;
+
+	songpaused = is_looping =\
+	 is_fading = false;
+
+	// HACK: See music_loop, where we want the fade timing to proceed after a non-looping
+	// song has stopped playing
+	if (!fading_nocleanup)
+		fading_callback = NULL;
+	else
+		fading_nocleanup = false; // use it once, set it back immediately
+
+	internal_volume = 100;
+}
+
 static const char* BassErrorCodeToString(int bass_errorcode)
 {
 	if (bass_errorcode == BASS_ERROR_UNKNOWN) // Special case
@@ -70,6 +103,7 @@ void I_FreeSfx(sfxinfo_t *sfx)
 
 void I_StartupSound(void)
 {
+	static long bassver;
 	//I_Assert(!sound_started);
 	if (sound_started)
 		return;
@@ -78,8 +112,13 @@ void I_StartupSound(void)
 	(void)music_volume;
 	(void)sfx_volume;
 
+	bassver = BASS_GetVersion();
+
+	CONS_Printf("Compiled with BASS version: %s\n", BASSVERSIONTEXT);
+	CONS_Printf("Linked with BASS version: %ld.%ld\n", bassver/100/100/100, bassver/100/100%100);
+
 	// Initalize BASS and the output device
-	if (!BASS_Init(-1, 44100, 0, NULL, NULL))
+	if (!BASS_Init(-1, 44100, BASS_DEVICE_STEREO|BASS_DEVICE_LATENCY|BASS_DEVICE_FREQ, NULL, NULL))
 	{
 		CONS_Alert(CONS_ERROR, "Error initializing BASS: %s\n", BassErrorCodeToString(BASS_ErrorGetCode()));
 		// call to start audio failed -- we do not have it
@@ -88,14 +127,11 @@ void I_StartupSound(void)
 	else
 		CONS_Printf("BASS was successfully initialized\n");
 
-	_ultoa_s((unsigned long)BASS_GetVersion(), bassver, sizeof(bassver), 10);
-	CONS_Printf("BASS version: %s\n", bassver);
+	fading_nocleanup = false;
 
-	//fading_nocleanup = false;
+	var_cleanup();
 
-	//var_cleanup();
-
-	music = NULL;
+	music = 0;
 	music_volume = sfx_volume = 0;
 
 #if 0
@@ -251,33 +287,58 @@ UINT32 I_GetSongPosition(void)
 //  MUSIC PLAYBACK
 /// ------------------------
 
-boolean I_LoadSong(char *data, size_t len)
-{
-	(void)data;
-	(void)len;
-	return -1;
-}
-
-void I_UnloadSong(void)
-{
-}
-
 boolean I_PlaySong(boolean looping)
 {
-	(void)looping;
-	return false;
+	is_looping = looping;
+	if (!BASS_ChannelPlay(music, looping))
+	{
+		CONS_Alert(CONS_ERROR, "BASS_ChannelPlay: %s\n", BassErrorCodeToString(BASS_ErrorGetCode()));
+		return false;
+	}
+	return true;
 }
 
 void I_StopSong(void)
 {
+	if (music)
+		BASS_ChannelStop(music);
 }
 
 void I_PauseSong(void)
 {
+	if (!BASS_ChannelPause(music))
+		CONS_Alert(CONS_ERROR, "BASS_ChannelPause: %s\n", BassErrorCodeToString(BASS_ErrorGetCode()));
+	songpaused = true;
 }
 
 void I_ResumeSong(void)
 {
+	if (!BASS_ChannelPlay(music, is_looping))
+		CONS_Alert(CONS_ERROR, "BASS_ChannelPlay: %s\n", BassErrorCodeToString(BASS_ErrorGetCode()));
+	songpaused = false;
+}
+
+boolean I_LoadSong(char *data, size_t len)
+{
+	if (music)
+		I_UnloadSong();
+
+	music = BASS_StreamCreateFile(true, data, 0, len, 0);
+
+	if (!music)
+	{
+		CONS_Alert(CONS_ERROR, "BASS_StreamCreateFile: %s\n", BassErrorCodeToString(BASS_ErrorGetCode()));
+		return false;
+	}
+	return true;
+}
+
+void I_UnloadSong(void)
+{
+	I_StopSong();
+
+	if (music)
+		BASS_StreamFree(music);
 }
 
 void I_SetMusicVolume(UINT8 volume)
