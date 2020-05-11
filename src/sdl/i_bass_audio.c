@@ -5,7 +5,8 @@ UINT8 sound_started = false;
 static boolean songpaused;
 static UINT8 music_volume, sfx_volume, internal_volume;
 static const char* BassErrorCodeToString(int bass_errorcode);
-HSTREAM music;
+HSTREAM music_stream;
+BASS_CHANNELINFO musicinfo;
 
 static UINT8 music_volume, sfx_volume, internal_volume;
 static float loop_point;
@@ -131,7 +132,7 @@ void I_StartupSound(void)
 
 	var_cleanup();
 
-	music = 0;
+	music_stream = 0;
 	music_volume = sfx_volume = 0;
 
 #if 0
@@ -216,12 +217,55 @@ void I_SetSfxVolume(UINT8 volume)
 }
 
 /// ------------------------
+/// Music Hooks
+/// ------------------------
+
+#if 0
+static void count_music_bytes(HSTREAM handle, void *buffer, DWORD length, void *user)
+{
+	(void)handle;
+	(void)buffer;
+	(void)user;
+
+	if (!music_stream || I_SongType() == MU_GME || I_SongType() == MU_MOD || I_SongType() == MU_MID)
+		return;
+	music_bytes += length;
+}
+#endif
+
+static void CALLBACK music_loop(HSYNC handle, DWORD channel, DWORD data, void *user)
+{
+	(void)handle;
+	(void)channel;
+	(void)data;
+	(void)user;
+	if (is_looping)
+	{
+		BASS_ChannelSetPosition(music_stream, loop_point, BASS_POS_BYTE);
+		music_bytes = (UINT32)(loop_point*44100.0L*4); //assume 44.1khz, 4-byte length (see I_GetSongPosition)
+	}
+	else
+	{
+		// HACK: Let fade timing proceed beyond the end of a
+		// non-looping song. This is a specific case where the timing
+		// should persist after stopping a song, so I don't believe
+		// this should apply every time the user stops a song.
+		// This is auto-unset in var_cleanup, called by I_StopSong
+		fading_nocleanup = true;
+		I_StopSong();
+	}
+}
+
+/// ------------------------
 //  MUSIC SYSTEM
 /// ------------------------
 
 void I_InitMusic(void){}
 
-void I_ShutdownMusic(void){}
+void I_ShutdownMusic(void)
+{
+	I_UnloadSong();
+}
 
 /// ------------------------
 //  MUSIC PROPERTIES
@@ -229,17 +273,25 @@ void I_ShutdownMusic(void){}
 
 musictype_t I_SongType(void)
 {
+	BASS_ChannelGetInfo(music_stream, &musicinfo); // get info
+
+	if (musicinfo.ctype == BASS_CTYPE_STREAM_VORBIS)
+		return MU_OGG;
+	else if (musicinfo.ctype == BASS_CTYPE_STREAM_MP3 || musicinfo.ctype == BASS_CTYPE_STREAM_MP1 || musicinfo.ctype == BASS_CTYPE_STREAM_MP2)
+		return MU_MP3;
+	else if (musicinfo.ctype == BASS_CTYPE_STREAM_WAV)
+		return MU_WAV;
 	return MU_NONE;
 }
 
 boolean I_SongPlaying(void)
 {
-	return false;
+	return (music_stream != 0);
 }
 
 boolean I_SongPaused(void)
 {
-	return false;
+	return songpaused;
 }
 
 /// ------------------------
@@ -274,8 +326,8 @@ UINT32 I_GetSongLoopPoint(void)
 
 boolean I_SetSongPosition(UINT32 position)
 {
-    (void)position;
-    return false;
+    BASS_ChannelSetPosition(music_stream, position, 0);
+    return true;
 }
 
 UINT32 I_GetSongPosition(void)
@@ -290,55 +342,72 @@ UINT32 I_GetSongPosition(void)
 boolean I_PlaySong(boolean looping)
 {
 	is_looping = looping;
-	if (!BASS_ChannelPlay(music, looping))
+	if (!BASS_ChannelPlay(music_stream, looping))
 	{
 		CONS_Alert(CONS_ERROR, "BASS_ChannelPlay: %s\n", BassErrorCodeToString(BASS_ErrorGetCode()));
 		return false;
 	}
+
+	if (music_stream && is_looping)
+		BASS_ChannelSetSync(music_stream, BASS_SYNC_POS|BASS_SYNC_MIXTIME, BASS_ChannelGetLength(music_stream, BASS_POS_BYTE), music_loop, NULL); // set mix-time POS sync at loop end
 	return true;
 }
 
 void I_StopSong(void)
 {
-	if (music)
-		BASS_ChannelStop(music);
+	if (music_stream)
+	{
+		BASS_ChannelSetPosition(music_stream, 0, 0);
+		BASS_ChannelPause(music_stream);
+	}
+
+	var_cleanup();
 }
 
 void I_PauseSong(void)
 {
-	if (!BASS_ChannelPause(music))
+	if (!BASS_ChannelPause(music_stream))
+	{
+		CONS_Printf("%d\n", BASS_ErrorGetCode());
 		CONS_Alert(CONS_ERROR, "BASS_ChannelPause: %s\n", BassErrorCodeToString(BASS_ErrorGetCode()));
+	}
 	songpaused = true;
 }
 
 void I_ResumeSong(void)
 {
-	if (!BASS_ChannelPlay(music, is_looping))
+	if (!BASS_ChannelPlay(music_stream, is_looping))
 		CONS_Alert(CONS_ERROR, "BASS_ChannelPlay: %s\n", BassErrorCodeToString(BASS_ErrorGetCode()));
 	songpaused = false;
-}
-
-boolean I_LoadSong(char *data, size_t len)
-{
-	if (music)
-		I_UnloadSong();
-
-	music = BASS_StreamCreateFile(true, data, 0, len, 0);
-
-	if (!music)
-	{
-		CONS_Alert(CONS_ERROR, "BASS_StreamCreateFile: %s\n", BassErrorCodeToString(BASS_ErrorGetCode()));
-		return false;
-	}
-	return true;
 }
 
 void I_UnloadSong(void)
 {
 	I_StopSong();
 
-	if (music)
-		BASS_StreamFree(music);
+	if (music_stream)
+	{
+		BASS_StreamFree(music_stream);
+		music_stream = 0;
+	}
+}
+
+boolean I_LoadSong(char *data, size_t len)
+{
+	if (music_stream)
+		I_UnloadSong();
+
+	// always do this whether or not a music already exists
+	var_cleanup();
+
+	music_stream = BASS_StreamCreateFile(true, data, 0, len, 0);
+
+	if (!music_stream)
+	{
+		CONS_Alert(CONS_ERROR, "BASS_StreamCreateFile: %s\n", BassErrorCodeToString(BASS_ErrorGetCode()));
+		return false;
+	}
+	return true;
 }
 
 void I_SetMusicVolume(UINT8 volume)
