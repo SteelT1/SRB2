@@ -1,4 +1,8 @@
 #include "bass.h"
+#include "bassmix.h"
+#include "bass_fx.h"
+#include "SDL.h"
+#include "../doomstat.h"
 #include "../i_sound.h"
 
 UINT8 sound_started = false;
@@ -6,6 +10,7 @@ static boolean songpaused;
 static UINT8 music_volume, sfx_volume, internal_volume;
 static const char* BassErrorCodeToString(int bass_errorcode);
 HSTREAM music_stream;
+HSTREAM bassmixer;
 BASS_CHANNELINFO musicinfo;
 
 static UINT8 music_volume, sfx_volume, internal_volume;
@@ -20,7 +25,7 @@ static UINT8 fading_source;
 static UINT8 fading_target;
 static UINT32 fading_timer;
 static UINT32 fading_duration;
-//static INT32 fading_id;
+static INT32 fading_id;
 static void (*fading_callback)(void);
 static boolean fading_nocleanup;
 
@@ -135,32 +140,17 @@ void I_StartupSound(void)
 	music_stream = 0;
 	music_volume = sfx_volume = 0;
 
-#if 0
-#ifdef HAVE_MIXERX
-	Mix_SetMidiPlayer(cv_midiplayer.value);
-	Mix_SetSoundFonts(cv_midisoundfontpath.string);
-	Mix_Timidity_addToPathList(cv_miditimiditypath.string);
-#endif
-#if SDL_MIXER_VERSION_ATLEAST(1,2,11)
-	Mix_Init(MIX_INIT_FLAC|MIX_INIT_MP3|MIX_INIT_OGG|MIX_INIT_MOD);
-#endif
+	bassmixer = BASS_Mixer_StreamCreate(44100, 2, BASS_STREAM_AUTOFREE|BASS_MIXER_NONSTOP);
 
-	if (Mix_OpenAudio(SAMPLERATE, AUDIO_S16SYS, 2, BUFFERSIZE) < 0)
+	if (!bassmixer)
 	{
-		CONS_Alert(CONS_ERROR, "Error starting SDL_Mixer: %s\n", Mix_GetError());
-		// call to start audio failed -- we do not have it
+		CONS_Alert(CONS_ERROR, "Error creating BASS mixer: %s\n", BassErrorCodeToString(BASS_ErrorGetCode()));
 		return;
 	}
 
-#ifdef HAVE_OPENMPT
-	CONS_Printf("libopenmpt version: %s\n", openmpt_get_string("library_version"));
-	CONS_Printf("libopenmpt build date: %s\n", openmpt_get_string("build"));
-#endif
+	BASS_ChannelSetAttribute(bassmixer, BASS_ATTRIB_BUFFER, 0);
+	BASS_ChannelPlay(bassmixer, false);
 
-	sound_started = true;
-	songpaused = false;
-	Mix_AllocateChannels(256);
-#endif
 	sound_started = true;
 	songpaused = false;
 }
@@ -171,8 +161,8 @@ void I_ShutdownSound(void)
 		return; // not an error condition
 	sound_started = false;
 
-	if (!BASS_Free())
-		CONS_Alert(CONS_ERROR, "BASS_Free() failed... %s\n", BassErrorCodeToString(BASS_ErrorGetCode()));
+	BASS_ChannelStop(bassmixer);
+	BASS_Free();
 }
 
 void I_UpdateSound(void){};
@@ -217,21 +207,56 @@ void I_SetSfxVolume(UINT8 volume)
 }
 
 /// ------------------------
+/// Music Utilities
+/// ------------------------
+
+static float get_real_volume(UINT8 volume)
+{
+#ifdef _WIN32
+	if (I_SongType() == MU_MID)
+		// HACK: Until we stop using native MIDI,
+		// disable volume changes
+		return 31.0/31.0; // volume = 31
+	else
+#endif
+		// convert volume to BASS's 0...1.0 scale
+		// then apply internal_volume as a percentage
+		return (volume/31.0) * (UINT32)internal_volume / 100;
+}
+
+static UINT32 get_adjusted_position(UINT32 position)
+{
+	// all in milliseconds
+	UINT32 length = I_GetSongLength();
+	UINT32 looppoint = I_GetSongLoopPoint();
+	if (length)
+		return position >= length ? (position % (length-looppoint)) : position;
+	else
+		return position;
+}
+
+static void do_fading_callback(void)
+{
+	if (fading_callback)
+		(*fading_callback)();
+	fading_callback = NULL;
+}
+
+/// ------------------------
 /// Music Hooks
 /// ------------------------
 
-#if 0
-static void count_music_bytes(HSTREAM handle, void *buffer, DWORD length, void *user)
+static void CALLBACK count_music_bytes(HSYNC handle, DWORD channel, DWORD data, void *user)
 {
 	(void)handle;
-	(void)buffer;
+	(void)channel;
 	(void)user;
+	(void)data;
 
 	if (!music_stream || I_SongType() == MU_GME || I_SongType() == MU_MOD || I_SongType() == MU_MID)
 		return;
-	music_bytes += length;
+	music_bytes += BASS_ChannelGetLength(music_stream, BASS_POS_BYTE);
 }
-#endif
 
 static void CALLBACK music_loop(HSYNC handle, DWORD channel, DWORD data, void *user)
 {
@@ -241,7 +266,7 @@ static void CALLBACK music_loop(HSYNC handle, DWORD channel, DWORD data, void *u
 	(void)user;
 	if (is_looping)
 	{
-		BASS_ChannelSetPosition(music_stream, loop_point, BASS_POS_BYTE);
+		BASS_ChannelSetPosition(music_stream, loop_point*44100.0L*4, BASS_POS_BYTE);
 		music_bytes = (UINT32)(loop_point*44100.0L*4); //assume 44.1khz, 4-byte length (see I_GetSongPosition)
 	}
 	else
@@ -253,6 +278,41 @@ static void CALLBACK music_loop(HSYNC handle, DWORD channel, DWORD data, void *u
 		// This is auto-unset in var_cleanup, called by I_StopSong
 		fading_nocleanup = true;
 		I_StopSong();
+	}
+}
+
+static UINT32 music_fade(UINT32 interval, void *param)
+{
+	(void)param;
+
+	if (!is_fading ||
+		internal_volume == fading_target ||
+		fading_duration == 0)
+	{
+		I_StopFadingSong();
+		do_fading_callback();
+		return 0;
+	}
+	else if (songpaused) // don't decrement timer
+		return interval;
+	else if ((fading_timer -= 10) <= 0)
+	{
+		internal_volume = fading_target;
+		BASS_ChannelSetAttribute(music_stream, BASS_ATTRIB_VOL, get_real_volume(music_volume));
+		I_StopFadingSong();
+		do_fading_callback();
+		return 0;
+	}
+	else
+	{
+		UINT8 delta = abs(fading_target - fading_source);
+		fixed_t factor = FixedDiv(fading_duration - fading_timer, fading_duration);
+		if (fading_target < fading_source)
+			internal_volume = max(min(internal_volume, fading_source - FixedMul(delta, factor)), fading_target);
+		else if (fading_target > fading_source)
+			internal_volume = min(max(internal_volume, fading_source + FixedMul(delta, factor)), fading_target);
+		BASS_ChannelSetAttribute(music_stream, BASS_ATTRIB_VOL, get_real_volume(music_volume));
+		return interval;
 	}
 }
 
@@ -310,29 +370,60 @@ boolean I_SetSongSpeed(float speed)
 
 UINT32 I_GetSongLength(void)
 {
-	return 0;
+	QWORD len;
+	double time;
+	if (!music_stream || I_SongType() == MU_MOD || I_SongType() == MU_MID)
+		return 0;
+	else
+	{
+		len = BASS_ChannelGetLength(music_stream, BASS_POS_BYTE); // the length in bytes
+		time = BASS_ChannelBytes2Seconds(music_stream, len); // the length in seconds
+		return (UINT32)(time*1000); // the length in miliseconds;
+	}
 }
 
 boolean I_SetSongLoopPoint(UINT32 looppoint)
 {
-        (void)looppoint;
-        return false;
+	if (!music_stream || I_SongType() == MU_GME || I_SongType() == MU_MOD || I_SongType() == MU_MID || !is_looping)
+		return false;
+	else
+	{
+		UINT32 length = I_GetSongLength();
+
+		if (length > 0)
+			looppoint %= length;
+
+		loop_point = max((float)(looppoint / 1000.0L), 0);
+		return true;
+	}
 }
 
 UINT32 I_GetSongLoopPoint(void)
 {
-	return 0;
+	if (!music_stream || I_SongType() == MU_MOD || I_SongType() == MU_MID)
+		return 0;
+	else
+		return loop_point * 1000;
 }
 
 boolean I_SetSongPosition(UINT32 position)
 {
-    BASS_ChannelSetPosition(music_stream, position, 0);
+	UINT32 length;
+
+	length = I_GetSongLength(); // get it in MS
+	if (length)
+		position = get_adjusted_position(position);
+
+    BASS_ChannelSetPosition(music_stream, BASS_ChannelSeconds2Bytes(music_stream, position), BASS_POS_BYTE);
     return true;
 }
 
 UINT32 I_GetSongPosition(void)
 {
-    return 0;
+	if (!music_stream || I_SongType() == MU_MID)
+		return 0;
+	else
+   		return BASS_ChannelGetPosition(music_stream, BASS_POS_BYTE);
 }
 
 /// ------------------------
@@ -342,14 +433,19 @@ UINT32 I_GetSongPosition(void)
 boolean I_PlaySong(boolean looping)
 {
 	is_looping = looping;
-	if (!BASS_ChannelPlay(music_stream, looping))
+	if (!BASS_Mixer_StreamAddChannel(bassmixer, music_stream, BASS_MIXER_CHAN_BUFFER|BASS_MIXER_CHAN_NORAMPIN))
 	{
-		CONS_Alert(CONS_ERROR, "BASS_ChannelPlay: %s\n", BassErrorCodeToString(BASS_ErrorGetCode()));
+		CONS_Alert(CONS_ERROR, "I_PlaySong: %s\n", BassErrorCodeToString(BASS_ErrorGetCode()));
 		return false;
 	}
 
 	if (music_stream && is_looping)
-		BASS_ChannelSetSync(music_stream, BASS_SYNC_POS|BASS_SYNC_MIXTIME, BASS_ChannelGetLength(music_stream, BASS_POS_BYTE), music_loop, NULL); // set mix-time POS sync at loop end
+	{
+		BASS_ChannelFlags(music_stream, BASS_SAMPLE_LOOP, BASS_SAMPLE_LOOP); // set the LOOP flag
+		BASS_Mixer_ChannelSetSync(music_stream, BASS_SYNC_POS|BASS_SYNC_MIXTIME|BASS_SYNC_THREAD, BASS_ChannelGetLength(music_stream, BASS_POS_BYTE), music_loop, NULL); // set mix-time POS sync at loop end
+	}
+
+	BASS_Mixer_ChannelSetSync(music_stream, BASS_SYNC_MIXTIME|BASS_SYNC_THREAD|BASS_SYNC_END, 0, count_music_bytes, NULL);
 	return true;
 }
 
@@ -357,8 +453,8 @@ void I_StopSong(void)
 {
 	if (music_stream)
 	{
-		BASS_ChannelSetPosition(music_stream, 0, 0);
-		BASS_ChannelPause(music_stream);
+		BASS_Mixer_ChannelFlags(music_stream, BASS_MIXER_CHAN_PAUSE, BASS_MIXER_CHAN_PAUSE);
+		BASS_Mixer_ChannelSetPosition(music_stream, 0, 0);
 	}
 
 	var_cleanup();
@@ -366,18 +462,15 @@ void I_StopSong(void)
 
 void I_PauseSong(void)
 {
-	if (!BASS_ChannelPause(music_stream))
-	{
-		CONS_Printf("%d\n", BASS_ErrorGetCode());
-		CONS_Alert(CONS_ERROR, "BASS_ChannelPause: %s\n", BassErrorCodeToString(BASS_ErrorGetCode()));
-	}
+	if (!BASS_Mixer_ChannelFlags(music_stream, BASS_MIXER_CHAN_PAUSE, BASS_MIXER_CHAN_PAUSE))
+		CONS_Alert(CONS_ERROR, "I_PauseSong: %s\n", BassErrorCodeToString(BASS_ErrorGetCode()));
 	songpaused = true;
 }
 
 void I_ResumeSong(void)
 {
-	if (!BASS_ChannelPlay(music_stream, is_looping))
-		CONS_Alert(CONS_ERROR, "BASS_ChannelPlay: %s\n", BassErrorCodeToString(BASS_ErrorGetCode()));
+	if (!BASS_Mixer_ChannelFlags(music_stream, 0, BASS_MIXER_CHAN_PAUSE))
+		CONS_Alert(CONS_ERROR, "I_ResumeSong: %s\n", BassErrorCodeToString(BASS_ErrorGetCode()));
 	songpaused = false;
 }
 
@@ -387,6 +480,7 @@ void I_UnloadSong(void)
 
 	if (music_stream)
 	{
+		BASS_Mixer_ChannelRemove(music_stream);
 		BASS_StreamFree(music_stream);
 		music_stream = 0;
 	}
@@ -394,25 +488,78 @@ void I_UnloadSong(void)
 
 boolean I_LoadSong(char *data, size_t len)
 {
+	const char *key1 = "LOOP";
+	const char *key2 = "POINT=";
+	const char *key3 = "MS=";
+	const size_t key1len = strlen(key1);
+	const size_t key2len = strlen(key2);
+	const size_t key3len = strlen(key3);
+	char *p = data;
+
 	if (music_stream)
 		I_UnloadSong();
 
 	// always do this whether or not a music already exists
 	var_cleanup();
 
-	music_stream = BASS_StreamCreateFile(true, data, 0, len, 0);
+	music_stream = BASS_StreamCreateFile(true, data, 0, len, BASS_STREAM_DECODE);
 
 	if (!music_stream)
 	{
 		CONS_Alert(CONS_ERROR, "BASS_StreamCreateFile: %s\n", BassErrorCodeToString(BASS_ErrorGetCode()));
 		return false;
 	}
+
+	// Find the OGG loop point.
+	loop_point = 0.0f;
+	song_length = 0.0f;
+
+	while ((UINT32)(p - data) < len)
+	{
+		if (fpclassify(loop_point) == FP_ZERO && !strncmp(p, key1, key1len))
+		{
+			p += key1len; // skip LOOP
+			if (!strncmp(p, key2, key2len)) // is it LOOPPOINT=?
+			{
+				p += key2len; // skip POINT=
+				loop_point = (float)((44.1L+atoi(p)) / 44100.0L); // LOOPPOINT works by sample count.
+				// because SDL_Mixer is USELESS and can't even tell us
+				// something simple like the frequency of the streaming music,
+				// we are unfortunately forced to assume that ALL MUSIC is 44100hz.
+				// This means a lot of tracks that are only 22050hz for a reasonable downloadable file size will loop VERY badly.
+			}
+			else if (!strncmp(p, key3, key3len)) // is it LOOPMS=?
+			{
+				p += key3len; // skip MS=
+				loop_point = (float)(atoi(p) / 1000.0L); // LOOPMS works by real time, as miliseconds.
+				// Everything that uses LOOPMS will work perfectly with SDL_Mixer.
+			}
+		}
+
+		if (fpclassify(loop_point) != FP_ZERO) // Got what we needed
+			break;
+		else // continue searching
+			p++;
+	}
+
 	return true;
 }
 
 void I_SetMusicVolume(UINT8 volume)
 {
-	(void)volume;
+	if (!I_SongPlaying())
+		return;
+
+#ifdef _WIN32
+	if (I_SongType() == MU_MID)
+		// HACK: Until we stop using native MIDI,
+		// disable volume changes
+		music_volume = 31;
+	else
+#endif
+		music_volume = volume;
+
+	BASS_ChannelSetAttribute(music_stream, BASS_ATTRIB_VOL, get_real_volume(music_volume));
 }
 
 boolean I_SetSongTrack(int track)
@@ -427,39 +574,86 @@ boolean I_SetSongTrack(int track)
 
 void I_SetInternalMusicVolume(UINT8 volume)
 {
-	(void)volume;
+	internal_volume = volume;
+	if (!I_SongPlaying())
+		return;
+	BASS_ChannelSetAttribute(music_stream, BASS_ATTRIB_VOL, get_real_volume(music_volume));
 }
 
 void I_StopFadingSong(void)
 {
+	if (fading_id)
+		SDL_RemoveTimer(fading_id);
+	is_fading = false;
+	fading_source = fading_target = fading_timer = fading_duration = fading_id = 0;
 }
 
 boolean I_FadeSongFromVolume(UINT8 target_volume, UINT8 source_volume, UINT32 ms, void (*callback)(void))
 {
-	(void)target_volume;
-	(void)source_volume;
-	(void)ms;
-	(void)callback;
-	return false;
+	INT16 volume_delta;
+
+	source_volume = min(source_volume, 100);
+	volume_delta = (INT16)(target_volume - source_volume);
+
+	I_StopFadingSong();
+
+	if (!ms && volume_delta)
+	{
+		I_SetInternalMusicVolume(target_volume);
+		if (callback)
+			(*callback)();
+		return true;
+
+	}
+	else if (!volume_delta)
+	{
+		if (callback)
+			(*callback)();
+		return true;
+	}
+
+	// Round MS to nearest 10
+	// If n - lower > higher - n, then round up
+	ms = (ms - ((ms / 10) * 10) > (((ms / 10) * 10) + 10) - ms) ?
+		(((ms / 10) * 10) + 10) // higher
+		: ((ms / 10) * 10); // lower
+
+	if (!ms)
+		I_SetInternalMusicVolume(target_volume);
+	else if (source_volume != target_volume)
+	{
+		fading_id = SDL_AddTimer(10, music_fade, NULL);
+		if (fading_id)
+		{
+			is_fading = true;
+			fading_timer = fading_duration = ms;
+			fading_source = source_volume;
+			fading_target = target_volume;
+			fading_callback = callback;
+
+			if (internal_volume != source_volume)
+				I_SetInternalMusicVolume(source_volume);
+		}
+	}
+
+	return is_fading;
 }
+
 
 boolean I_FadeSong(UINT8 target_volume, UINT32 ms, void (*callback)(void))
 {
-	(void)target_volume;
-	(void)ms;
-	(void)callback;
-	return false;
+	return I_FadeSongFromVolume(target_volume, internal_volume, ms, callback);
 }
 
 boolean I_FadeOutStopSong(UINT32 ms)
 {
-	(void)ms;
-	return false;
+	return I_FadeSongFromVolume(0, internal_volume, ms, &I_StopSong);
 }
 
 boolean I_FadeInPlaySong(UINT32 ms, boolean looping)
 {
-        (void)ms;
-        (void)looping;
-        return false;
+	if (I_PlaySong(looping))
+		return I_FadeSongFromVolume(100, 0, ms, NULL);
+	else
+		return false;
 }
