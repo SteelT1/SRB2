@@ -29,6 +29,7 @@ static INT32 fading_id;
 static void (*fading_callback)(void);
 static boolean fading_nocleanup;
 
+// Ideally this wouldn't need to exist, however BASS has no function for it, so we gotta do it ourselves.
 const char *bec2str[] = {
 	"All is OK",
 	"Memory error",
@@ -255,7 +256,7 @@ static void CALLBACK count_music_bytes(HSYNC handle, DWORD channel, DWORD data, 
 
 	if (!music_stream || I_SongType() == MU_GME || I_SongType() == MU_MOD || I_SongType() == MU_MID)
 		return;
-	music_bytes += BASS_ChannelGetLength(music_stream, BASS_POS_BYTE);
+	music_bytes++;
 }
 
 static void CALLBACK music_loop(HSYNC handle, DWORD channel, DWORD data, void *user)
@@ -410,12 +411,21 @@ boolean I_SetSongPosition(UINT32 position)
 {
 	UINT32 length;
 
-	length = I_GetSongLength(); // get it in MS
-	if (length)
-		position = get_adjusted_position(position);
+    if (!music_stream || I_SongType() == MU_MID)
+		return false;
+	else
+	{
+		length = I_GetSongLength(); // get it in MS
+		if (length)
+			position = get_adjusted_position(position);
 
-    BASS_ChannelSetPosition(music_stream, BASS_ChannelSeconds2Bytes(music_stream, position), BASS_POS_BYTE);
-    return true;
+		if (BASS_ChannelSetPosition(music_stream, BASS_ChannelSeconds2Bytes(music_stream, position/1000.0L), BASS_POS_BYTE))
+			music_bytes = (UINT32)(position/1000.0L*44100.0L*4);
+		else
+			music_bytes = 0;
+
+		return true;
+	}
 }
 
 UINT32 I_GetSongPosition(void)
@@ -423,7 +433,7 @@ UINT32 I_GetSongPosition(void)
 	if (!music_stream || I_SongType() == MU_MID)
 		return 0;
 	else
-   		return BASS_ChannelGetPosition(music_stream, BASS_POS_BYTE);
+   		return BASS_ChannelBytes2Seconds(music_stream, BASS_ChannelGetPosition(music_stream, BASS_POS_BYTE)) * 1000;
 }
 
 /// ------------------------
@@ -445,7 +455,7 @@ boolean I_PlaySong(boolean looping)
 		BASS_Mixer_ChannelSetSync(music_stream, BASS_SYNC_POS|BASS_SYNC_MIXTIME|BASS_SYNC_THREAD, BASS_ChannelGetLength(music_stream, BASS_POS_BYTE), music_loop, NULL); // set mix-time POS sync at loop end
 	}
 
-	BASS_Mixer_ChannelSetSync(music_stream, BASS_SYNC_MIXTIME|BASS_SYNC_THREAD|BASS_SYNC_END, 0, count_music_bytes, NULL);
+	BASS_Mixer_ChannelSetSync(music_stream, BASS_SYNC_MIXTIME|BASS_SYNC_THREAD|BASS_SYNC_POS, 0, count_music_bytes, NULL);
 	return true;
 }
 
