@@ -4,6 +4,10 @@
 #include "SDL.h"
 #include "../doomstat.h"
 #include "../i_sound.h"
+#include "../z_zone.h"
+#include "../byteptr.h"
+#include "../s_sound.h"
+#include "../w_wad.h"
 
 UINT8 sound_started = false;
 static boolean songpaused;
@@ -15,7 +19,6 @@ BASS_CHANNELINFO musicinfo;
 
 static UINT8 music_volume, sfx_volume, internal_volume;
 static float loop_point;
-static float song_length; // length in seconds
 static boolean songpaused;
 static UINT32 music_bytes;
 static boolean is_looping;
@@ -73,7 +76,7 @@ const char *bec2str[] = {
 
 static void var_cleanup(void)
 {
-	song_length = loop_point = 0.0f;
+	loop_point = 0.0f;
 	music_bytes = fading_source = fading_target =\
 	 fading_timer = fading_duration = 0;
 
@@ -95,17 +98,6 @@ static const char* BassErrorCodeToString(int bass_errorcode)
 	if (bass_errorcode == BASS_ERROR_UNKNOWN) // Special case
 		return "unknown";
 	return bec2str[bass_errorcode];
-}
-
-void *I_GetSfx(sfxinfo_t *sfx)
-{
-	(void)sfx;
-	return NULL;
-}
-
-void I_FreeSfx(sfxinfo_t *sfx)
-{
-	(void)sfx;
 }
 
 void I_StartupSound(void)
@@ -168,30 +160,198 @@ void I_ShutdownSound(void)
 
 void I_UpdateSound(void){};
 
-//
-//  SFX I/O
-//
+
+/// ------------------------
+/// SFX
+/// ------------------------
+
+static void *ds2sample(void *stream)
+{
+	UINT16 ver,freq;
+	UINT32 samples, i, newsamples;
+	UINT8 *sound;
+	static HSTREAM sfxsample;
+	static short *mem = NULL;
+	UINT32 len;
+
+	SINT8 *s;
+	INT16 *d;
+	INT16 o;
+	fixed_t step, frac;
+
+	// lump header
+	ver = READUINT16(stream); // sound version format?
+	if (ver != 3) // It should be 3 if it's a doomsound...
+		return 0; // onos! it's not a doomsound!
+	freq = READUINT16(stream);
+	samples = READUINT32(stream);
+
+	// convert from signed 8bit ???hz to signed 16bit 44100hz.
+	switch(freq)
+	{
+	case 44100:
+		if (samples >= UINT32_MAX>>2)
+			return NULL; // would wrap, can't store.
+		newsamples = samples;
+		break;
+	case 22050:
+		if (samples >= UINT32_MAX>>3)
+			return NULL; // would wrap, can't store.
+		newsamples = samples<<1;
+		break;
+	case 11025:
+		if (samples >= UINT32_MAX>>4)
+			return NULL; // would wrap, can't store.
+		newsamples = samples<<2;
+		break;
+	default:
+		frac = (44100 << FRACBITS) / (UINT32)freq;
+		if (!(frac & 0xFFFF)) // other solid multiples (change if FRACBITS != 16)
+			newsamples = samples * (frac >> FRACBITS);
+		else // strange and unusual fractional frequency steps, plus anything higher than 44100hz.
+			newsamples = FixedMul(FixedDiv(samples, freq), 44100) + 1; // add 1 to counter truncation.
+		if (newsamples >= UINT32_MAX>>2)
+			return NULL; // would and/or did wrap, can't store.
+		break;
+	}
+
+	sound = Z_Malloc(newsamples<<2, PU_SOUND, NULL); // samples * frequency shift * bytes per sample * channels
+
+	s = (SINT8 *)stream;
+	d = (INT16 *)sound;
+
+	i = 0;
+	switch(freq)
+	{
+	case 44100: // already at the same rate? well that makes it simple.
+		while(i++ < samples)
+		{
+			o = ((INT16)(*s++)+0x80)<<8; // changed signedness and shift up to 16 bits
+			*d++ = o; // left channel
+			*d++ = o; // right channel
+		}
+		break;
+	case 22050: // unwrap 2x
+		while(i++ < samples)
+		{
+			o = ((INT16)(*s++)+0x80)<<8; // changed signedness and shift up to 16 bits
+			*d++ = o; // left channel
+			*d++ = o; // right channel
+			*d++ = o; // left channel
+			*d++ = o; // right channel
+		}
+		break;
+	case 11025: // unwrap 4x
+		while(i++ < samples)
+		{
+			o = ((INT16)(*s++)+0x80)<<8; // changed signedness and shift up to 16 bits
+			*d++ = o; // left channel
+			*d++ = o; // right channel
+			*d++ = o; // left channel
+			*d++ = o; // right channel
+			*d++ = o; // left channel
+			*d++ = o; // right channel
+			*d++ = o; // left channel
+			*d++ = o; // right channel
+		}
+		break;
+	default: // convert arbitrary hz to 44100.
+		step = 0;
+		frac = ((UINT32)freq << FRACBITS) / 44100 + 1; //Add 1 to counter truncation.
+		while (i < samples)
+		{
+			o = (INT16)(*s+0x80)<<8; // changed signedness and shift up to 16 bits
+			while (step < FRACUNIT) // this is as fast as I can make it.
+			{
+				*d++ = o; // left channel
+				*d++ = o; // right channel
+				step += frac;
+			}
+			do {
+				i++; s++;
+				step -= FRACUNIT;
+			} while (step >= FRACUNIT);
+		}
+		break;
+	}
+
+	sfxsample = BASS_StreamCreate(cv_samplerate.value, 2, BASS_STREAM_DECODE, STREAMPROC_PUSH, NULL);
+
+	if (sfxsample)
+	{
+		if (BASS_StreamPutFileData(sfxsample, sound, (DWORD)((UINT8*)d-sound)))
+		{
+			len = BASS_StreamGetFilePosition(sfxsample, BASS_FILEPOS_END);
+			mem = Z_Malloc(len, PU_SOUND, 0);
+			return mem;
+		}
+	}
+	return NULL;
+}
+
+void *I_GetSfx(sfxinfo_t *sfx)
+{
+	void *lump;
+	static HSAMPLE sfxsample;
+	static short *bsfx = NULL;
+	UINT32 len;
+
+	if (sfx->lumpnum == LUMPERROR)
+		sfx->lumpnum = S_GetSfxLumpNum(sfx);
+	sfx->length = W_LumpLength(sfx->lumpnum);
+
+	lump = W_CacheLumpNum(sfx->lumpnum, PU_SOUND);
+
+	// convert from standard DoomSound format.
+	bsfx = ds2sample(sfx);
+	if (sfx)
+	{
+		Z_Free(lump);
+		return bsfx;
+	}
+
+	sfxsample = BASS_StreamCreate(cv_samplerate.value, 2, BASS_STREAM_DECODE, STREAMPROC_PUSH, NULL);
+
+	if (sfxsample)
+	{
+		if (BASS_StreamPutFileData(sfxsample, lump, sfx->length))
+		{
+			len = BASS_StreamGetFilePosition(sfxsample, BASS_FILEPOS_END);
+			bsfx = Z_Malloc(len, PU_SOUND, 0);
+			return bsfx;
+		}
+	}
+	return NULL;
+}
+
+void I_FreeSfx(sfxinfo_t *sfx)
+{
+	(void)sfx;
+}
 
 INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priority, INT32 channel)
 {
-	(void)id;
-	(void)vol;
-	(void)sep;
-	(void)pitch;
-	(void)priority;
+	INT32 handle;
+	float volume = (((UINT16)vol + 1) * (UINT16)sfx_volume) / (31 / 256); // (256 * 31) / (31 / 256) == 1.0
+	handle = BASS_StreamCreateFile(true, S_sfx[id].data, 0, S_sfx[id].length, BASS_STREAM_AUTOFREE|BASS_STREAM_DECODE);
+	//Mix_SetPanning(handle, min((UINT16)(0xff-sep)<<1, 0xff), min((UINT16)(sep)<<1, 0xff));
+	BASS_Mixer_StreamAddChannel(bassmixer, channel, BASS_STREAM_AUTOFREE|BASS_MIXER_CHAN_NORAMPIN);
+	BASS_ChannelSetAttribute(handle, BASS_ATTRIB_VOL, volume);
+	BASS_ChannelSetAttribute(handle, BASS_ATTRIB_PAN, sep);
+	(void)pitch; // Mixer can't handle pitch
+	(void)priority; // priority and channel management is handled by SRB2...
 	(void)channel;
-	return -1;
+	return handle;
 }
 
 void I_StopSound(INT32 handle)
 {
-	(void)handle;
+	BASS_ChannelStop(handle);
 }
 
 boolean I_SoundIsPlaying(INT32 handle)
 {
-	(void)handle;
-	return false;
+	return BASS_ChannelIsActive(handle);
 }
 
 void I_UpdateSoundParams(INT32 handle, UINT8 vol, UINT8 sep, UINT8 pitch)
@@ -204,7 +364,7 @@ void I_UpdateSoundParams(INT32 handle, UINT8 vol, UINT8 sep, UINT8 pitch)
 
 void I_SetSfxVolume(UINT8 volume)
 {
-	(void)volume;
+	sfx_volume = volume;
 }
 
 /// ------------------------
@@ -522,7 +682,6 @@ boolean I_LoadSong(char *data, size_t len)
 
 	// Find the OGG loop point.
 	loop_point = 0.0f;
-	song_length = 0.0f;
 
 	while ((UINT32)(p - data) < len)
 	{
