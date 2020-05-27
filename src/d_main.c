@@ -982,8 +982,6 @@ static void IdentifyVersion(void)
 	D_AddFile(va(pandf,srb2waddir,"patch.pk3"));
 #endif
 
-#if !defined (HAVE_SDL) || defined (HAVE_MIXER)
-	{
 #define MUSICTEST(str) \
 		{\
 			const char *musicpath = va(pandf,srb2waddir,str);\
@@ -994,12 +992,10 @@ static void IdentifyVersion(void)
 				I_Error("File "str" has been modified with non-music/sound lumps"); \
 		}
 
-		MUSICTEST("music.dta")
-		MUSICTEST("patch_music.pk3")
+	MUSICTEST("music.dta")
+	MUSICTEST("patch_music.pk3")
 #ifdef DEVELOP // remove when music_new.dta is merged into music.dta
-		MUSICTEST("music_new.dta")
-#endif
-	}
+	MUSICTEST("music_new.dta")
 #endif
 }
 

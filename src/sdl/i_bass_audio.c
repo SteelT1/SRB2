@@ -8,6 +8,7 @@
 #include "../byteptr.h"
 #include "../s_sound.h"
 #include "../w_wad.h"
+#include "i_bass_audio.h"
 
 UINT8 sound_started = false;
 static boolean songpaused;
@@ -15,8 +16,10 @@ static UINT8 music_volume, sfx_volume, internal_volume;
 static const char* BassErrorCodeToString(int bass_errorcode);
 HSTREAM music_stream;
 HSTREAM bassmixer;
+HSTREAM sfxsample;
 BASS_CHANNELINFO musicinfo;
 
+sfxenum_t sfxhandle[NUMSFX];
 static UINT8 music_volume, sfx_volume, internal_volume;
 static float loop_point;
 static boolean songpaused;
@@ -133,7 +136,7 @@ void I_StartupSound(void)
 	music_stream = 0;
 	music_volume = sfx_volume = 0;
 
-	bassmixer = BASS_Mixer_StreamCreate(44100, 2, BASS_STREAM_AUTOFREE|BASS_MIXER_NONSTOP);
+	bassmixer = BASS_Mixer_StreamCreate(44100, 2, BASS_MIXER_NONSTOP);
 
 	if (!bassmixer)
 	{
@@ -170,9 +173,7 @@ static void *ds2sample(void *stream)
 	UINT16 ver,freq;
 	UINT32 samples, i, newsamples;
 	UINT8 *sound;
-	static HSTREAM sfxsample;
-	static short *mem = NULL;
-	UINT32 len;
+	char *bsfx = NULL;
 
 	SINT8 *s;
 	INT16 *d;
@@ -275,16 +276,12 @@ static void *ds2sample(void *stream)
 		break;
 	}
 
-	sfxsample = BASS_StreamCreate(cv_samplerate.value, 2, BASS_STREAM_DECODE, STREAMPROC_PUSH, NULL);
+	sfxsample = BASS_StreamCreateFile(true, sound, 0, ((UINT8*)d-sound), BASS_STREAM_DECODE);
 
 	if (sfxsample)
 	{
-		if (BASS_StreamPutFileData(sfxsample, sound, (DWORD)((UINT8*)d-sound)))
-		{
-			len = BASS_StreamGetFilePosition(sfxsample, BASS_FILEPOS_END);
-			mem = Z_Malloc(len, PU_SOUND, 0);
-			return mem;
-		}
+		if (BASS_ChannelGetData(sfxsample, bsfx, BASS_DATA_FIXED))
+			return bsfx;
 	}
 	return NULL;
 }
@@ -292,9 +289,7 @@ static void *ds2sample(void *stream)
 void *I_GetSfx(sfxinfo_t *sfx)
 {
 	void *lump;
-	static HSAMPLE sfxsample;
-	static short *bsfx = NULL;
-	UINT32 len;
+	char *bsfx = NULL;
 
 	if (sfx->lumpnum == LUMPERROR)
 		sfx->lumpnum = S_GetSfxLumpNum(sfx);
@@ -304,44 +299,49 @@ void *I_GetSfx(sfxinfo_t *sfx)
 
 	// convert from standard DoomSound format.
 	bsfx = ds2sample(sfx);
-	if (sfx)
+
+	if (bsfx)
 	{
 		Z_Free(lump);
 		return bsfx;
 	}
 
-	sfxsample = BASS_StreamCreate(cv_samplerate.value, 2, BASS_STREAM_DECODE, STREAMPROC_PUSH, NULL);
+	sfxsample = BASS_StreamCreateFile(true, lump, 0, sfx->length, BASS_STREAM_DECODE);
 
 	if (sfxsample)
 	{
-		if (BASS_StreamPutFileData(sfxsample, lump, sfx->length))
-		{
-			len = BASS_StreamGetFilePosition(sfxsample, BASS_FILEPOS_END);
-			bsfx = Z_Malloc(len, PU_SOUND, 0);
+		if (BASS_ChannelGetData(sfxsample, bsfx, BASS_DATA_FIXED))
 			return bsfx;
-		}
 	}
 	return NULL;
 }
 
 void I_FreeSfx(sfxinfo_t *sfx)
 {
-	(void)sfx;
+	if (sfx->data)
+		Z_Free(sfx->data);
+	sfx->data = NULL;
+	sfx->lumpnum = LUMPERROR;
 }
 
 INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priority, INT32 channel)
 {
-	INT32 handle;
-	float volume = (((UINT16)vol + 1) * (UINT16)sfx_volume) / (31 / 256); // (256 * 31) / (31 / 256) == 1.0
-	handle = BASS_StreamCreateFile(true, S_sfx[id].data, 0, S_sfx[id].length, BASS_STREAM_AUTOFREE|BASS_STREAM_DECODE);
+	float realvolume;
+	vol += 1;
+	realvolume = (sfx_volume / 31.0) * (vol / 256.0);
+	sfxhandle[id] = sfxsample;
 	//Mix_SetPanning(handle, min((UINT16)(0xff-sep)<<1, 0xff), min((UINT16)(sep)<<1, 0xff));
-	BASS_Mixer_StreamAddChannel(bassmixer, channel, BASS_STREAM_AUTOFREE|BASS_MIXER_CHAN_NORAMPIN);
-	BASS_ChannelSetAttribute(handle, BASS_ATTRIB_VOL, volume);
-	BASS_ChannelSetAttribute(handle, BASS_ATTRIB_PAN, sep);
-	(void)pitch; // Mixer can't handle pitch
+	if (sfxhandle[id])
+	{
+		//BASS_ChannelSetAttribute(sfxhandle[id], BASS_ATTRIB_PAN, sep);
+		BASS_ChannelSetAttribute(sfxhandle[id], BASS_ATTRIB_VOL, realvolume);
+		BASS_Mixer_StreamAddChannel(bassmixer, sfxhandle[id], BASS_MIXER_CHAN_NORAMPIN);
+	}
+	(void)pitch;
 	(void)priority; // priority and channel management is handled by SRB2...
 	(void)channel;
-	return handle;
+	(void)sep;
+	return (INT32)sfxhandle[id];
 }
 
 void I_StopSound(INT32 handle)
@@ -351,15 +351,21 @@ void I_StopSound(INT32 handle)
 
 boolean I_SoundIsPlaying(INT32 handle)
 {
-	return BASS_ChannelIsActive(handle);
+	if (BASS_ChannelIsActive(handle) == BASS_ACTIVE_PLAYING)
+		return true;
+	return false;
 }
 
 void I_UpdateSoundParams(INT32 handle, UINT8 vol, UINT8 sep, UINT8 pitch)
 {
-	(void)handle;
-	(void)vol;
-	(void)sep;
+	float realvolume;
+	vol += 1;
+	realvolume = (sfx_volume / 31.0) * (vol / 256.0);
+	//Mix_SetPanning(handle, min((UINT16)(0xff-sep)<<1, 0xff), min((UINT16)(sep)<<1, 0xff));
+	//BASS_ChannelSetAttribute(handle, BASS_ATTRIB_PAN, sep);
+	BASS_ChannelSetAttribute(handle, BASS_ATTRIB_VOL, realvolume);
 	(void)pitch;
+	(void)sep;
 }
 
 void I_SetSfxVolume(UINT8 volume)
