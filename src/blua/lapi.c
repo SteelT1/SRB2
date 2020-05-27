@@ -28,6 +28,7 @@
 #include "ltm.h"
 #include "lundump.h"
 #include "lvm.h"
+#include "lauxlib.h"
 
 
 
@@ -155,6 +156,11 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
 ** basic stack manipulation
 */
 
+LUA_API int lua_absindex (lua_State *L, int i) {
+  if (i < 0 && i > LUA_REGISTRYINDEX)
+    i += lua_gettop(L) + 1;
+  return i;
+}
 
 LUA_API int lua_gettop (lua_State *L) {
   return cast_int(L->top - L->base);
@@ -979,6 +985,12 @@ LUA_API int lua_next (lua_State *L, int idx) {
   return more;
 }
 
+LUA_API void lua_copy (lua_State *L, int from, int to) {
+  int abs_to = lua_absindex(L, to);
+  luaL_checkstack(L, 1, "not enough stack slots");
+  lua_pushvalue(L, from);
+  lua_replace(L, abs_to);
+}
 
 LUA_API void lua_concat (lua_State *L, int n) {
   lua_lock(L);

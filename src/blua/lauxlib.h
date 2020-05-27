@@ -39,6 +39,8 @@ typedef struct luaL_Reg {
 
 
 
+LUALIB_API void (luaL_traceback) (lua_State *L, lua_State *L1,
+                                const char *msg, int level);
 LUALIB_API void (luaI_openlib) (lua_State *L, const char *libname,
                                 const luaL_Reg *l, int nup);
 LUALIB_API void (luaL_register) (lua_State *L, const char *libname,

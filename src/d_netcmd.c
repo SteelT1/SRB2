@@ -43,6 +43,7 @@
 #include "mserv.h"
 #include "z_zone.h"
 #include "lua_script.h"
+#include "lua_libs.h"
 #include "lua_hook.h"
 #include "m_cond.h"
 #include "m_anigif.h"

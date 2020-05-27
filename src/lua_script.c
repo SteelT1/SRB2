@@ -36,6 +36,8 @@
 
 lua_State *gL = NULL;
 
+int tracebackidx;
+
 // List of internal libraries to load from SRB2
 static lua_CFunction liblist[] = {
 	LUA_EnumLib, // global metatable for enums
@@ -397,6 +399,14 @@ void LUA_ClearExtVars(void)
 // (i.e. they were called in hooks or coroutines etc)
 boolean lua_lumploading = false;
 
+int LUA_Traceback(lua_State *L)
+{
+	CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
+	luaL_traceback(L, L, NULL, 1);
+	CONS_Printf("%s\n", lua_tostring(L, -1));
+	return 1;
+}
+
 // Load a script from a MYFILE
 static inline void LUA_LoadFile(MYFILE *f, char *name)
 {
@@ -407,13 +417,15 @@ static inline void LUA_LoadFile(MYFILE *f, char *name)
 		LUA_ClearState();
 	lua_pushinteger(gL, f->wad);
 	lua_setfield(gL, LUA_REGISTRYINDEX, "WAD");
+	lua_pushcfunction(gL, LUA_Traceback);
+	tracebackidx = lua_gettop(gL);
 
 	lua_lumploading = true; // turn on loading flag
 
-	if (luaL_loadbuffer(gL, f->data, f->size, va("@%s",name)) || lua_pcall(gL, 0, 0, 0)) {
-		CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
+	if (luaL_loadbuffer(gL, f->data, f->size, va("@%s",name)) || lua_pcall(gL, 0, 0, tracebackidx)) {
 		lua_pop(gL,1);
 	}
+	lua_remove(gL, tracebackidx);
 	lua_gc(gL, LUA_GCCOLLECT, 0);
 
 	lua_lumploading = false; // turn off again

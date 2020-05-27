@@ -37,7 +37,9 @@
 void LUA_ClearExtVars(void);
 #endif
 
+extern int LUA_Traceback(lua_State *L);
 extern boolean lua_lumploading; // is LUA_LoadLump being called?
+extern int tracebackidx;
 
 void LUA_LoadLump(UINT16 wad, UINT16 lump);
 #ifdef LUA_ALLOW_BYTECODE
@@ -66,8 +68,9 @@ void COM_Lua_f(void);
 
 #define LUA_Call(L,a)\
 {\
-	if (lua_pcall(L, a, 0, 0)) {\
-		CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(L,-1));\
+	lua_pushcfunction(L, LUA_Traceback); \
+	tracebackidx = lua_gettop(L); \
+	if (lua_pcall(L, a, 0, tracebackidx)) {\
 		lua_pop(L, 1);\
 	}\
 }
