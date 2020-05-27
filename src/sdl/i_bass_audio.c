@@ -15,6 +15,7 @@ static boolean songpaused;
 static UINT8 music_volume, sfx_volume, internal_volume;
 static const char* BassErrorCodeToString(int bass_errorcode);
 HSTREAM music_stream;
+INT32 musicstream_fx;
 HSTREAM bassmixer;
 HSTREAM sfxsample;
 BASS_CHANNELINFO musicinfo;
@@ -527,7 +528,15 @@ boolean I_SongPaused(void)
 
 boolean I_SetSongSpeed(float speed)
 {
-	(void)speed;
+	if (music_stream)
+	{
+		musicstream_fx = BASS_FX_TempoCreate(music_stream, BASS_STREAM_DECODE);
+		BASS_ChannelSetAttribute(musicstream_fx, BASS_ATTRIB_TEMPO_PITCH, speed);
+		BASS_ChannelSetAttribute(musicstream_fx, BASS_ATTRIB_TEMPO, speed);
+		BASS_Mixer_ChannelRemove(music_stream);
+		BASS_Mixer_StreamAddChannel(bassmixer, musicstream_fx, BASS_MIXER_CHAN_NORAMPIN);
+		return true;
+	}
 	return false;
 }
 
@@ -609,7 +618,7 @@ UINT32 I_GetSongPosition(void)
 boolean I_PlaySong(boolean looping)
 {
 	is_looping = looping;
-	if (!BASS_Mixer_StreamAddChannel(bassmixer, music_stream, BASS_MIXER_CHAN_BUFFER|BASS_MIXER_CHAN_NORAMPIN))
+	if (!BASS_Mixer_StreamAddChannel(bassmixer, music_stream, BASS_MIXER_CHAN_NORAMPIN))
 	{
 		CONS_Alert(CONS_ERROR, "I_PlaySong: %s\n", BassErrorCodeToString(BASS_ErrorGetCode()));
 		return false;
