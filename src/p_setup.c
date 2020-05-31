@@ -3719,7 +3719,7 @@ void P_LoadSoundsRange(UINT16 wadnum, UINT16 first, UINT16 num)
 				// since sfx->data will be NULL
 				CONS_Debug(DBG_SETUP, "Sound %.8s replaced\n", lumpinfo->name);
 
-				I_FreeSfx(&S_sfx[j]);
+				I_FreeSfx(&S_sfx[j], j);
 				break; // there shouldn't be two sounds with the same name, so stop looking
 			}
 		}
@@ -3857,7 +3857,7 @@ boolean P_AddWadFile(const char *wadfilename)
 							// since sfx->data will be NULL
 							CONS_Debug(DBG_SETUP, "Sound %.8s replaced\n", name);
 
-							I_FreeSfx(&S_sfx[j]);
+							I_FreeSfx(&S_sfx[j], j);
 
 							sreplaces++;
 							break; // there shouldn't be two sounds with the same name, so stop looking

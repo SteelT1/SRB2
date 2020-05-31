@@ -684,7 +684,7 @@ void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
 		// cache data if necessary
 		// NOTE: set sfx->data NULL sfx->lump -1 to force a reload
 		if (!sfx->data)
-			sfx->data = I_GetSfx(sfx);
+			sfx->data = I_GetSfx(sfx, sfx_id);
 
 		// increase the usefulness
 		if (sfx->usefulness++ < 0)
@@ -737,7 +737,7 @@ dontplay:
 	// cache data if necessary
 	// NOTE: set sfx->data NULL sfx->lump -1 to force a reload
 	if (!sfx->data)
-		sfx->data = I_GetSfx(sfx);
+		sfx->data = I_GetSfx(sfx, sfx_id);
 
 	// increase the usefulness
 	if (sfx->usefulness++ < 0)
@@ -1076,7 +1076,7 @@ void S_ClearSfx(void)
 #ifndef DJGPPDOS
 	size_t i;
 	for (i = 1; i < NUMSFX; i++)
-		I_FreeSfx(S_sfx + i);
+		I_FreeSfx(S_sfx + i, i);
 #endif
 }
 
@@ -1393,7 +1393,7 @@ void S_InitSfxChannels(INT32 sfxVolume)
 
 		for (i = 1; i < NUMSFX; i++)
 			if (S_sfx[i].name)
-				S_sfx[i].data = I_GetSfx(&S_sfx[i]);
+				S_sfx[i].data = I_GetSfx(&S_sfx[i], i);
 
 		CONS_Printf(M_GetText(" pre-cached all sound data\n"));
 	}

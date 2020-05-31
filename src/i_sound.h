@@ -47,18 +47,20 @@ extern consvar_t cv_samplerate;
 /**	\brief	The I_GetSfx function
 
 	\param	sfx	sfx to setup
+	\param	sfx_id	the id of sfx to setup
 
 	\return	data for sfx
 */
-void *I_GetSfx(sfxinfo_t *sfx);
+void *I_GetSfx(sfxinfo_t *sfx, sfxenum_t sfx_id);
 
 /**	\brief	The I_FreeSfx function
 
 	\param	sfx	sfx to be freed up
+	\param	sfx_id	the id of sfx to be freed up
 
 	\return	void
 */
-void I_FreeSfx(sfxinfo_t *sfx);
+void I_FreeSfx(sfxinfo_t *sfx, sfxenum_t sfx_id);
 
 /**	\brief Init at program start...
 */
