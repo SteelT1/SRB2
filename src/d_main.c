@@ -1235,6 +1235,10 @@ void D_SRB2Main(void)
 	// get parameters from a response file (eg: srb2 @parms.txt)
 	M_FindResponseFile();
 
+#if defined(__ANDROID__)
+	M_CheckReponseFile(); // Check if args.txt exists.
+#endif
+
 	// MAINCFG is now taken care of where "OBJCTCFG" is handled
 	G_LoadGameSettings();
 

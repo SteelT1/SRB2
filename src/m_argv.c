@@ -12,11 +12,13 @@
 /// \brief Command line arguments
 
 #include <string.h>
+#include <errno.h>
 
 #include "doomdef.h"
 #include "command.h"
 #include "m_argv.h"
 #include "m_misc.h"
+#include "i_system.h"
 
 /**	\brief number of arg
 */
@@ -214,4 +216,91 @@ void M_FindResponseFile(void)
 
 			break;
 		}
+}
+
+/**	\Check if args.txt exists
+	Mostly a copypaste of M_FindResponseFile()
+*/
+void M_CheckReponseFile(void)
+{
+	INT32 i = 0;
+	char responsepath[256] = "\0";
+	char argfname[9] = "\0"; 
+
+#if defined(__ANDROID__)
+	strlcpy(argfname, "args.txt", 9);
+	snprintf(responsepath, 255, "%s%s%s", I_StorageLocation(), PATHSEP, argfname);
+
+	CONS_Printf("Checking for parameters file %s...\n", responsepath);
+
+	if (FIL_ReadFileOK(responsepath))
+	{
+		FILE *handle;
+		INT32 k, pindex, indexinfile;
+		long size;
+		boolean inquote = false;
+		UINT8 *infile;
+		char *file;
+		char *moreargs[20];
+		char *firstargv;
+
+		// read the response file into memory
+		handle = fopen(responsepath, "rb");
+		if (!handle)
+			CONS_Alert(CONS_ERROR, "Failed to open %s: %s\n", responsepath, strerror(errno));
+
+		fseek(handle, 0, SEEK_END);
+		size = ftell(handle);
+		fseek(handle, 0, SEEK_SET);
+		file = malloc(size);
+		if (!file)
+			I_Error("No more free memory for the response file");
+		if (fread(file, size, 1, handle) != 1)
+			CONS_Alert(CONS_ERROR, "Couldn't read response file because %s", M_FileError(handle));
+		fclose(handle);
+
+		// keep all the command line arguments following @responsefile
+		for (pindex = 0, k = i+1; k < myargc; k++)
+			moreargs[pindex++] = myargv[k];
+
+		firstargv = myargv[0];
+		myargv = malloc(sizeof (char *) * MAXARGVS);
+		if (!myargv)
+		{
+			free(file);
+			I_Error("Not enough memory to read response file");
+		}
+		myargmalloc = true; // mark as having been allocated by us
+		memset(myargv, 0, sizeof (char *) * MAXARGVS);
+		myargv[0] = firstargv;
+
+		infile = (UINT8 *)file;
+		indexinfile = k = 0;
+		indexinfile++; // skip past argv[0]
+		while (k < size)
+		{
+			inquote = infile[k] == '"';
+			if (inquote) // strip enclosing double-quote
+				k++;
+			myargv[indexinfile++] = (char *)&infile[k];
+			while (k < size && ((inquote && infile[k] != '"')
+				|| (!inquote && infile[k] > ' ')))
+			{
+				k++;
+			}
+			infile[k] = 0;
+			while (k < size && (infile[k] <= ' '))
+				k++;
+		} 
+
+		for (k = 0; k < pindex; k++)
+			myargv[indexinfile++] = moreargs[k];
+		myargc = indexinfile;
+
+		// display arguments
+		CONS_Printf(M_GetText("%d command-line args:\n"), myargc-1); // -1 so @ don't actually get counted for
+		for (k = 1; k < myargc; k++)
+			CONS_Printf("%s\n", myargv[k]);
+	}
+#endif
 }

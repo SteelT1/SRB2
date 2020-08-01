@@ -39,4 +39,7 @@ const char *M_GetNextParm(void);
 // Finds and loads a response file (@moreargs.txt)
 void M_FindResponseFile(void);
 
+// Check if our preset reponse file exists.
+void M_CheckReponseFile(void);
+
 #endif //__M_ARGV__
