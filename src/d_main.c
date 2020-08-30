@@ -794,6 +794,8 @@ void D_SRB2Loop(void)
 			lastwipetic = 0;
 		}
 
+		//singletics = true; // uncomment this line and comment the one in TryRunTics for waitless hack
+
 		// get real tics
 		entertic = I_GetTime();
 		realtics = entertic - oldentertics;

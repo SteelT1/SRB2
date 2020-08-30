@@ -5387,7 +5387,7 @@ void TryRunTics(tic_t realtics)
 
 	NetUpdate();
 
-	if (demoplayback)
+	if (demoplayback)// comment this line and uncomment the one in d_main for waitless hack
 	{
 		neededtic = gametic + (realtics * cv_playbackspeed.value);
 		// start a game after a demo

@@ -1780,6 +1780,11 @@ void P_XYMovement(mobj_t *mo)
 	vector3_t slopemom = {0,0,0};
 	fixed_t predictedz = 0;
 
+	//if (gametic % 201 == 0 && mo->type == MT_BIGGARGOYLE)
+	//	CONS_Printf("xymovement for big gargoyle\n");
+	
+	//int thinktime = I_GetTimeMicros();
+
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
 
@@ -2100,6 +2105,10 @@ void P_XYMovement(mobj_t *mo)
 		return; // no friction when airborne
 
 	P_XYFriction(mo, oldx, oldy);
+
+	//thinktime = I_GetTimeMicros() - thinktime;
+	//if (gametic % 201 == 0)
+	//	CONS_Printf("it took %d\n", thinktime);
 }
 
 void P_RingXYMovement(mobj_t *mo)
@@ -3070,6 +3079,8 @@ nightsdone:
 
 boolean P_SceneryZMovement(mobj_t *mo)
 {
+	if (mo->flags & MF_NOGRAVITY && mo->momz == 0) // test: optimization: no gravity, no z-momentum, no z-movement?
+		return true;
 	// Intercept the stupid 'fall through 3dfloors' bug
 	if (mo->subsector->sector->ffloors)
 		P_AdjustMobjFloorZ_FFloors(mo, mo->subsector->sector, 2);
@@ -7964,6 +7975,7 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 
 static boolean P_MobjPushableThink(mobj_t *mobj)
 {
+	//int thinktime = I_GetTimeMicros();
 	P_MobjCheckWater(mobj);
 	P_PushableThinker(mobj);
 
@@ -7974,6 +7986,11 @@ static boolean P_MobjPushableThink(mobj_t *mobj)
 		P_KillMobj(mobj, NULL, NULL, 0);
 		return false;
 	}
+
+	//thinktime = I_GetTimeMicros() - thinktime;
+
+	//if (gametic % 201 == 0)
+	//	CONS_Printf("P_MobjPushableThink took %d, type is %d\n", thinktime, mobj->type);
 
 	return true;
 }
@@ -10026,8 +10043,19 @@ void P_MobjThinker(mobj_t *mobj)
 	if (mobj->flags & MF_NOTHINK)
 		return;
 
+	/*if (mobj->flags & MF_SCENERY) // test
+	{
+		P_RemoveMobj(mobj);
+		return;
+	}*/
+
 	if ((mobj->flags & MF_BOSS) && mobj->spawnpoint && (bossdisabled & (1<<mobj->spawnpoint->extrainfo)))
 		return;
+
+	//if (gametic % 201 == 0 && mobj->type == MT_BIGGARGOYLE)
+	//	CONS_Printf("mobjthinker for big gargoyle\n");
+	
+	//int thinktime = I_GetTimeMicros();
 
 	// Remove dead target/tracer.
 	if (mobj->target && P_MobjWasRemoved(mobj->target))
@@ -10233,6 +10261,10 @@ void P_MobjThinker(mobj_t *mobj)
 		default:
 			break;
 	}
+
+	//thinktime = I_GetTimeMicros() - thinktime;
+	//if (gametic % 201 == 0 && mobj->type == MT_BIGGARGOYLE)
+	//	CONS_Printf("it took %d\n", thinktime);
 }
 
 // Quick, optimized function for the Rail Rings
@@ -10373,15 +10405,28 @@ void P_SceneryThinker(mobj_t *mobj)
 		|| (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z != mobj->floorz)
 		|| P_IsObjectInGoop(mobj))
 	{
+		fixed_t zbefore = mobj->z;
 		if (!P_SceneryZMovement(mobj))
 			return; // mobj was removed
-		P_CheckPosition(mobj, mobj->x, mobj->y); // Need this to pick up objects!
-		if (P_MobjWasRemoved(mobj))
-			return;
-		mobj->floorz = tmfloorz;
-		mobj->ceilingz = tmceilingz;
-		mobj->floorrover = tmfloorrover;
-		mobj->ceilingrover = tmceilingrover;
+		if (mobj->z != zbefore || mobj->shadowscale) // test: only check position if there was movement or if mobj has shadow (then shadow would need accurate floorz in case a polyobj gets below the mobj?)
+		{
+			//if (gametic % 301 == 0)
+			//	CONS_Printf("scenery checkpos for type %d x %d y %d z %d\n", mobj->type, mobj->x >> FRACBITS, mobj->y >> FRACBITS, mobj->z >> FRACBITS);
+			P_CheckPosition(mobj, mobj->x, mobj->y); // Need this to pick up objects! (?)
+			if (P_MobjWasRemoved(mobj))
+				return;
+			mobj->floorz = tmfloorz;
+			mobj->ceilingz = tmceilingz;
+			mobj->floorrover = tmfloorrover;
+			mobj->ceilingrover = tmceilingrover;
+		}
+		// test
+		if (P_IsObjectOnGround(mobj))
+		{
+			mobj->eflags |= MFE_ONGROUND; // we're on the ground by the way, so stop hogging the cpu
+			//if (gametic % 151 == 0)
+			//	CONS_Printf("put scenery on ground type %d x %d y %d z %d\n", mobj->type, mobj->x >> FRACBITS, mobj->y >> FRACBITS, mobj->z >> FRACBITS);
+		}
 	}
 	else
 	{

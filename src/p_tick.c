@@ -319,6 +319,14 @@ if ((*mop = targ) != NULL) // Set new target and if non-NULL, increase its count
 static inline void P_RunThinkers(void)
 {
 	size_t i;
+	//int maxtime = 0;
+	//boolean maxismobj;
+	//mobjtype_t maxtype;
+	//thinker_t *maxthinker; // might have trouble with removed thinkers
+	//if (gametic % 351 == 0)
+	//	CONS_Printf("runthinkers dump:\n");
+	//if (gametic % 39 == 0)
+	//	CONS_Printf("stuff:\n");
 	for (i = 0; i < NUM_THINKERLISTS; i++)
 	{
 		for (currentthinker = thlist[i].next; currentthinker != &thlist[i]; currentthinker = currentthinker->next)
@@ -326,9 +334,50 @@ static inline void P_RunThinkers(void)
 #ifdef PARANOIA
 			I_Assert(currentthinker->function.acp1 != NULL);
 #endif
+			//int thinktime = I_GetTimeMicros();
 			currentthinker->function.acp1(currentthinker);
+			/*thinktime = I_GetTimeMicros() - thinktime;
+			if (thinktime > maxtime)
+			{
+				maxtime = thinktime;
+				maxthinker = currentthinker;
+				if (currentthinker->function.acp1 == (actionf_p1)P_MobjThinker)
+				{
+					maxismobj = true;
+					maxtype = ((mobj_t*)currentthinker)->type;
+				}
+				else
+				{
+					maxismobj = false;
+				}
+			}*/
+			/*if (gametic % 351 == 0 && thinktime > 1)
+			{
+				if (currentthinker->function.acp1 == (actionf_p1)P_MobjThinker)
+					CONS_Printf("%d    %d\n", thinktime, ((mobj_t*)currentthinker)->type);
+				else
+					CONS_Printf("%d    %p\n", thinktime, maxthinker->function.acp1);
+			}*/
 		}
 	}
+	/*if (gametic % 39 == 0)
+	{
+		if (maxismobj)
+			CONS_Printf("maxtime: %d    mobj type: %d\n", maxtime, maxtype);
+		else
+		{
+			if (maxthinker->function.acp1 == (actionf_p1)T_Pusher)
+				CONS_Printf("maxtime: %d    pusher\n", maxtime);
+			else if (maxthinker->function.acp1 == (actionf_p1)T_Friction)
+				CONS_Printf("maxtime: %d    friction\n", maxtime);
+			else if (maxthinker->function.acp1 == (actionf_p1)P_NullPrecipThinker)
+				CONS_Printf("maxtime: %d    null precip\n", maxtime);
+			else if (maxthinker->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				CONS_Printf("maxtime: %d    removethinkerdelayed\n", maxtime);
+			else
+				CONS_Printf("maxtime: %d    unknown: %p\n", maxtime, maxthinker->function.acp1);
+		}
+	}*/
 
 }
 
@@ -660,14 +709,28 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
+		int thinkertime = I_GetTimeMicros();
+		int pattime;
+		int luatime;
 		P_RunThinkers();
+		thinkertime = I_GetTimeMicros() - thinkertime;
 
+		pattime = I_GetTimeMicros();
 		// Run any "after all the other thinkers" stuff
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 				P_PlayerAfterThink(&players[i]);
+		pattime = I_GetTimeMicros() - pattime;
 
+		luatime = I_GetTimeMicros();
 		LUAh_ThinkFrame();
+		luatime = I_GetTimeMicros() - luatime;
+		/*if (gametic % 39 == 0)
+		{
+			CONS_Printf("P_RunThinkers: %d\n", thinkertime);
+			CONS_Printf("P_PlayerAfterThink: %d\n", pattime);
+			CONS_Printf("LUAh_ThinkFrame: %d\n", luatime);
+		}*/
 	}
 
 	// Run shield positioning

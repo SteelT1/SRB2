@@ -8022,7 +8022,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		4,              // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_NOGRAVITY|MF_NOCLIP|MF_NOCLIPTHING,  // flags
+		MF_NOBLOCKMAP|MF_NOGRAVITY|MF_SCENERY|MF_NOCLIP|MF_NOCLIPTHING,  // flags // TEST: ADDED SCENERY
 		S_NULL          // raisestate
 	},
 
@@ -10938,7 +10938,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		4,               // mass
 		0,               // damage
 		sfx_None,        // activesound
-		MF_NOCLIP|MF_NOBLOCKMAP|MF_NOGRAVITY|MF_RUNSPAWNFUNC, // flags
+		MF_SCENERY|MF_NOCLIP|MF_NOBLOCKMAP|MF_NOGRAVITY|MF_RUNSPAWNFUNC, // flags // test added scenery
 		S_NULL          // raisestate
 	},
 
@@ -10965,7 +10965,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		4,              // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOCLIP|MF_NOBLOCKMAP|MF_NOGRAVITY, // flags
+		MF_SCENERY|MF_NOCLIP|MF_NOBLOCKMAP|MF_NOGRAVITY, // flags // test added scenery
 		S_NULL          // raisestate
 	},
 

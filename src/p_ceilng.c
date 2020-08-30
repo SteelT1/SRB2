@@ -34,7 +34,7 @@ INT32 ceilmovesound = sfx_None;
 void T_MoveCeiling(ceiling_t *ceiling)
 {
 	result_e res;
-	boolean dontupdate = false;
+	boolean dontupdate = false;// return; //test
 
 	if (ceiling->delaytimer)
 	{
