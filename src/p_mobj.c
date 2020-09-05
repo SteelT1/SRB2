@@ -2354,6 +2354,9 @@ boolean P_ZMovement(mobj_t *mo)
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
 
+	if (mo->flags & MF_NOGRAVITY && mo->momz == 0 && !(mo->eflags & MFE_APPLYPMOMZ)) // test: optimization: no gravity, no z-momentum, no z-movement?
+		return true;
+
 	// Intercept the stupid 'fall through 3dfloors' bug
 	if (mo->subsector->sector->ffloors)
 		P_AdjustMobjFloorZ_FFloors(mo, mo->subsector->sector, 0);
@@ -10040,6 +10043,8 @@ void P_MobjThinker(mobj_t *mobj)
 	I_Assert(mobj != NULL);
 	I_Assert(!P_MobjWasRemoved(mobj));
 
+	//return;
+
 	if (mobj->flags & MF_NOTHINK)
 		return;
 
@@ -10048,6 +10053,8 @@ void P_MobjThinker(mobj_t *mobj)
 		P_RemoveMobj(mobj);
 		return;
 	}*/
+
+	//if (mobj->type >= MT_SPIKE) return;
 
 	if ((mobj->flags & MF_BOSS) && mobj->spawnpoint && (bossdisabled & (1<<mobj->spawnpoint->extrainfo)))
 		return;
@@ -10072,6 +10079,7 @@ void P_MobjThinker(mobj_t *mobj)
 	tmfloorthing = tmhitthing = NULL;
 
 	// Sector special (2,8) allows ANY mobj to trigger a linedef exec
+	// ** Could this line cause cache issues and because of that show up in the random pause profiling? **
 	if (mobj->subsector && GETSECSPECIAL(mobj->subsector->sector->special, 2) == 8)
 	{
 		sector_t *sec2;
@@ -10099,6 +10107,8 @@ void P_MobjThinker(mobj_t *mobj)
 				mobj->frame = (mobj->frame & ~FF_TRANSMASK) | (((NUMTRANSMAPS-1) - mobj->fuse / 2) << FF_TRANSSHIFT);
 		}
 	}
+
+	//return; //TEST
 
 	// Special thinker for scenery objects
 	if (mobj->flags & MF_SCENERY)
@@ -10175,13 +10185,17 @@ void P_MobjThinker(mobj_t *mobj)
 	if (!(mobj->eflags & MFE_ONGROUND) || mobj->momz
 		|| ((mobj->eflags & MFE_VERTICALFLIP) && mobj->z + mobj->height != mobj->ceilingz)
 		|| (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z != mobj->floorz)
-		|| P_IsObjectInGoop(mobj))
+		|| P_IsObjectInGoop(mobj))  // TODO: try the optimization from scenery thinker here??
 	{
+		fixed_t zbefore = mobj->z;
 		if (!P_ZMovement(mobj))
 			return; // mobj was removed
-		P_CheckPosition(mobj, mobj->x, mobj->y); // Need this to pick up objects!
-		if (P_MobjWasRemoved(mobj))
-			return;
+		if (mobj->z != zbefore || mobj->shadowscale) // test: only check position if there was movement or if mobj has shadow (then shadow would need accurate floorz in case a polyobj gets below the mobj?)
+		{
+			P_CheckPosition(mobj, mobj->x, mobj->y); // Need this to pick up objects!
+			if (P_MobjWasRemoved(mobj))
+				return;
+		}
 	}
 	else
 	{

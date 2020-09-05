@@ -329,15 +329,20 @@ static inline void P_RunThinkers(void)
 	//	CONS_Printf("stuff:\n");
 	for (i = 0; i < NUM_THINKERLISTS; i++)
 	{
+		if (i == THINK_PRECIP)
+			if (curWeather == PRECIP_BLANK || curWeather == PRECIP_STORM_NORAIN)
+				continue; // save cpu cycles with one simple trick
+		//if (i != THINK_PRECIP) continue; // TEST
 		for (currentthinker = thlist[i].next; currentthinker != &thlist[i]; currentthinker = currentthinker->next)
 		{
 #ifdef PARANOIA
 			I_Assert(currentthinker->function.acp1 != NULL);
 #endif
 			//int thinktime = I_GetTimeMicros();
+			//if (currentthinker->function.acp1 == (actionf_p1)P_MobjThinker) continue; //TEST
 			currentthinker->function.acp1(currentthinker);
-			/*thinktime = I_GetTimeMicros() - thinktime;
-			if (thinktime > maxtime)
+			//thinktime = I_GetTimeMicros() - thinktime;
+			/*if (thinktime > maxtime)
 			{
 				maxtime = thinktime;
 				maxthinker = currentthinker;
@@ -356,7 +361,7 @@ static inline void P_RunThinkers(void)
 				if (currentthinker->function.acp1 == (actionf_p1)P_MobjThinker)
 					CONS_Printf("%d    %d\n", thinktime, ((mobj_t*)currentthinker)->type);
 				else
-					CONS_Printf("%d    %p\n", thinktime, maxthinker->function.acp1);
+					CONS_Printf("%d    %p\n", thinktime, currentthinker->function.acp1);
 			}*/
 		}
 	}
