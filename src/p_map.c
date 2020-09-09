@@ -709,6 +709,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 {
 	fixed_t blockdist;
 
+	//if (true) return true; // TEST
+
 	// don't clip against self
 	if (thing == tmthing)
 		return true;
@@ -2019,6 +2021,8 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 	subsector_t *newsubsec;
 	boolean blockval = true;
 
+	//return true;
+
 	I_Assert(thing != NULL);
 #ifdef PARANOIA
 	if (P_MobjWasRemoved(thing))
@@ -2036,7 +2040,10 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 	tmbbox[BOXRIGHT] = x + tmthing->radius;
 	tmbbox[BOXLEFT] = x - tmthing->radius;
 
-	newsubsec = R_PointInSubsector(x, y);
+	if (x == thing->x && y == thing->y) // TEST
+		newsubsec = thing->subsector;
+	else
+		newsubsec = R_PointInSubsector(x, y);
 	ceilingline = blockingline = NULL;
 
 	// The base floor / ceiling is from the subsector
@@ -3010,7 +3017,7 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 		P_PlayerHitFloor(thing->player, !onfloor);
 
 	// debug: be sure it falls to the floor
-	thing->eflags &= ~MFE_ONGROUND;
+	//thing->eflags &= ~MFE_ONGROUND; // TEST: removed this
 
 	if (thing->ceilingz - thing->floorz < thing->height && thing->z >= thing->floorz)
 		// BP: i know that this code cause many trouble but this also fixes
@@ -4353,6 +4360,9 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 		}
 	}
 
+	//int thinktime = I_GetTimeMicros();
+	//int foundcounter = 0;
+
 	// Mark all things invalid
 	sector->moved = true;
 
@@ -4365,6 +4375,7 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 			if (!n->visited) // unprocessed thing found
 			{
 				n->visited = true; // mark thing as processed
+				//foundcounter++;
 				if (!(n->m_thing->flags & MF_NOBLOCKMAP)) //jff 4/7/98 don't do these
 				{
 					if (!PIT_ChangeSector(n->m_thing, false)) // process it
@@ -4376,6 +4387,11 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 				break; // exit and start over
 			}
 	} while (n); // repeat from scratch until all things left are marked valid
+
+	//thinktime = I_GetTimeMicros() - thinktime;
+	//if (gametic % 39 == 0)
+	//	CONS_Printf("%d\n", thinktime);
+	//	CONS_Printf("checksector part took %d foundcounter %d\n", thinktime, foundcounter);
 
 	// Nothing blocked us, so lets crush for real!
 

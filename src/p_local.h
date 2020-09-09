@@ -283,6 +283,7 @@ void P_PrecipitationEffects(void);
 
 void P_RemoveMobj(mobj_t *th);
 boolean P_MobjWasRemoved(mobj_t *th);
+//#define P_MobjWasRemoved(mobj) (!(mobj && mobj->thinker.function.acp1 == (actionf_p1)P_MobjThinker))
 void P_RemoveSavegameMobj(mobj_t *th);
 boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state);
 boolean P_SetMobjState(mobj_t *mobj, statenum_t state);

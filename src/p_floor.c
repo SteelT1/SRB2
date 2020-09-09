@@ -34,6 +34,11 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, boolean crus
 {
 	fixed_t lastpos;
 	fixed_t destheight; // used to keep floors/ceilings from moving through each other
+
+	//if (gametic % 39 == 0)
+	//	CONS_Printf("T_MovePlane\n");
+	//int thinktime = I_GetTimeMicros();
+
 	sector->moved = true;
 
 	if (ceiling)
@@ -153,6 +158,10 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, boolean crus
 		}
 	}
 
+	//thinktime = I_GetTimeMicros() - thinktime;
+	//if (gametic % 39 == 0)
+	//	CONS_Printf("took %d\n", thinktime);
+
 	return ok;
 }
 
@@ -162,7 +171,7 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, boolean crus
 void T_MoveFloor(floormove_t *movefloor)
 {
 	result_e res = 0;
-	boolean dontupdate = false;
+	boolean dontupdate = false;// return; // test
 
 	if (movefloor->delaytimer)
 	{
@@ -318,7 +327,7 @@ void T_MoveElevator(elevator_t *elevator)
 {
 	result_e res1 = 0, res2 = 0, res = 0;
 	boolean dontupdate = false;
-	fixed_t oldfloor, oldceiling;
+	fixed_t oldfloor, oldceiling;// return; // test
 
 	if (elevator->delaytimer)
 	{
