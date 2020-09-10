@@ -10768,6 +10768,9 @@ static int action_call(lua_State *L)
 const char *superactions[MAXRECURSION];
 UINT8 superstack = 0;
 
+static int soclua_constants_ref = LUA_NOREF;
+static int lua_constants_ref = LUA_NOREF;
+
 static int lib_dummysuper(lua_State *L)
 {
 	return luaL_error(L, "Can't call super() outside of hardcode-replacing A_Action functions being called by state changes!"); // convoluted, I know. @_@;;
@@ -10777,10 +10780,46 @@ static inline int lib_getenum(lua_State *L)
 {
 	const char *word, *p;
 	fixed_t i;
+	int timetaken = I_GetTimeNanos();
+	// is this being called from soc math eval?
 	boolean mathlib = lua_toboolean(L, lua_upvalueindex(1));
 	if (lua_type(L,2) != LUA_TSTRING)
 		return 0;
-	word = lua_tostring(L,2);
+	// debug: count globals by iterating (apparently only way to count the hash part)
+	/*if (gametic % 100 == 0)
+	{
+		int gcount = 0;
+		lua_pushnil(L);
+		while (lua_next(L, LUA_GLOBALSINDEX) != 0)
+		{
+			gcount++;
+			// lua_next pops key, pushes key and value, so pop value and leave key for next lua_next call
+			lua_pop(L, 1);
+		}
+		CONS_Printf("gcount is %d\n", gcount);
+	}*/
+
+	//word = lua_tostring(L, -1);// need for debug print
+	// first try the fast context (mathlib) dependent table
+	lua_rawgeti(L, LUA_REGISTRYINDEX, mathlib ? soclua_constants_ref : lua_constants_ref);
+	// put the table deeper to the stack, so the string goes to the top
+	lua_insert(L, -2);
+	// duplicate the string since lua_gettable eats it
+	lua_pushvalue(L, -1);
+	// index the context dependent table with the string
+	lua_gettable(L, -3);
+	if (!lua_isnil(L, -1)) // did we find something? then return it!
+	{
+		//if (gametic % 39 == 0)
+		//	CONS_Printf("lib_getenum found %s from table\n", word);
+		return 1;
+	}
+	lua_pop(L, 1);
+
+	//if (gametic % 39 == 0)
+	//	CONS_Printf("lib_getenum didn't find %s from table\n", word);
+
+	word = lua_tostring(L, -1);
 	if (strlen(word) == 1) { // Assume sprite frame if length 1.
 		if (*word >= 'A' && *word <= '~')
 		{
@@ -10789,7 +10828,7 @@ static inline int lib_getenum(lua_State *L)
 		}
 		if (mathlib) return luaL_error(L, "constant '%s' could not be parsed.\n", word);
 		return 0;
-	}
+	}/*
 	else if (fastncmp("MF_", word, 3)) {
 		p = word+3;
 		for (i = 0; MOBJFLAG_LIST[i]; i++)
@@ -10819,7 +10858,7 @@ static inline int lib_getenum(lua_State *L)
 			}
 		if (mathlib) return luaL_error(L, "mobjeflag '%s' could not be found.\n", word);
 		return 0;
-	}
+	}*/
 	else if (fastncmp("MTF_", word, 4)) {
 		p = word+4;
 		for (i = 0; i < 4; i++)
@@ -10900,12 +10939,12 @@ static inline int lib_getenum(lua_State *L)
 				lua_pushinteger(L, S_FIRSTFREESLOT+i);
 				return 1;
 			}
-		}
+		}/*
 		for (i = 0; i < S_FIRSTFREESLOT; i++)
 			if (fastcmp(p, STATE_LIST[i]+2)) {
 				lua_pushinteger(L, i);
 				return 1;
-			}
+			}}*/
 		return luaL_error(L, "state '%s' does not exist.\n", word);
 	}
 	else if (fastncmp("MT_",word,3)) {
@@ -10917,12 +10956,12 @@ static inline int lib_getenum(lua_State *L)
 				lua_pushinteger(L, MT_FIRSTFREESLOT+i);
 				return 1;
 			}
-		}
+		}/*
 		for (i = 0; i < MT_FIRSTFREESLOT; i++)
 			if (fastcmp(p, MOBJTYPE_LIST[i]+3)) {
 				lua_pushinteger(L, i);
 				return 1;
-			}
+			}*/
 		return luaL_error(L, "mobjtype '%s' does not exist.\n", word);
 	}
 	else if (fastncmp("SPR_",word,4)) {
@@ -11007,7 +11046,7 @@ static inline int lib_getenum(lua_State *L)
 		return 1;
 	}
 #endif
-	else if (!mathlib && fastncmp("pw_",word,3)) {
+/*	else if (!mathlib && fastncmp("pw_",word,3)) {
 		p = word+3;
 		for (i = 0; i < NUMPOWERS; i++)
 			if (fasticmp(p, POWERS_LIST[i])) {
@@ -11034,7 +11073,7 @@ static inline int lib_getenum(lua_State *L)
 			}
 		if (mathlib) return luaL_error(L, "huditem '%s' could not be found.\n", word);
 		return 0;
-	}
+	}*/
 	else if (fastncmp("SKINCOLOR_",word,10)) {
 		p = word+10;
 		for (i = 0; i < NUMCOLORFREESLOTS; i++) {
@@ -11121,11 +11160,12 @@ static inline int lib_getenum(lua_State *L)
 		return 1;
 	}
 
+/*
 	for (i = 0; INT_CONST[i].n; i++)
 		if (fastcmp(word,INT_CONST[i].n)) {
 			lua_pushinteger(L, INT_CONST[i].v);
 			return 1;
-		}
+		}*/
 
 	if (mathlib) return luaL_error(L, "constant '%s' could not be parsed.\n", word);
 
@@ -11137,6 +11177,21 @@ static inline int lib_getenum(lua_State *L)
 
 int LUA_EnumLib(lua_State *L)
 {
+	int i;
+	char temp[128];
+	int counter = 0;
+	int gcount_before = 0;
+	int gcount_after = 0;
+
+	// debug: count globals by iterating (apparently only way to count the hash part)
+	lua_pushnil(L);
+	while (lua_next(L, LUA_GLOBALSINDEX) != 0)
+	{
+		gcount_before++;
+		// lua_next pops key, pushes key and value, so pop value and leave key for next lua_next call
+		lua_pop(L, 1);
+	}
+
 	if (lua_gettop(L) == 0)
 		lua_pushboolean(L, 0);
 
@@ -11146,6 +11201,142 @@ int LUA_EnumLib(lua_State *L)
 	lua_pushcclosure(L, lib_getenum, 1);
 	lua_setfield(L, -2, "__index");
 	lua_setmetatable(L, LUA_GLOBALSINDEX);
+
+	// PROBLEM: every SOC math eval gets new LUA state, and this gets called for those. Very slow!
+	// Separate soc-lua enumlib and lua enumlib?
+
+	// Make tables in the Lua registry for context dependent constants
+	lua_newtable(L); // soclua (math eval)
+	lua_newtable(L); // normal lua
+
+	// Set global constant variables and enums
+	for (i = 0; INT_CONST[i].n; i++, counter++)
+	{
+		lua_pushstring(L, INT_CONST[i].n);
+		lua_pushinteger(L, INT_CONST[i].v);
+		lua_rawset(L, LUA_GLOBALSINDEX);
+	}
+
+	// the strings in this list and others dont have MF_ at the start so we need to add it
+	strcpy(temp, "MF_");
+	for (i = 0; MOBJFLAG_LIST[i]; i++, counter++)
+	{
+		strcpy(temp+3, MOBJFLAG_LIST[i]);
+		lua_pushstring(L, temp);
+		lua_pushinteger(L, ((lua_Integer)1<<i));
+		lua_rawset(L, LUA_GLOBALSINDEX);
+	}
+
+	strcpy(temp, "MF2_");
+	for (i = 0; MOBJFLAG2_LIST[i]; i++, counter++)
+	{
+		strcpy(temp+4, MOBJFLAG2_LIST[i]);
+		lua_pushstring(L, temp);
+		lua_pushinteger(L, ((lua_Integer)1<<i));
+		lua_rawset(L, LUA_GLOBALSINDEX);
+	}
+
+	strcpy(temp, "MFE_");
+	for (i = 0; MOBJEFLAG_LIST[i]; i++, counter++)
+	{
+		strcpy(temp+4, MOBJEFLAG_LIST[i]);
+		lua_pushstring(L, temp);
+		lua_pushinteger(L, ((lua_Integer)1<<i));
+		lua_rawset(L, LUA_GLOBALSINDEX);
+	}
+
+	for (i = 0; i < S_FIRSTFREESLOT; i++, counter++)
+	{
+		lua_pushstring(L, STATE_LIST[i]);
+		lua_pushinteger(L, i);
+		lua_rawset(L, LUA_GLOBALSINDEX);
+	}
+
+	for (i = 0; i < MT_FIRSTFREESLOT; i++, counter++)
+	{
+		lua_pushstring(L, MOBJTYPE_LIST[i]);
+		lua_pushinteger(L, i);
+		lua_rawset(L, LUA_GLOBALSINDEX);
+	}
+/* // just use the old method for now, haven't done freeslots for this
+	strcpy(temp, "SPR_");
+	for (i = 0; i < NUMSPRITES; i++)
+	{
+		if (!sprnames[i][4])
+		{
+			strcpy(temp+4, sprnames[i]);
+			lua_pushstring(L, temp);
+			lua_pushinteger(L, i);
+			lua_rawset(L, LUA_GLOBALSINDEX);
+		}
+	}*/
+	// non freeslots are here and freeslots are checked the old way by lib_getenum
+	for (i = 0; i < sfx_freeslot0; i++)
+	{
+		if (S_sfx[i].name)
+		{
+			// lowercase for normal lua
+			strcpy(temp, "sfx_");
+			strcpy(temp+4, S_sfx[i].name);
+			lua_pushstring(L, temp);
+			lua_pushinteger(L, i);
+			lua_settable(L, -3);
+			// uppercase for soc lua
+			strupr(temp);
+			lua_pushstring(L, temp);
+			lua_pushinteger(L, i);
+			lua_settable(L, -4);
+			// DS prefixed version for soc lua
+			strcpy(temp, "DS");
+			strcpy(temp+2, S_sfx[i].name);
+			strupr(temp);
+			lua_pushstring(L, temp);
+			lua_pushinteger(L, i);
+			lua_settable(L, -4);
+		}
+		else
+			I_Error("there is actually a null sfx name");
+	}
+
+	for (i = 0; i < NUMPOWERS; i++)
+	{
+		strcpy(temp, "PW_");
+		// uppercase for soc lua
+		strcpy(temp+3, POWERS_LIST[i]);
+		lua_pushstring(L, temp);
+		lua_pushinteger(L, i);
+		lua_settable(L, -4);
+		// lowercase for normal lua
+		strlwr(temp);
+		lua_pushstring(L, temp);
+		lua_pushinteger(L, i);
+		lua_settable(L, -3);
+	}
+
+	strcpy(temp, "HUD_");
+	for (i = 0; i < NUMHUDITEMS; i++, counter++)
+	{
+		strcpy(temp+4, HUDITEMS_LIST[i]);
+		lua_pushstring(L, HUDITEMS_LIST[i]);
+		lua_pushinteger(L, i);
+		lua_rawset(L, LUA_GLOBALSINDEX);
+	}
+
+	// put the tables to the Lua registry using luaL_ref
+	lua_constants_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+	soclua_constants_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+
+	// debug: count globals by iterating (apparently only way to count the hash part)
+	lua_pushnil(L);
+	while (lua_next(L, LUA_GLOBALSINDEX) != 0)
+	{
+		gcount_after++;
+		// lua_next pops key, pushes key and value, so pop value and leave key for next lua_next call
+		lua_pop(L, 1);
+	}
+
+	CONS_Printf("LUA_EnumLib set %d globals, #_G before: %d after: %d\n", counter, gcount_before, gcount_after);
+
 	return 0;
 }
 

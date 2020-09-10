@@ -161,12 +161,14 @@ static const char *const mobj_opt[] = {
 	"shadowscale",
 	NULL};
 
+static int mobj_fields_ref = LUA_NOREF;
+
 #define UNIMPLEMENTED luaL_error(L, LUA_QL("mobj_t") " field " LUA_QS " is not implemented for Lua and cannot be accessed.", mobj_opt[field])
 
 static int mobj_get(lua_State *L)
 {
 	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
-	enum mobj_e field = Lua_optoption(L, 2, NULL, mobj_opt);
+	enum mobj_e field = Lua_optoption(L, 2, NULL, mobj_opt, mobj_fields_ref);
 	lua_settop(L, 2);
 
 	if (!mo || !ISINLEVEL) {
@@ -405,7 +407,7 @@ static int mobj_get(lua_State *L)
 		lua_pushfixed(L, mo->shadowscale);
 		break;
 	default: // extra custom variables in Lua memory
-		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
+		lua_rawgeti(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
 		I_Assert(lua_istable(L, -1));
 		lua_pushlightuserdata(L, mo);
 		lua_rawget(L, -2);
@@ -427,7 +429,7 @@ static int mobj_get(lua_State *L)
 static int mobj_set(lua_State *L)
 {
 	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
-	enum mobj_e field = Lua_optoption(L, 2, mobj_opt[0], mobj_opt);
+	enum mobj_e field = Lua_optoption(L, 2, mobj_opt[0], mobj_opt, mobj_fields_ref);
 	lua_settop(L, 3);
 
 	INLEVEL
@@ -742,7 +744,7 @@ static int mobj_set(lua_State *L)
 		mo->shadowscale = luaL_checkfixed(L, 3);
 		break;
 	default:
-		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
+		lua_rawgeti(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
 		I_Assert(lua_istable(L, -1));
 		lua_pushlightuserdata(L, mo);
 		lua_rawget(L, -2);
@@ -1017,5 +1019,8 @@ int LUA_MobjLib(lua_State *L)
 			lua_setfield(L, -2, "__len");
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, "mapthings");
+
+	mobj_fields_ref = Lua_createoptiontable(L, mobj_opt);
+	
 	return 0;
 }

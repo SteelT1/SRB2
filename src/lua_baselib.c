@@ -36,6 +36,8 @@
 #define NOHUD if (hud_running)\
 return luaL_error(L, "HUD rendering code should not call this function!");
 
+int LREG_EXTVARS = LUA_NOREF;
+
 boolean luaL_checkboolean(lua_State *L, int narg) {
 	luaL_checktype(L, narg, LUA_TBOOLEAN);
 	return lua_toboolean(L, narg);
@@ -3691,7 +3693,7 @@ int LUA_BaseLib(lua_State *L)
 	lua_pop(L, 2); // pop metatable and dummy string
 
 	lua_newtable(L);
-	lua_setfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
+	LREG_EXTVARS = luaL_ref(L, LUA_REGISTRYINDEX);
 
 	// Set global functions
 	lua_pushvalue(L, LUA_GLOBALSINDEX);

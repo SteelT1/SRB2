@@ -1150,7 +1150,7 @@ static int mobjinfo_get(lua_State *L)
 	else if (fastcmp(field,"raisestate"))
 		lua_pushinteger(L, info->raisestate);
 	else {
-		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
+		lua_rawgeti(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
 		I_Assert(lua_istable(L, -1));
 		lua_pushlightuserdata(L, info);
 		lua_rawget(L, -2);
@@ -1226,7 +1226,7 @@ static int mobjinfo_set(lua_State *L)
 	else if (fastcmp(field,"raisestate"))
 		info->raisestate = luaL_checkinteger(L, 3);
 	else {
-		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
+		lua_rawgeti(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
 		I_Assert(lua_istable(L, -1));
 		lua_pushlightuserdata(L, info);
 		lua_rawget(L, -2);

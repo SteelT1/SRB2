@@ -13,7 +13,8 @@
 extern lua_State *gL;
 
 #define LREG_VALID "VALID_USERDATA"
-#define LREG_EXTVARS "LUA_VARS"
+//#define LREG_EXTVARS "LUA_VARS"
+extern int LREG_EXTVARS;
 #define LREG_STATEACTION "STATE_ACTION"
 #define LREG_ACTIONS "MOBJ_ACTION"
 

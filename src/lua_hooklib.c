@@ -235,6 +235,9 @@ static int lib_addHook(lua_State *L)
 	// tack it onto the end of the linked list.
 	*lastp = hookp;
 
+	// debug
+	CONS_Printf("-- hook %u added --\n", hook.id);
+
 	// set the hook function in the registry.
 	lua_pushfstring(L, FMT_HOOKID, hook.id);
 	lua_pushvalue(L, 1);
@@ -455,6 +458,7 @@ void LUAh_PreThinkFrame(void)
 void LUAh_ThinkFrame(void)
 {
 	hook_p hookp;
+	int sum = 0;
 	if (!gL || !(hooksAvailable[hook_ThinkFrame/8] & (1<<(hook_ThinkFrame%8))))
 		return;
 
@@ -465,6 +469,7 @@ void LUAh_ThinkFrame(void)
 		if (hookp->type != hook_ThinkFrame)
 			continue;
 
+		int hooktime = I_GetTimeMicros();
 		PushHook(gL, hookp);
 		if (lua_pcall(gL, 0, 0, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
@@ -472,9 +477,19 @@ void LUAh_ThinkFrame(void)
 			lua_pop(gL, 1);
 			hookp->error = true;
 		}
+		hooktime = I_GetTimeNanos() - hooktime;
+		sum += hooktime;
+		//if (gametic % 39 == 0)
+		//{
+		//	CONS_Printf("hook %u: %d\n", hookp->id, hooktime);
+		//}
+
 	}
 
 	lua_pop(gL, 1); // Pop error handler
+
+	if (gametic % 39 == 0)
+		CONS_Printf("sum: %d\n", sum);
 }
 
 // Hook for frame (at end of tick, ie after overlays, precipitation, specials)

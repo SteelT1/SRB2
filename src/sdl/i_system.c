@@ -2166,6 +2166,11 @@ int I_GetTimeMicros(void)
 	return TimeFunction(1000000);
 }
 
+int I_GetTimeNanos(void)
+{
+	return TimeFunction(1000000000);
+}
+
 //
 //I_StartupTimer
 //

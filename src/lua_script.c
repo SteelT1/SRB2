@@ -603,20 +603,23 @@ void LUA_DumpFile(const char *filename)
 
 fixed_t LUA_EvalMath(const char *word)
 {
-	lua_State *L = NULL;
+	static lua_State *L = NULL;
 	char buf[1024], *b;
 	const char *p;
 	fixed_t res = 0;
 
 	// make a new state so SOC can't interefere with scripts
 	// allocate state
-	L = lua_newstate(LUA_Alloc, NULL);
-	lua_atpanic(L, LUA_Panic);
+	if (!L)
+	{
+		L = lua_newstate(LUA_Alloc, NULL);
+		lua_atpanic(L, LUA_Panic);
 
-	// open only enum lib
-	lua_pushcfunction(L, LUA_EnumLib);
-	lua_pushboolean(L, true);
-	lua_call(L, 1, 0);
+		// open only enum lib
+		lua_pushcfunction(L, LUA_EnumLib);
+		lua_pushboolean(L, true);
+		lua_call(L, 1, 0);
+	}
 
 	// change ^ into ^^ for Lua.
 	strcpy(buf, "return ");
@@ -642,7 +645,7 @@ fixed_t LUA_EvalMath(const char *word)
 		res = lua_tointeger(L, -1);
 
 	// clean up and return.
-	lua_close(L);
+	//lua_close(L); // removed since now reusing the state
 	return res;
 }
 
@@ -720,7 +723,7 @@ void LUA_InvalidateUserdata(void *data)
 			}
 
 			// nullify any additional data
-			lua_getfield(gL, LUA_REGISTRYINDEX, LREG_EXTVARS);
+			lua_rawgeti(gL, LUA_REGISTRYINDEX, LREG_EXTVARS);
 			I_Assert(lua_istable(gL, -1));
 				lua_pushlightuserdata(gL, data);
 				lua_pushnil(gL);
@@ -1178,7 +1181,7 @@ static void ArchiveExtVars(void *pointer, const char *ptype)
 
 	TABLESINDEX = lua_gettop(gL);
 
-	lua_getfield(gL, LUA_REGISTRYINDEX, LREG_EXTVARS);
+	lua_rawgeti(gL, LUA_REGISTRYINDEX, LREG_EXTVARS);
 	I_Assert(lua_istable(gL, -1));
 	lua_pushlightuserdata(gL, pointer);
 	lua_rawget(gL, -2);
@@ -1417,7 +1420,7 @@ static void UnArchiveExtVars(void *pointer)
 		lua_setfield(gL, -2, field);
 	}
 
-	lua_getfield(gL, LUA_REGISTRYINDEX, LREG_EXTVARS);
+	lua_rawgeti(gL, LUA_REGISTRYINDEX, LREG_EXTVARS);
 	I_Assert(lua_istable(gL, -1));
 	lua_pushlightuserdata(gL, pointer);
 	lua_pushvalue(gL, -3); // pointer's ext vars subtable
@@ -1544,6 +1547,7 @@ void LUA_UnArchive(void)
 		lua_pop(gL, 1); // pop tables
 }
 
+/*
 // For mobj_t, player_t, etc. to take custom variables.
 int Lua_optoption(lua_State *L, int narg,
 	const char *def, const char *const lst[])
@@ -1554,4 +1558,39 @@ int Lua_optoption(lua_State *L, int narg,
 		if (fastcmp(lst[i], name))
 			return i;
 	return -1;
+}*/
+
+int Lua_optoption(lua_State *L, int narg, const char *def, const char *const lst[], int ref)
+{
+	//const char *name = (def) ? luaL_optstring(L, narg, def) :  luaL_checkstring(L, narg);
+	//if (!name)
+	//	return -1;
+	lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
+	//if (!lua_istable(L, -1))
+	//	I_Error("Lua_optoption: The option table does not exist!");
+	//if (name == def)
+	//	lua_pushstring(L, def);
+	//else
+		lua_pushvalue(L, narg);
+	lua_gettable(L, -2);
+	if (lua_isnumber(L, -1))
+		return lua_tonumber(L, -1);
+	else
+		return -1;
+}
+
+// Create Lua option table for Lua_optoption, returns ref
+int Lua_createoptiontable(lua_State *L, const char *const lst[])
+{
+	int i;
+
+	lua_newtable(L);
+	for (i = 0; lst[i]; i++)
+	{
+		lua_pushstring(L, lst[i]);
+		lua_pushinteger(L, i);
+		lua_settable(L, -3);
+	}
+
+	return luaL_ref(L, LUA_REGISTRYINDEX);
 }
