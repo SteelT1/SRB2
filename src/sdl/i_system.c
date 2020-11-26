@@ -54,11 +54,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include <fcntl.h>
 #endif
 
-#if defined (_WIN32)
-DWORD TimeFunction(int requested_frequency);
-#else
 int TimeFunction(int requested_frequency);
-#endif
 
 #include <stdio.h>
 #ifdef _WIN32
@@ -2048,68 +2044,6 @@ ticcmd_t *I_BaseTiccmd2(void)
 
 static Uint64 basetime = 0;
 
-#if defined (_WIN32)
-static HMODULE winmm = NULL;
-static DWORD starttickcount = 0; // hack for win2k time bug
-static p_timeGetTime pfntimeGetTime = NULL;
-
-// ---------
-// I_GetTime
-// Use the High Resolution Timer if available,
-// else use the multimedia timer which has 1 millisecond precision on Windowz 95,
-// but lower precision on Windows NT
-// ---------
-
-DWORD TimeFunction(int requested_frequency)
-{
-	DWORD newtics = 0;
-	// this var acts as a multiplier if sub-millisecond precision is asked but is not available
-	int excess_frequency = requested_frequency / 1000;
-
-	if (!starttickcount) // high precision timer
-	{
-		LARGE_INTEGER currtime; // use only LowPart if high resolution counter is not available
-		static LARGE_INTEGER basetime = {{0, 0}};
-
-		// use this if High Resolution timer is found
-		static LARGE_INTEGER frequency;
-
-		if (!basetime.LowPart)
-		{
-			if (!QueryPerformanceFrequency(&frequency))
-				frequency.QuadPart = 0;
-			else
-				QueryPerformanceCounter(&basetime);
-		}
-
-		if (frequency.LowPart && QueryPerformanceCounter(&currtime))
-		{
-			newtics = (INT32)((currtime.QuadPart - basetime.QuadPart) * requested_frequency
-				/ frequency.QuadPart);
-		}
-		else if (pfntimeGetTime)
-		{
-			currtime.LowPart = pfntimeGetTime();
-			if (!basetime.LowPart)
-				basetime.LowPart = currtime.LowPart;
-			if (requested_frequency > 1000)
-				newtics = currtime.LowPart - basetime.LowPart * excess_frequency;
-			else
-				newtics = (currtime.LowPart - basetime.LowPart)/(1000/requested_frequency);
-		}
-	}
-	else
-	{
-		if (requested_frequency > 1000)
-			newtics = (GetTickCount() - starttickcount) * excess_frequency;
-		else
-			newtics = (GetTickCount() - starttickcount)/(1000/requested_frequency);
-	}
-
-	return newtics;
-}
-#else
-
 //
 // I_GetTime
 // returns time in 1/TICRATE second tics
@@ -2131,7 +2065,6 @@ int TimeFunction(int requested_frequency)
 
 	return ticks;
 }
-#endif
 
 fixed_t I_GetTimeFrac(void) {
 	Uint64 ticks;
