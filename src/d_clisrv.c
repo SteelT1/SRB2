@@ -1512,16 +1512,17 @@ static void SV_SavedGame(void)
 
 #undef  TMPSAVENAME
 #endif
+#endif
 #define TMPSAVENAME "$$$.sav"
 
-
+#ifndef NONET
 static void CL_LoadReceivedSavegame(boolean reloading)
 {
 	UINT8 *savebuffer = NULL;
 	size_t length, decompressedlen;
 	char tmpsave[256];
 
-	sprintf(tmpsave, "%s" PATHSEP TMPSAVENAME, srb2home);
+	sprintf(tmpsave, "%s%s" PATHSEP, TMPSAVENAME, srb2home);
 
 	length = FIL_ReadFile(tmpsave, &savebuffer);
 
@@ -3074,6 +3075,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 		CL_RemovePlayer(pnum, kickreason);
 }
 
+#ifndef NONET
 static void Command_ResendGamestate(void)
 {
 	SINT8 playernum;
@@ -3101,6 +3103,7 @@ static void Command_ResendGamestate(void)
 		return;
 	}
 }
+#endif
 
 static CV_PossibleValue_t netticbuffer_cons_t[] = {{0, "MIN"}, {3, "MAX"}, {0, NULL}};
 consvar_t cv_netticbuffer = CVAR_INIT ("netticbuffer", "1", CV_SAVE, netticbuffer_cons_t, NULL);
@@ -3793,7 +3796,7 @@ static void PT_WillResendGamestate(void)
 
 	CONS_Printf(M_GetText("Reloading game state...\n"));
 
-	sprintf(tmpsave, "%s" PATHSEP TMPSAVENAME, srb2home);
+	sprintf(tmpsave, "%s%s%s", PATHSEP, TMPSAVENAME, srb2home);
 
 	// Don't get a corrupt savegame error because tmpsave already exists
 	if (FIL_FileExists(tmpsave) && unlink(tmpsave) == -1)
@@ -3804,6 +3807,7 @@ static void PT_WillResendGamestate(void)
 	cl_redownloadinggamestate = true;
 }
 
+#ifndef NONET
 static void PT_CanReceiveGamestate(SINT8 node)
 {
 	if (client || sendingsavegame[node])
@@ -3814,6 +3818,7 @@ static void PT_CanReceiveGamestate(SINT8 node)
 	SV_SendSaveGame(node, true); // Resend a complete game state
 	resendingsavegame[node] = true;
 }
+#endif
 
 /** Handles a packet received from a node that isn't in game
   *
@@ -4096,6 +4101,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 				G_MoveTiccmd(&netcmds[maketic%BACKUPTICS][(UINT8)nodetoplayer2[node]],
 					&netbuffer->u.client2pak.cmd2, 1);
 
+#ifndef NONET
 			// Check player consistancy during the level
 			if (realstart <= gametic && realstart + BACKUPTICS - 1 > gametic && gamestate == GS_LEVEL
 				&& consistancy[realstart%BACKUPTICS] != SHORT(netbuffer->u.clientpak.consistancy)
@@ -4129,6 +4135,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 					break;
 				}
 			}
+#endif
 			break;
 		case PT_TEXTCMD2: // splitscreen special
 			netconsole = nodetoplayer2[node];
@@ -4254,9 +4261,11 @@ static void HandlePacketFromPlayer(SINT8 node)
 			Net_CloseConnection(node);
 			nodeingame[node] = false;
 			break;
+#ifndef NONET			
 		case PT_CANRECEIVEGAMESTATE:
 			PT_CanReceiveGamestate(node);
 			break;
+#endif
 		case PT_ASKLUAFILE:
 			if (server && luafiletransfers && luafiletransfers->nodestatus[node] == LFTNS_ASKED)
 				AddLuaFileToSendQueue(node, luafiletransfers->realfilename);
@@ -5001,9 +5010,11 @@ void NetUpdate(void)
 
 	if (client)
 	{
+#ifndef NONET		
 		// If the client just finished redownloading the game state, load it
 		if (cl_redownloadinggamestate && fileneeded[0].status == FS_FOUND)
 			CL_ReloadReceivedSavegame();
+#endif
 
 		CL_SendClientCmd(); // Send tic cmd
 		hu_redownloadinggamestate = cl_redownloadinggamestate;
