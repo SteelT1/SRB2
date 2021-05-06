@@ -36,11 +36,15 @@ extern UINT8 keyboard_started;
 
 /**	\brief	The I_GetFreeMem function
 
-	\param	total	total memory in the system
-
-	\return	free memory in the system
+	\return	total memory in the system (in bytes)
 */
-UINT32 I_GetFreeMem(UINT32 *total);
+size_t I_GetTotalMem(void);
+
+/**	\brief	The I_GetFreeMem function
+
+	\return	free memory in the system (in bytes)
+*/
+size_t I_GetFreeMem(void);
 
 /**	\brief  Called by D_SRB2Loop, returns current time in tics.
 */

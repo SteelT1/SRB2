@@ -45,6 +45,7 @@ set(SRB2_SDL2_SOURCES
 	ogl_sdl.c
 
 	${SRB2_SDL2_SOUNDIMPL}
+	memstats.c
 )
 
 set(SRB2_SDL2_HEADERS

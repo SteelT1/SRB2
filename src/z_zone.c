@@ -28,7 +28,7 @@
 #include "doomdef.h"
 #include "doomstat.h"
 #include "r_picformats.h"
-#include "i_system.h" // I_GetFreeMem
+#include "i_system.h" // I_GetFreeMem, I_GetTotalMem
 #include "i_video.h" // rendermode
 #include "z_zone.h"
 #include "m_misc.h" // M_Memcpy
@@ -105,14 +105,16 @@ static void Command_Memdump_f(void);
   */
 void Z_Init(void)
 {
-	UINT32 total, memfree;
+	size_t memtotal, memfree;
 
 	memset(&head, 0x00, sizeof(head));
 
 	head.next = head.prev = &head;
 
-	memfree = I_GetFreeMem(&total)>>20;
-	CONS_Printf("System memory: %uMB - Free: %uMB\n", total>>20, memfree);
+	memtotal = I_GetTotalMem();
+	memfree = I_GetFreeMem();
+	
+	CONS_Printf("System memory: %sMB - Free: %sMB\n", sizeu1(memtotal>>20), sizeu2(memfree>>20));
 
 	// Note: This allocates memory. Watch out.
 	COM_AddCommand("memfree", Command_Memfree_f);
@@ -789,7 +791,7 @@ size_t Z_TagsUsage(INT32 lowtag, INT32 hightag)
   */
 static void Command_Memfree_f(void)
 {
-	UINT32 freebytes, totalbytes;
+	size_t freebytes, totalbytes;
 
 	Z_CheckHeap(-1);
 	CONS_Printf("\x82%s", M_GetText("Memory Info\n"));
@@ -816,9 +818,10 @@ static void Command_Memfree_f(void)
 #endif
 
 	CONS_Printf("\x82%s", M_GetText("System Memory Info\n"));
-	freebytes = I_GetFreeMem(&totalbytes);
-	CONS_Printf(M_GetText("    Total physical memory: %7u KB\n"), totalbytes>>10);
-	CONS_Printf(M_GetText("Available physical memory: %7u KB\n"), freebytes>>10);
+	totalbytes = I_GetTotalMem();	
+	freebytes = I_GetFreeMem();
+	CONS_Printf(M_GetText("    Total physical memory: %7s KB\n"), sizeu1(totalbytes>>10));
+	CONS_Printf(M_GetText("Available physical memory: %7s KB\n"), sizeu2(freebytes>>10));
 }
 
 #ifdef ZDEBUG

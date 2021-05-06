@@ -90,8 +90,6 @@ int TimeFunction(int requested_frequency);
 #else
 #include <sys/param.h>
 #include <sys/mount.h>
-/*For meminfo*/
-#include <sys/types.h>
 #ifdef FREEBSD
 #include <kvm.h>
 #endif
@@ -198,6 +196,8 @@ static char returnWadPath[256];
 #include "../d_clisrv.h"
 #include "../byteptr.h"
 #endif
+
+#include "memstats.h"
 
 /**	\brief	The JoyReset function
 
@@ -2940,124 +2940,14 @@ const char *I_LocateWad(void)
 	return waddir;
 }
 
-#ifdef __linux__
-#define MEMINFO_FILE "/proc/meminfo"
-#define MEMTOTAL "MemTotal:"
-#define MEMAVAILABLE "MemAvailable:"
-#define MEMFREE "MemFree:"
-#define CACHED "Cached:"
-#define BUFFERS "Buffers:"
-#define SHMEM "Shmem:"
-
-/* Parse the contents of /proc/meminfo (in buf), return value of "name"
- * (example: MemTotal) */
-static long get_entry(const char* name, const char* buf)
+size_t I_GetTotalMem(void)
 {
-	long val;
-	char* hit = strstr(buf, name);
-	if (hit == NULL) {
-		return -1;
-	}
-
-	errno = 0;
-	val = strtol(hit + strlen(name), NULL, 10);
-	if (errno != 0) {
-		CONS_Alert(CONS_ERROR, M_GetText("get_entry: strtol() failed: %s\n"), strerror(errno));
-		return -1;
-	}
-	return val;
+	return GetTotalSysMem();
 }
-#endif
-
-// quick fix for compil
-UINT32 I_GetFreeMem(UINT32 *total)
+	
+size_t I_GetFreeMem(void)
 {
-#ifdef FREEBSD
-	*total = 0;
-	return 0;
-#elif defined (SOLARIS)
-	/* Just guess */
-	if (total)
-		*total = 32 << 20;
-	return 32 << 20;
-#elif defined (_WIN32)
-	MEMORYSTATUS info;
-
-	info.dwLength = sizeof (MEMORYSTATUS);
-	GlobalMemoryStatus( &info );
-	if (total)
-		*total = (UINT32)info.dwTotalPhys;
-	return (UINT32)info.dwAvailPhys;
-#elif defined (__linux__)
-	/* Linux */
-	char buf[1024];
-	char *memTag;
-	UINT32 freeKBytes;
-	UINT32 totalKBytes;
-	INT32 n;
-	INT32 meminfo_fd = -1;
-	long Cached;
-	long MemFree;
-	long Buffers;
-	long Shmem;
-	long MemAvailable = -1;
-
-	meminfo_fd = open(MEMINFO_FILE, O_RDONLY);
-	n = read(meminfo_fd, buf, 1023);
-	close(meminfo_fd);
-
-	if (n < 0)
-	{
-		// Error
-		if (total)
-			*total = 0L;
-		return 0;
-	}
-
-	buf[n] = '\0';
-	if ((memTag = strstr(buf, MEMTOTAL)) == NULL)
-	{
-		// Error
-		if (total)
-			*total = 0L;
-		return 0;
-	}
-
-	memTag += sizeof (MEMTOTAL);
-	totalKBytes = atoi(memTag);
-
-	if ((memTag = strstr(buf, MEMAVAILABLE)) == NULL)
-	{
-		Cached = get_entry(CACHED, buf);
-		MemFree = get_entry(MEMFREE, buf);
-		Buffers = get_entry(BUFFERS, buf);
-		Shmem = get_entry(SHMEM, buf);
-		MemAvailable = Cached + MemFree + Buffers - Shmem;
-
-		if (MemAvailable == -1)
-		{
-			// Error
-			if (total)
-				*total = 0L;
-			return 0;
-		}
-		freeKBytes = MemAvailable;
-	}
-	else
-	{
-		memTag += sizeof (MEMAVAILABLE);
-		freeKBytes = atoi(memTag);
-	}
-
-	if (total)
-		*total = totalKBytes << 10;
-	return freeKBytes << 10;
-#else
-	// Guess 48 MB.
-	if (total)
-		*total = 48<<20;
-	return 48<<20;
-#endif
+	return GetFreeSysMem();
 }
 
 const CPUInfoFlags *I_CPUInfo(void)
