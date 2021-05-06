@@ -2973,40 +2973,8 @@ static long get_entry(const char* name, const char* buf)
 UINT32 I_GetFreeMem(UINT32 *total)
 {
 #ifdef FREEBSD
-	struct vmmeter sum;
-	kvm_t *kd;
-	struct nlist namelist[] =
-	{
-#define X_SUM   0
-		{"_cnt"},
-		{NULL}
-	};
-	if ((kd = kvm_open(NULL, NULL, NULL, O_RDONLY, "kvm_open")) == NULL)
-	{
-		if (total)
-			*total = 0L;
-		return 0;
-	}
-	if (kvm_nlist(kd, namelist) != 0)
-	{
-		kvm_close (kd);
-		if (total)
-			*total = 0L;
-		return 0;
-	}
-	if (kvm_read(kd, namelist[X_SUM].n_value, &sum,
-		sizeof (sum)) != sizeof (sum))
-	{
-		kvm_close(kd);
-		if (total)
-			*total = 0L;
-		return 0;
-	}
-	kvm_close(kd);
-
-	if (total)
-		*total = sum.v_page_count * sum.v_page_size;
-	return sum.v_free_count * sum.v_page_size;
+	*total = 0;
+	return 0;
 #elif defined (SOLARIS)
 	/* Just guess */
 	if (total)
