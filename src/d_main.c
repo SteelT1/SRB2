@@ -1038,6 +1038,7 @@ void D_SRB2Main(void)
 
 	INT32 pstartmap = 1;
 	boolean autostart = false;
+	INT32 i;
 
 	/* break the version string into version numbers, for netplay */
 	D_ConvertVersionNumbers();
@@ -1188,6 +1189,19 @@ void D_SRB2Main(void)
 
 				if (s) // Check for NULL?
 					D_AddFile(startuppwads, s);
+			}
+		}
+
+		// Add any files that was dragged onto the executable
+		// Start at 1 as myargv[0] is the executable
+		if (myargc > 1)
+		{
+			for (i = 1; i < myargc; i++)
+			{
+				if (myargv[i][0] == '-') // Skip anything that starts with hyphen, if we do get any somehow.
+					continue;
+
+				D_AddFile(startuppwads, myargv[i]);
 			}
 		}
 	}
