@@ -435,7 +435,7 @@ ifdef GCC48
 else
 	CFLAGS+=-O0
 endif
-	CFLAGS+= -Wall -DPARANOIA -DRANGECHECK -DPACKETDROP -DMOBJCONSISTANCY
+	CFLAGS+= -Wall -DPARANOIA -DRANGECHECK -DPACKETDROP
 else
 
 
@@ -482,6 +482,9 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/d_netfil.o \
 		$(OBJDIR)/d_netcmd.o \
 		$(OBJDIR)/dehacked.o \
+		$(OBJDIR)/deh_soc.o  \
+		$(OBJDIR)/deh_lua.o  \
+		$(OBJDIR)/deh_tables.o \
 		$(OBJDIR)/z_zone.o   \
 		$(OBJDIR)/f_finale.o \
 		$(OBJDIR)/f_wipe.o   \
@@ -503,6 +506,7 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/m_fixed.o  \
 		$(OBJDIR)/m_menu.o   \
 		$(OBJDIR)/m_misc.o   \
+		$(OBJDIR)/m_perfstats.o \
 		$(OBJDIR)/m_random.o \
 		$(OBJDIR)/m_queue.o  \
 		$(OBJDIR)/info.o     \
@@ -535,9 +539,12 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/r_splats.o \
 		$(OBJDIR)/r_things.o \
 		$(OBJDIR)/r_textures.o \
+		$(OBJDIR)/r_patch.o \
+		$(OBJDIR)/r_patchrotation.o \
 		$(OBJDIR)/r_picformats.o \
 		$(OBJDIR)/r_portal.o \
 		$(OBJDIR)/screen.o   \
+		$(OBJDIR)/taglist.o  \
 		$(OBJDIR)/v_video.o  \
 		$(OBJDIR)/s_sound.o  \
 		$(OBJDIR)/sounds.o   \
