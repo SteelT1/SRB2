@@ -10,9 +10,15 @@
 /// \file  memstats.c
 /// \brief Functions to get system memory information.
 
+#include <math.h>
+
 #include <stdio.h>
 #ifndef errno
 #include <errno.h>
+#endif
+
+#ifdef FREEBSD
+#include <sys/sysctl.h>
 #endif
 
 #ifdef __linux__
@@ -21,6 +27,7 @@
 #endif
 
 #include "memstats.h"
+#include "../console.h"
 
 #ifdef __linux__ 
 ssize_t numread;
@@ -48,7 +55,7 @@ static long linux_get_entry(const char* name, const char* buf)
 	errno = 0;
 	val = strtol(hit + strlen(name), NULL, 10);
 	if (errno != 0) {
-		CONS_Debug(DBG_MEMORY, M_GetText("get_entry: strtol() failed: %s\n"), strerror(errno));
+		CONS_Debug(DBG_MEMORY, "get_entry: strtol() failed: %s\n", strerror(errno));
 		return -1;
 	}
 	return val;
@@ -157,6 +164,61 @@ static size_t win_get_freemem(void)
 }
 #endif
 
+#ifdef FREEBSD
+static size_t freebsd_get_totalmem(void)
+{
+	unsigned long totalMem, realtotalmem;
+	int MIB_hw_physmem[2];
+	size_t len;
+	
+	len = 2;
+	sysctlnametomib("hw.physmem", MIB_hw_physmem, &len);
+	
+	len = sizeof(totalMem);	
+	sysctl(MIB_hw_physmem, 2, &(totalMem), &len, NULL, 0);
+	
+	/* round the memory size to the next power of two, as it's usually in powers of 2 */
+	realtotalmem = pow(2, ceil(log(totalMem)/log(2)));
+
+	return realtotalmem;
+}
+
+static size_t freebsd_get_freemem(void)
+{
+	int MIB_vm_stats_vm_v_inactive_count[4];
+	int MIB_vm_stats_vm_v_cache_count[4];
+	int MIB_vm_stats_vm_v_free_count[4];
+	int pageSize;
+	size_t len;
+	unsigned int inactiveMem, freeMem, cachedMem;
+	unsigned long realfreemem;
+
+	len = sizeof(pageSize);
+	
+ 	if (sysctlbyname("vm.stats.vm.v_page_size", &pageSize, &len, NULL, 0) == -1)
+		CONS_Debug(DBG_MEMORY, "Cannot get pagesize by sysctl");
+	len = 4;	
+	sysctlnametomib("vm.stats.vm.v_inactive_count", MIB_vm_stats_vm_v_inactive_count, &len);
+	sysctlnametomib("vm.stats.vm.v_cache_count", MIB_vm_stats_vm_v_cache_count, &len);
+	sysctlnametomib("vm.stats.vm.v_free_count", MIB_vm_stats_vm_v_free_count, &len);
+
+	len = sizeof(inactiveMem);
+	sysctl(MIB_vm_stats_vm_v_inactive_count, 4, &(inactiveMem), &len, NULL, 0);
+	inactiveMem *= pageSize;
+
+	len = sizeof(cachedMem);
+	sysctl(MIB_vm_stats_vm_v_cache_count, 4, &(cachedMem), &len, NULL, 0);
+	cachedMem *= pageSize;
+
+	len = sizeof(freeMem);
+	sysctl(MIB_vm_stats_vm_v_free_count, 4, &(freeMem), &len, NULL, 0);
+	freeMem *= pageSize;
+
+	realfreemem = (inactiveMem + cachedMem + freeMem);
+	return realfreemem;
+}
+#endif
+
 size_t GetTotalSysMem(void)
 {
 #ifdef __linux__
@@ -164,6 +226,9 @@ size_t GetTotalSysMem(void)
 #endif
 #ifdef _WIN32_
 	return win_get_totalmem();
+#endif
+#ifdef FREEBSD
+	return freebsd_get_totalmem();
 #endif
 	/*	Guess 48 MB. */
 	return 48<<20;
@@ -176,6 +241,9 @@ size_t GetFreeSysMem(void)
 #endif
 #ifdef _WIN32_
 	return win_get_freemem();
+#endif
+#ifdef FREEBSD
+	return freebsd_get_freemem();
 #endif
 	/*	Guess 48 MB. */
 	return 48<<20;
