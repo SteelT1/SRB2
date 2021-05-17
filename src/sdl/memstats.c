@@ -15,6 +15,10 @@
 #include <errno.h>
 #endif
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #ifdef __linux__
 #include <sys/types.h>
 #define MEMINFO_FILE "/proc/meminfo"
@@ -22,7 +26,7 @@
 
 #include "memstats.h"
 
-#ifdef __linux__ 
+#ifdef __linux__
 ssize_t numread;
 int meminfo_fd = -1;
 long Cached;
@@ -111,8 +115,8 @@ static size_t linux_get_freemem(void)
 
 	procbuf[numread] = '\0';
 
-	/* Kernel is too old to support MEMAVAILABLE 
-		so get values using old calculation 
+	/* Kernel is too old to support MEMAVAILABLE
+		so get values using old calculation
 	*/
 	if ((memTag = strstr(buf, MEMAVAILABLE)) == NULL)
 	{
@@ -162,7 +166,7 @@ size_t GetTotalSysMem(void)
 #ifdef __linux__
 	return linux_get_totalmem();
 #endif
-#ifdef _WIN32_
+#ifdef _WIN32
 	return win_get_totalmem();
 #endif
 	/*	Guess 48 MB. */
@@ -174,7 +178,7 @@ size_t GetFreeSysMem(void)
 #ifdef __linux__
 	return linux_get_freemem();
 #endif
-#ifdef _WIN32_
+#ifdef _WIN32
 	return win_get_freemem();
 #endif
 	/*	Guess 48 MB. */
