@@ -33,6 +33,13 @@
 #include <unistd.h>
 #endif
 
+#include <stdio.h>
+
+#ifdef WIN32
+#include "libfmemopen.h"
+#include "libfmemopen.c"
+#endif
+
 #define ZWAD
 
 #ifdef ZWAD
@@ -187,6 +194,21 @@ FILE *W_OpenWadFile(const char **filename, boolean useerrors)
 				CONS_Alert(CONS_ERROR, M_GetText("File %s not found.\n"), *filename);
 			return NULL;
 		}
+	}
+	return handle;
+}
+
+static FILE *W_OpenBuffer(void *buf, size_t len)
+{
+	FILE *handle;
+
+	handle = fmemopen(buf, len, "rb");
+
+	// open buffer
+	if (handle == NULL)
+	{
+		CONS_Alert(CONS_ERROR, M_GetText("Can't open buffer\n"));
+		return NULL;
 	}
 	return handle;
 }
@@ -705,7 +727,7 @@ static UINT16 W_InitFileError (const char *filename, boolean exitworthy)
 //
 // Can now load dehacked files (.soc)
 //
-UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
+UINT16 W_InitFile(const char *filename, void *buf, size_t len, boolean mainfile, boolean startup)
 {
 	FILE *handle;
 	lumpinfo_t *lumpinfo = NULL;
@@ -743,11 +765,19 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 		return W_InitFileError(filename, startup);
 	}
 
+	if (buf)
+	{
+		if ((handle = W_OpenBuffer(buf, len)) == NULL)
+			return W_InitFileError(filename, startup);
+	}
 	// open wad file
-	if ((handle = W_OpenWadFile(&filename, true)) == NULL)
-		return W_InitFileError(filename, startup);
+	else
+	{
+		if ((handle = W_OpenWadFile(&filename, true)) == NULL)
+			return W_InitFileError(filename, startup);
+	}
 
-	important = W_VerifyNMUSlumps(filename, startup);
+	important = W_VerifyNMUSlumps(filename, (buf) ? buf : NULL, startup);
 
 	if (important == -1)
 	{
@@ -780,7 +810,10 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	// Let's not add a wad file if the MD5 matches
 	// an MD5 of an already added WAD file!
 	//
-	W_MakeFileMD5(filename, md5sum);
+	if (buf)
+		P_MakeBufferMD5(buf, len, md5sum);
+	else
+		W_MakeFileMD5(filename, md5sum);
 
 	for (i = 0; i < numwadfiles; i++)
 	{
@@ -904,7 +937,7 @@ void W_InitMultipleFiles(char **filenames)
 	for (; *filenames; filenames++)
 	{
 		//CONS_Debug(DBG_SETUP, "Loading %s\n", *filenames);
-		W_InitFile(*filenames, numwadfiles < mainwads, true);
+		W_InitFile(*filenames, NULL, 0, numwadfiles < mainwads, true);
 	}
 }
 
@@ -2050,7 +2083,7 @@ W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 
 // Note: This never opens lumps themselves and therefore doesn't have to
 // deal with compressed lumps.
-static int W_VerifyFile(const char *filename, lumpchecklist_t *checklist,
+static int W_VerifyFile(const char *filename, void *buf, lumpchecklist_t *checklist,
 	boolean status)
 {
 	FILE *handle;
@@ -2059,8 +2092,16 @@ static int W_VerifyFile(const char *filename, lumpchecklist_t *checklist,
 	if (!checklist)
 		I_Error("No checklist for %s\n", filename);
 	// open wad file
-	if ((handle = W_OpenWadFile(&filename, false)) == NULL)
-		return -1;
+	if (buf)
+	{
+		if ((handle = W_OpenBuffer(buf, sizeof(buf))) == NULL)
+			return -1;
+	}
+	else
+	{
+		if ((handle = W_OpenWadFile(&filename, false)) == NULL)
+			return -1;
+	}
 
 	if (stricmp(&filename[strlen(filename) - 4], ".pk3") == 0)
 		goodfile = W_VerifyPK3(handle, checklist, status);
@@ -2090,7 +2131,7 @@ static int W_VerifyFile(const char *filename, lumpchecklist_t *checklist,
   *         file exists with that filename
   * \author Alam Arias
   */
-int W_VerifyNMUSlumps(const char *filename, boolean exit_on_error)
+int W_VerifyNMUSlumps(const char *filename, void *buf, boolean exit_on_error)
 {
 	// MIDI, MOD/S3M/IT/XM/OGG/MP3/WAV, WAVE SFX
 	// ENDOOM text and palette lumps
@@ -2165,7 +2206,7 @@ int W_VerifyNMUSlumps(const char *filename, boolean exit_on_error)
 		{NULL, 0},
 	};
 
-	int status = W_VerifyFile(filename, NMUSlist, false);
+	int status = W_VerifyFile(filename, buf, NMUSlist, false);
 
 	if (status == -1)
 		W_InitFileError(filename, exit_on_error);

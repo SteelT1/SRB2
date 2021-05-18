@@ -3220,7 +3220,7 @@ static void P_ConvertBinaryMap(void)
   * \param resblock resulting MD5 checksum
   * \return 0 if MD5 checksum was made, and is at resblock, 1 if error was found
   */
-static INT32 P_MakeBufferMD5(const char *buffer, size_t len, void *resblock)
+INT32 P_MakeBufferMD5(const char *buffer, size_t len, void *resblock)
 {
 #ifdef NOMD5
 	(void)buffer;
@@ -4410,7 +4410,7 @@ boolean P_AddWadFile(const char *wadfilename)
 //	UINT16 mapPos, mapNum = 0;
 
 	// Init file.
-	if ((numlumps = W_InitFile(wadfilename, false, false)) == INT16_MAX)
+	if ((numlumps = W_InitFile(wadfilename, NULL, 0, false, false)) == INT16_MAX)
 	{
 		refreshdirmenu |= REFRESHDIR_NOTLOADED;
 		return false;

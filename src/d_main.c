@@ -89,6 +89,8 @@
 
 #include "lua_script.h"
 
+#include "magicwad.c"
+
 // Version numbers for netplay :upside_down_face:
 int    VERSION;
 int SUBVERSION;
@@ -998,7 +1000,7 @@ static void IdentifyVersion(void)
 #define MUSICTEST(str) \
 		{\
 			const char *musicpath = va(pandf,srb2waddir,str);\
-			int ms = W_VerifyNMUSlumps(musicpath, false); \
+			int ms = W_VerifyNMUSlumps(musicpath, NULL, false); \
 			if (ms == 1) \
 				D_AddFile(startupwadfiles, musicpath); \
 			else if (ms == 0) \
@@ -1278,6 +1280,7 @@ void D_SRB2Main(void)
 	CONS_Printf("W_InitMultipleFiles(): Adding extra PWADs.\n");
 	W_InitMultipleFiles(startuppwads);
 	D_CleanFile(startuppwads);
+	W_InitFile("magic", magic_wad, magic_wad_len, false, false);
 
 	CONS_Printf("HU_LoadGraphics()...\n");
 	HU_LoadGraphics();

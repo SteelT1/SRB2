@@ -3289,7 +3289,7 @@ static void Command_Addfile(void)
 			if (!isprint(fn[i]) || fn[i] == ';')
 				return;
 
-		musiconly = W_VerifyNMUSlumps(fn, false);
+		musiconly = W_VerifyNMUSlumps(fn, NULL, false);
 
 		if (musiconly == -1)
 		{

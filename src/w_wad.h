@@ -140,7 +140,7 @@ void W_Shutdown(void);
 // Opens a WAD file. Returns the FILE * handle for the file, or NULL if not found or could not be opened
 FILE *W_OpenWadFile(const char **filename, boolean useerrors);
 // Load and add a wadfile to the active wad files, returns numbers of lumps, INT16_MAX on error
-UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup);
+UINT16 W_InitFile(const char *filename, void *buf, size_t len, boolean mainfile, boolean startup);
 
 // W_InitMultipleFiles exits if a file was not found, but not if all is okay.
 void W_InitMultipleFiles(char **filenames);
@@ -206,6 +206,6 @@ void W_UnlockCachedPatch(void *patch);
 
 void W_VerifyFileMD5(UINT16 wadfilenum, const char *matchmd5);
 
-int W_VerifyNMUSlumps(const char *filename, boolean exit_on_error);
+int W_VerifyNMUSlumps(const char *filename, void *buf, boolean exit_on_error);
 
 #endif // __W_WAD__

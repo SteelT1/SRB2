@@ -89,6 +89,7 @@ extern levelflat_t *levelflats;
 INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat);
 INT32 P_AddLevelFlatRuntime(const char *flatname);
 INT32 P_CheckLevelFlat(const char *flatname);
+INT32 P_MakeBufferMD5(const char *buffer, size_t len, void *resblock);
 
 extern size_t nummapthings;
 extern mapthing_t *mapthings;
