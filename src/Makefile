@@ -261,7 +261,7 @@ opts+=-pg
 libs+=-pg
 endif
 
-libs+=-Wl,--disable-reloc-section
+libs+=-Wl,--disable-dynamicbase
 
 ifdef DEBUGMODE
 debug_opts=-D_DEBUG
