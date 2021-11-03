@@ -65,7 +65,7 @@ configuration:
 
 before_build:
 - set "Path=%MINGW_SDK%\bin;%Path%"
-- %SRB2_MAKE_EXE% --version
+- $SRB2_MAKE_EXE --version
 - nasm -v
 - if not [%NOUPX%] == [1] ( upx -V )
 - ccache -V
