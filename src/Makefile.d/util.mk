@@ -74,7 +74,7 @@ Prefix=$(if $(PREFIX),$(PREFIX)-)$(1)
 
 # Tests if flag is supported by the compiler
 define check_cc_flag =
-  $(shell echo 'void main(){}' | $(cc) -xc $(1) -o $(if $(WINDOWSHELL),NUL,/dev/null) - $(if $(WINDOWSHELL),2>NUL,2>/dev/null); echo $(1))  
+ $(shell echo 'int main() { return 0; }' | $(CC) -fsyntax-only $(1) -xc - $(if $(WINDOWSHELL),2>NUL,2>/dev/null) && echo $(1))
 endef
 
 Echo=

@@ -124,7 +124,7 @@
 # SDL_CONFIG= - sdl-config command.
 # SDL_CFLAGS=, SDL_LDFLAGS=
 
-CHECK_CC_FLAGS := -Wl,--disable-dynamicbase
+CHECK_FLAGS := -Wl,--disable-dynamicbase
 
 clean_targets=cleandep clean distclean info
 
@@ -289,8 +289,7 @@ ifdef CCACHE
 cc=ccache $(CC)
 endif
 
-# Append flags if supported
-libs += $(foreach flag,$(CHECK_CC_FLAGS),$(call check_cc_flag,$(flag)))
+libs += $(foreach flag,$(CHECK_FLAGS),$(call check_cc_flag,$(flag)))
 
 ifndef SILENT
 # makefile will 'restart' when it finishes including the
