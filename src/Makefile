@@ -261,6 +261,8 @@ opts+=-pg
 libs+=-pg
 endif
 
+libs+=-Wl,--disable-reloc-section
+
 ifdef DEBUGMODE
 debug_opts=-D_DEBUG
 else # build a normal optimized version
